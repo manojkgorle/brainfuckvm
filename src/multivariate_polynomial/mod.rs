@@ -24,6 +24,22 @@ pub fn zero(field: Field) -> Self {
     }
 }
 
+//Function to calculate degree
+pub fn degree(&self) -> FieldElement {
+    if self.dictionary.is_empty() {
+        return FieldElement::zero(self.field); // Return zero for an empty polynomial
+    }
+
+    let max_degree = self
+        .dictionary
+        .keys() // Get the keys (vectors of exponents)
+        .map(|k| k.iter().sum::<u128>()) // Calculate the sum of exponents for each term
+        .max() // Find the maximum sum
+        .unwrap_or(0); // Default to 0 if no keys
+
+    FieldElement::new(max_degree as u128, self.field) // Convert the maximum degree to a FieldElement
+}
+
 //Function to evaluate at a point
 pub fn evaluate(&self, point: &Vec<FieldElement>)->FieldElement{
         let field = self.field;
@@ -45,6 +61,47 @@ pub fn evaluate(&self, point: &Vec<FieldElement>)->FieldElement{
             }
             acc = acc + prod;
         }
+        acc
+    }
+
+    pub fn evaluate_symbolic(
+        &self,
+        point: &Vec<MPolynomial>,
+        memo: &mut HashMap<(u128, u128), MPolynomial>,
+    ) -> MPolynomial {
+        let field = self.field;
+        let mut acc = MPolynomial::zero(self.field); // Accumulator for the result
+
+        for (exp, coeff) in &self.dictionary {
+            let mut prod = MPolynomial::constant(*coefficient, field.clone()); // Start with the coefficient as a constant
+
+            for (i, &exp) in exponents.iter().enumerate() {
+                let mut inner_acc = MPolynomial::one(&field); // Initialize to one
+
+                let mut j = 0;
+                while (1 << j) <= exp {
+                    if !memo.contains_key(&(i, 1 << j)) {
+                        if j == 0 {
+                            memo.insert((i, 1 << j), point[i].clone());
+                        } else {
+                            let prev = memo.get(&(i, 1 << (j - 1))).unwrap().clone();
+                            memo.insert((i, 1 << j), prev.clone() * prev);
+                        }
+                    }
+                    let point_power = memo.get(&(i, 1 << j)).unwrap();
+
+                    if (exp & (1 << j)) != 0 {
+                        inner_acc = inner_acc * point_power.clone();
+                    }
+                    j += 1;
+                }
+
+                prod = prod * inner_acc; // Multiply by the result for this variable
+            }
+
+            acc = acc + prod; // Add the product for this term
+        }
+
         acc
     }
 
@@ -192,6 +249,17 @@ mod test_MPolynomial_operation{
     let p = MPolynomial::new(Field::new(5), dictionary);
     let point = vec![FieldElement::new(2, field), FieldElement::new(1, field), FieldElement::new(2, field)];
     assert_eq!(p.evaluate(&point), FieldElement::new(3, field));
+  }
+
+  #[test]
+  fn test_mpoly_degree() {
+    let mut dictionary = HashMap::new();
+    let field = Field::new(17);
+    dictionary.insert(vec![1,2,3], FieldElement::new(3, field)); // 3xy^2z^3
+    dictionary.insert(vec![2,0,0], FieldElement::new(3, field)); // 3x^2
+    let p = MPolynomial::new(Field::new(17), dictionary);
+
+    assert_eq!(p.degree(), FieldElement::new(6, field));
   }
 }
 
