@@ -42,16 +42,13 @@ impl Polynomial {
         result
     }
     // new function added
-    pub fn evaluate_domain(&self, x:Vec<FieldElement>)->Vec<FieldElement>{
+    pub fn evaluate_domain(&self, x: Vec<FieldElement>) -> Vec<FieldElement> {
         let mut result = Vec::new();
-        for i in 0..x.len(){
+        for i in 0..x.len() {
             result.push(self.evaluate(x[i]));
         }
         result
-
     }
-    
-
 
     pub fn degree(&self) -> usize {
         self.coefficients.len() - 1
@@ -132,49 +129,50 @@ impl Polynomial {
     }
     // new function added
     pub fn pow(self, exp: u128) -> Self {
-        let mut res = Polynomial::new_from_coefficients(vec![FieldElement::new(1, Field::new(self.coefficients[0].modulus()))]);
-        
-           // Identity polynomial (constant 1)
-            let mut base = self.clone(); // Clone the base polynomial
-            let mut exp = exp;
-    
-            while exp > 0 {
-                if exp % 2 == 1 {
-                    res = res * base.clone(); // Multiply res by base polynomial if current bit is 1
-                }
-    
-                base = base.clone() * base; // Square the base polynomial
-                exp /= 2; // Right shift the exponent (equivalent to dividing by 2)
+        let mut res = Polynomial::new_from_coefficients(vec![FieldElement::new(
+            1,
+            Field::new(self.coefficients[0].modulus()),
+        )]);
+
+        // Identity polynomial (constant 1)
+        let mut base = self.clone(); // Clone the base polynomial
+        let mut exp = exp;
+
+        while exp > 0 {
+            if exp % 2 == 1 {
+                res = res * base.clone(); // Multiply res by base polynomial if current bit is 1
             }
-    
-            res
-        
+
+            base = base.clone() * base; // Square the base polynomial
+            exp /= 2; // Right shift the exponent (equivalent to dividing by 2)
+        }
+
+        res
     }
     // new function added
-    fn scale(&self,factor:u128)->Self{
+    fn scale(&self, factor: u128) -> Self {
         let mut result = Vec::new();
-        
-        for i in 0..self.coefficients.len(){
-            result.push(FieldElement::new(self.coefficients[i].0 * factor.pow(i as u32), Field::new(self.coefficients[i].modulus())));
+
+        for i in 0..self.coefficients.len() {
+            result.push(FieldElement::new(
+                self.coefficients[i].0 * factor.pow(i as u32),
+                Field::new(self.coefficients[i].modulus()),
+            ));
         }
         Polynomial::new_from_coefficients(result)
-
-
     }
     // new function added
-    fn collinearity(evaluation_form: Vec<(FieldElement, FieldElement)>)->bool{
+    fn collinearity(evaluation_form: Vec<(FieldElement, FieldElement)>) -> bool {
         let input: Vec<FieldElement> = evaluation_form.iter().map(|(x, _)| *x).collect();
         let output: Vec<FieldElement> = evaluation_form.iter().map(|(_, y)| *y).collect();
         let poly = interpolate_lagrange_polynomials(input.clone(), output.clone());
-        if poly.degree() == 1{
-            return 
-            true
+        if poly.degree() == 1 {
+            return true;
+        } else {
+            false
+        }
     }
-    else{false}
-    
-}}
-
-
+}
 
 impl Add for Polynomial {
     type Output = Polynomial;
@@ -904,7 +902,7 @@ mod test_polynomials {
         assert_eq!(polynomial.coefficients[2].0, 6);
     }
     #[test]
-    fn test_pow(){
+    fn test_pow() {
         let field = Field::new(7);
         let coefficients = vec![
             FieldElement::new(1, field),
@@ -918,10 +916,9 @@ mod test_polynomials {
         assert_eq!(result.coefficients[2].0, 3);
         assert_eq!(result.coefficients[3].0, 5);
         assert_eq!(result.coefficients[4].0, 2);
- 
     }
     #[test]
-    fn test_scale(){
+    fn test_scale() {
         let field = Field::new(7);
         let coefficients = vec![
             FieldElement::new(1, field),
@@ -935,7 +932,7 @@ mod test_polynomials {
         assert_eq!(result.coefficients[2].0, 5);
     }
     #[test]
-    fn test_collinearity(){
+    fn test_collinearity() {
         let field = Field::new(7);
         let evaluation_form = vec![
             (FieldElement::new(1, field), FieldElement::new(1, field)),
@@ -946,11 +943,12 @@ mod test_polynomials {
         assert_eq!(result, false);
     }
     #[test]
-    fn test_collinearity2(){
+    fn test_collinearity2() {
         let field = Field::new(7);
         let evaluation_form = vec![
             (FieldElement::new(1, field), FieldElement::new(1, field)),
-            (FieldElement::new(2, field), FieldElement::new(2, field)),];
+            (FieldElement::new(2, field), FieldElement::new(2, field)),
+        ];
         let result = Polynomial::collinearity(evaluation_form);
         assert_eq!(result, true);
     }
