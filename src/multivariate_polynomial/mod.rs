@@ -123,6 +123,38 @@ pub fn evaluate(&self, point: &Vec<FieldElement>)->FieldElement{
         acc
     }
 
+    pub fn variables(num_variables: usize, field: Field) -> Vec<Self> {
+      let mut variables = Vec::new();
+
+      for i in 0..num_variables {
+          let mut exponent = vec![0; num_variables];
+          exponent[i] = 1; // Set the ith variable's exponent to 1
+
+          let mut dictionary = HashMap::new();
+          dictionary.insert(exponent, FieldElement::one(field));
+
+          variables.push(MPolynomial::new(field, dictionary));
+      }
+
+      variables
+  }
+  // def lift(polynomial, variable_index):
+  //       if polynomial.is_zero():
+  //           return MPolynomial({})
+  //       field = polynomial.coefficients[0].field
+  //       variables = MPolynomial.variables(variable_index+1, field)
+  //       x = variables[-1]
+  //       acc = MPolynomial({})
+  //       for i in range(len(polynomial.coefficients)):
+  //           acc = acc + \
+  //               MPolynomial.constant(polynomial.coefficients[i]) * (x ^ i)
+  //       return acc
+
+  pub fn lift(){
+    
+  }
+
+
     pub fn symbolic_degree_bound(&self, max_degrees: Vec<u128>) -> i128 {
         // Check if the polynomial is empty
         let field = self.field;
