@@ -26,19 +26,20 @@ pub fn zero(field: Field) -> Self {
 }
 
 //Function to calculate degree
-pub fn degree(&self) -> FieldElement {
+pub fn degree(&self) -> i128 {
     if self.dictionary.is_empty() {
-        return FieldElement::zero(self.field); // Return zero for an empty polynomial
+        return -1; // Return zero for an empty polynomial
     }
 
     let max_degree = self
         .dictionary
-        .keys() // Get the keys (vectors of exponents)
-        .map(|k| k.iter().sum::<u128>()) // Calculate the sum of exponents for each term
-        .max() // Find the maximum sum
-        .unwrap_or(0); // Default to 0 if no keys
+        .iter() // Iterate over the key-value pairs in the dictionary
+        .filter(|(_, coefficient)| coefficient.0!=0 as u128) // Filter out terms with zero coefficients
+        .map(|(exponents, _)| exponents.iter().sum::<u128>()) // Sum the exponents for non-zero terms
+        .max() // Find the maximum sum of exponents
+        .unwrap_or(0); // Default to 0 if no non-zero terms
 
-    FieldElement::new(max_degree as u128, self.field) // Convert the maximum degree to a FieldElement
+    max_degree as i128 // Convert the maximum degree to a FieldElement
 }
 
 pub fn variables(num_variables: usize, field: Field) -> Vec<Self> {
@@ -120,6 +121,41 @@ pub fn evaluate(&self, point: &Vec<FieldElement>)->FieldElement{
             acc = acc + prod; // Add the product for this term
         }
         acc
+    }
+
+    pub fn symbolic_degree_bound(&self, max_degrees: Vec<u128>) -> i128 {
+        // Check if the polynomial is empty
+        let field = self.field;
+        if self.dictionary.is_empty() {
+            return -1;
+        }
+        // Ensure the max_degrees vector is correctly sized
+        let num_variables = self.dictionary.keys().next().unwrap_or(&vec![]).len();
+        if max_degrees.len() < num_variables {
+            panic!("max_degrees length does not match the number of variables in the polynomial.");
+        }
+        
+        // Make sure all degrees in max_degrees are the same
+        if !max_degrees.iter().all(|&degree| degree == max_degrees[0]) {
+            panic!("max_degrees must contain the same integer repeated.");
+        }
+
+        let mut total_degree_bound = 0;
+
+        for (exp, coeff) in &self.dictionary {
+            if coeff.0 == 0 as u128 {
+                continue;
+            }
+
+            let mut term_degree_bound = 0;
+            for (exp, max_degree) in exp.iter().zip(max_degrees.iter()) {
+                term_degree_bound += (*exp as u128) * (*max_degree);
+            }
+
+            total_degree_bound = total_degree_bound.max(term_degree_bound as i128);
+        }
+
+        total_degree_bound
     }
 
     #[allow(dead_code)]
@@ -410,11 +446,11 @@ mod test_mpolynomial_operation {
   fn test_mpoly_degree() {
     let mut dictionary = HashMap::new();
     let field = Field::new(17);
-    dictionary.insert(vec![1,2,3], FieldElement::new(3, field)); // 3xy^2z^3
-    dictionary.insert(vec![2,0,0], FieldElement::new(3, field)); // 3x^2
+    dictionary.insert(vec![1,2,3], FieldElement::new(0, field)); // 3xy^2z^3
+    dictionary.insert(vec![2,0,0], FieldElement::new(0, field)); // 3x^2
     let p = MPolynomial::new(Field::new(17), dictionary);
 
-    assert_eq!(p.degree(), FieldElement::new(6, field));
+    assert_eq!(p.degree(), -1 as i128);
   }
 
   #[test]
@@ -471,6 +507,20 @@ mod test_mpolynomial_operation {
     assert_eq!(result, poly2);
     // Check if symbolic result matches
   }
+
+  #[test]
+fn test_symbolic_degree_bound() {
+    let field = Field::new(17);
+    let mut dictionary = HashMap::new();
+    dictionary.insert(vec![1, 2, 0], FieldElement::new(3, field)); // term x^1 * y^2
+    dictionary.insert(vec![0, 0, 3], FieldElement::new(3, field)); // term z^3
+    let p = MPolynomial::new(field, dictionary);
+
+    // Test with max_degrees as [3, 3, 3] for each variable
+    let max_degrees = vec![4, 4, 4];
+    let degree_bound = p.symbolic_degree_bound(max_degrees);
+    assert_eq!(degree_bound, 12); 
+}
 
 }
 
