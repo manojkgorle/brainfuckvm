@@ -76,7 +76,7 @@ impl Add for MPolynomial{
             }
         }
     }}
-    
+
   impl PartialEq for MPolynomial {
     fn eq(&self, other: &Self) -> bool {
         // Step 1: Check if the sizes of the dictionaries are equal
@@ -101,6 +101,51 @@ impl Add for MPolynomial{
         // Step 3: If all checks pass, return true
         true
     }
+}
+impl Mul for MPolynomial{
+  type Output = Self;
+  fn mul(self, other: MPolynomial) -> MPolynomial {
+    let mut dictionary = HashMap::new();
+    
+    // Calculate max number of variables
+    let num_variables = self.dictionary.keys()
+        .chain(other.dictionary.keys())
+        .map(|k| k.len())
+        .max()
+        .unwrap_or(0);
+    
+    // Iterate through each term in both polynomials
+    for (k0, v0) in &self.dictionary {
+        for (k1, v1) in &other.dictionary {
+            // Initialize exponent vector
+            let mut exponent = vec![0; num_variables];
+            
+            // Add exponents from first polynomial
+            for (k, &exp) in k0.iter().enumerate() {
+                exponent[k] += exp;
+            }
+            
+            // Add exponents from second polynomial
+            for (k, &exp) in k1.iter().enumerate() {
+                exponent[k] += exp;
+            }
+            
+            // Convert to tuple for key
+            let exponent_key = exponent.clone().into_iter().collect::<Vec<_>>();
+            
+            // Update or insert the coefficient
+            dictionary
+                .entry(exponent_key)
+                .and_modify(|coeff| *coeff += *v0 * *v1)
+                .or_insert(*v0 * *v1);
+        }
+    }
+    
+    MPolynomial { dictionary }
+}
+
+  
+
 }
 
 
@@ -150,6 +195,21 @@ mod test_MPolynomial_operation{
     dictionary.insert(vec![1, 2,3], FieldElement::new(3, Field::new(5)));
     let p2 = MPolynomial::new(dictionary);
     assert_eq!(p1, p2);
+  }
+  #[test]
+  fn test_mul(){
+    let mut dictionary = HashMap::new();
+    dictionary.insert(vec![1, 2,3], FieldElement::new(3, Field::new(5)));
+    let p1 = MPolynomial::new(dictionary);
+    let mut dictionary = HashMap::new();
+    dictionary.insert(vec![1, 2,3], FieldElement::new(3, Field::new(5)));
+    let p2 = MPolynomial::new(dictionary);
+    let mut dictionary = HashMap::new();
+    dictionary.insert(vec![2,4,6], FieldElement::new(4, Field::new(5)));
+    let p3 = MPolynomial::new(dictionary);
+    assert_eq!(p1.mul(p2),p3);
+    
+
   }
 }
 
