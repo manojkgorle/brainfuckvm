@@ -1,4 +1,3 @@
-
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 // Define a field
 // Define a field element
@@ -11,24 +10,25 @@ impl Field {
         Field(x)
     }
     pub fn primitive_nth_root(self, n: u128) -> FieldElement {
-      if self.0 == 1 + (1 << 64) - (1 << 32) {
-          assert!(
-              n <= 1 << 32 && (n & (n - 1)) == 0,
-              "Field does not have nth root of unity where n > 2^32 or not power of two."
-          );
-          let mut root = FieldElement::new(1753635133440165772, self);
-          let mut order = 1 << 32;
-  
-          while order != n {
-              root = root.pow(2); // Square the root
-              order /= 2;         // Halve the order
-          }
-  
-          root
-      } else {
-          panic!("Unknown field, can't return root of unity.");
-      }}
-      pub fn generator(self) -> FieldElement {
+        if self.0 == 1 + (1 << 64) - (1 << 32) {
+            assert!(
+                n <= 1 << 32 && (n & (n - 1)) == 0,
+                "Field does not have nth root of unity where n > 2^32 or not power of two."
+            );
+            let mut root = FieldElement::new(1753635133440165772, self);
+            let mut order = 1 << 32;
+
+            while order != n {
+                root = root.pow(2); // Square the root
+                order /= 2; // Halve the order
+            }
+
+            root
+        } else {
+            panic!("Unknown field, can't return root of unity.");
+        }
+    }
+    pub fn generator(self) -> FieldElement {
         assert!(
             self.0 == 1 + (1 << 64) - (1 << 32),
             "Do not know generator for other fields beyond 2^64 - 2^32 + 1"
@@ -98,20 +98,17 @@ impl FieldElement {
         e
     }
 
-    // pub fn from_bytes(bytes: &[u8]) -> FieldElement {
-    //     let mut x = [0u8; 8];
-    //     let mut y = [0u8; 8];
-    //     x.copy_from_slice(&bytes[..8]);
-    //     y.copy_from_slice(&bytes[8..]);
-    //     FieldElement(
-    //         u128::from_be_bytes(x) % u128::from_be_bytes(y),
-    //         Field(u128::from_be_bytes(y)),
-    //     )
-    // }
-
- 
+    pub fn from_bytes(bytes: &[u8]) -> FieldElement {
+        let mut x = [0u8; 16];
+        let mut y = [0u8; 16];
+        x.copy_from_slice(&bytes[..16]);
+        y.copy_from_slice(&bytes[16..]);
+        FieldElement(
+            u128::from_be_bytes(x) % u128::from_be_bytes(y),
+            Field(u128::from_be_bytes(y)),
+        )
+    }
 }
-
 
 impl Add for FieldElement {
     type Output = FieldElement;
@@ -301,8 +298,16 @@ mod test_field_operations {
     #[test]
     fn test_primitive_root_of_unity() {
         let field = Field::new(1 + (1 << 64) - (1 << 32));
-        // let a = FieldElement::new(2, field);
-        let b = field.primitive_nth_root(1<<32);
+        let b = field.primitive_nth_root(1 << 32);
         assert_eq!(b.0, 1753635133440165772);
+    }
+
+    #[test]
+    fn test_encoding() {
+        let field = Field::new(7);
+        let a = FieldElement::new(2, field);
+        let b = a.to_bytes();
+        let c = FieldElement::from_bytes(&b);
+        assert_eq!(a.0, c.0);
     }
 }
