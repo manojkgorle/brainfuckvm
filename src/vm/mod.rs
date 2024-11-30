@@ -8,7 +8,8 @@ pub struct Register {
     pub field: Field,
     pub cycle: FieldElement,
     pub instruction_pointer: FieldElement,
-    pub next_instruction_pointer: FieldElement,
+    pub current_instruction: FieldElement,
+    pub next_instruction: FieldElement,
     pub memory_pointer: FieldElement,
     pub memory_value: FieldElement,
     pub memory_value_inverse: FieldElement,
@@ -20,7 +21,8 @@ impl Register {
             field,
             cycle: FieldElement::zero(field),
             instruction_pointer: FieldElement::zero(field),
-            next_instruction_pointer: FieldElement::zero(field),
+            current_instruction: FieldElement::zero(field),
+            next_instruction: FieldElement::zero(field),
             memory_pointer: FieldElement::zero(field),
             memory_value: FieldElement::zero(field),
             memory_value_inverse: FieldElement::zero(field),
@@ -142,7 +144,26 @@ impl VirtualMachine {
         (running_time, input_data, output_data)
     }
 
-    pub fn simulate(&self, program: &str, input_data: &[FieldElement]) {}
+    pub fn simulate(&self, program: &[FieldElement], input_data: String) {
+        let field = self.field;
+        let zero = FieldElement::zero(field);
+        let one = FieldElement::one(field);
+        let two = FieldElement::new(2, field);
+        let f = |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, field) };
+        let mut register = Register::new(field);
+        register.current_instruction = program[0];
+        if program.len() == 1 {
+            register.next_instruction = zero;
+        } else {
+            register.next_instruction = program[1];
+        }
+
+        let mut memory: HashMap<FieldElement, FieldElement> = HashMap::new();
+        let input_counter = 0;
+        let output_data = String::new();
+
+        // @todo create tables.
+    }
 }
 
 #[cfg(test)]
