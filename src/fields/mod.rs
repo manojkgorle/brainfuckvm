@@ -318,8 +318,12 @@ mod test_field_operations {
     #[test]
     fn test_primitive_root_of_unity() {
         let field = Field::new(1 + (1 << 64) - (1 << 32));
+        let x = FieldElement::new(1753635133440165772, field);
+        let y = x.pow(2);
         let b = field.primitive_nth_root(1 << 32);
-        assert_eq!(b.0, 1753635133440165772);
+        assert_eq!(b.0, x.0);
+        let c = field.primitive_nth_root(1<<31);
+        assert_eq!(c.0, y.0);
     }
 
     #[test]
