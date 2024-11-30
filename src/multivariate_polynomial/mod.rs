@@ -57,6 +57,7 @@ pub fn variables(num_variables: usize, field: Field) -> Vec<Self> {
 
     variables
 }
+
 //Function to evaluate at a point
 #[allow(dead_code)]
 pub fn evaluate(&self, point: &Vec<FieldElement>)->FieldElement{
@@ -123,21 +124,7 @@ pub fn evaluate(&self, point: &Vec<FieldElement>)->FieldElement{
         acc
     }
 
-    pub fn variables(num_variables: usize, field: Field) -> Vec<Self> {
-      let mut variables = Vec::new();
-
-      for i in 0..num_variables {
-          let mut exponent = vec![0; num_variables];
-          exponent[i] = 1; // Set the ith variable's exponent to 1
-
-          let mut dictionary = HashMap::new();
-          dictionary.insert(exponent, FieldElement::one(field));
-
-          variables.push(MPolynomial::new(field, dictionary));
-      }
-
-      variables
-  }
+   
   // def lift(polynomial, variable_index):
   //       if polynomial.is_zero():
   //           return MPolynomial({})
