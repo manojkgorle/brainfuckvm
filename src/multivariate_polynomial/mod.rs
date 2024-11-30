@@ -41,6 +41,21 @@ pub fn degree(&self) -> FieldElement {
     FieldElement::new(max_degree as u128, self.field) // Convert the maximum degree to a FieldElement
 }
 
+pub fn variables(num_variables: usize, field: Field) -> Vec<Self> {
+    let mut variables = Vec::new();
+
+    for i in 0..num_variables {
+        let mut exponent = vec![0; num_variables];
+        exponent[i] = 1; // Set the ith variable's exponent to 1
+
+        let mut dictionary = HashMap::new();
+        dictionary.insert(exponent, FieldElement::one(field));
+
+        variables.push(MPolynomial::new(field, dictionary));
+    }
+
+    variables
+}
 //Function to evaluate at a point
 #[allow(dead_code)]
 pub fn evaluate(&self, point: &Vec<FieldElement>)->FieldElement{
@@ -72,25 +87,26 @@ pub fn evaluate(&self, point: &Vec<FieldElement>)->FieldElement{
         memo: &mut HashMap<(u128, u128), MPolynomial>,
     ) -> MPolynomial {
         let field = self.field;
-        let mut acc = MPolynomial::zero(self.field); // Accumulator for the result
+        let mut acc = MPolynomial::zero(field); // Accumulator for the result
 
         for (exp, coeff) in &self.dictionary {
-            let mut prod = MPolynomial::constant(*coefficient, field.clone()); // Start with the coefficient as a constant
+            let c = FieldElement::new(1,field); 
+            let mut prod = MPolynomial::constant(c); // Start with the coefficient as a constant
 
-            for (i, &exp) in exponents.iter().enumerate() {
-                let mut inner_acc = MPolynomial::one(&field); // Initialize to one
+            for (i, &exp) in exp.iter().enumerate() {
+                let mut inner_acc = MPolynomial::one(field); // Initialize to one
 
                 let mut j = 0;
                 while (1 << j) <= exp {
-                    if !memo.contains_key(&(i, 1 << j)) {
+                    if !memo.contains_key(&(i as u128, 1 << j)) {
                         if j == 0 {
-                            memo.insert((i, 1 << j), point[i].clone());
+                            memo.insert((i as u128, 1 << j), point[i].clone());
                         } else {
-                            let prev = memo.get(&(i, 1 << (j - 1))).unwrap().clone();
-                            memo.insert((i, 1 << j), prev.clone() * prev);
+                            let prev = memo.get(&(i as u128, 1 << (j - 1))).unwrap().clone();
+                            memo.insert((i as u128, 1 << j), prev.clone() * prev);
                         }
                     }
-                    let point_power = memo.get(&(i, 1 << j)).unwrap();
+                    let point_power = memo.get(&(i as u128, 1 << j)).unwrap();
 
                     if (exp & (1 << j)) != 0 {
                         inner_acc = inner_acc * point_power.clone();
@@ -103,11 +119,9 @@ pub fn evaluate(&self, point: &Vec<FieldElement>)->FieldElement{
 
             acc = acc + prod; // Add the product for this term
         }
-
         acc
     }
 
-}
     #[allow(dead_code)]
     pub fn neg(&self)->Self{
         let mut dictionary = HashMap::new();
@@ -145,11 +159,8 @@ pub fn evaluate(&self, point: &Vec<FieldElement>)->FieldElement{
     }
     pub fn is_zero(&self)->bool{
         self.dictionary.is_empty()
-
-
-   
-    }}
-
+    }
+}
 
   
 impl Add for MPolynomial{
@@ -331,7 +342,6 @@ impl SubAssign for MPolynomial{
   }
 }
 
-
 #[cfg(test)]
 mod test_mpolynomial_operation {
   use super::*;
@@ -421,6 +431,47 @@ mod test_mpolynomial_operation {
     let p3 = MPolynomial::new(field, dictionary);
     assert_eq!(p1.mul(p2), p3);
   }
+
+  #[test]
+  fn test_mpoly_variables(){
+    let field = Field::new(5);
+    let variables = MPolynomial::variables(4, field);
+    let mut dictionary = HashMap::new();
+    dictionary.insert(vec![0, 0, 1, 0], FieldElement::new(3, field));
+    let p1 = MPolynomial::new(field, dictionary);
+    assert_eq!(variables[2], p1);
+  }
+
+  #[test]
+  fn test_poly_eval_symbolic() {
+    let field = Field::new(17);
+    // Define variables x, y
+    let variables = MPolynomial::variables(4, field);
+    let z = variables[2].clone();
+    let t = variables[3].clone();
+
+    // Define polynomial 3x^2y + 2x
+    let mut dictionary = HashMap::new();
+    dictionary.insert(vec![2, 1], FieldElement::new(3, field)); // 3x^2y
+    dictionary.insert(vec![1, 0], FieldElement::new(2, field)); // 2x
+    let poly = MPolynomial::new(field, dictionary);
+
+    let mut dictionary = HashMap::new();
+    dictionary.insert(vec![0, 0, 2, 1], FieldElement::new(3, field)); // 3z^2t
+    dictionary.insert(vec![0, 0, 1, 0], FieldElement::new(2, field)); // 2z
+    let poly2 = MPolynomial::new(field, dictionary);
+
+    // Memoization cache
+    let mut memo = HashMap::new();
+
+    // Evaluate symbolically with x, y
+    let result = poly.evaluate_symbolic(&vec![z, t], &mut memo);
+
+    // Expected result: 3x^2y + 2x
+    assert_eq!(result, poly2);
+    // Check if symbolic result matches
+  }
+
 }
 
 
