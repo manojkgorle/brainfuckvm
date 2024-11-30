@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use core::hash::{Hash, Hasher};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 // Define a field
