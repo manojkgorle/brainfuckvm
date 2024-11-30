@@ -124,23 +124,20 @@ pub fn evaluate(&self, point: &Vec<FieldElement>)->FieldElement{
         acc
     }
 
-   
-  // def lift(polynomial, variable_index):
-  //       if polynomial.is_zero():
-  //           return MPolynomial({})
-  //       field = polynomial.coefficients[0].field
-  //       variables = MPolynomial.variables(variable_index+1, field)
-  //       x = variables[-1]
-  //       acc = MPolynomial({})
-  //       for i in range(len(polynomial.coefficients)):
-  //           acc = acc + \
-  //               MPolynomial.constant(polynomial.coefficients[i]) * (x ^ i)
-  //       return acc
-
-  pub fn lift(){
-    
-  }
-
+    pub fn lift(field: Field, polynomial: Polynomial, variable_index: usize) -> MPolynomial {
+        if polynomial.coefficients.len()==0 {
+            return MPolynomial::zero(field);
+        }
+        
+        let variables = MPolynomial::variables(variable_index+1, field);
+        let x = &variables[variables.len()-1];
+        let mut acc = MPolynomial::zero(field);
+        
+        for i in 0..polynomial.coefficients.len() {
+            acc = acc + MPolynomial::constant(polynomial.coefficients[i])*x.pow(i as u128);
+        }
+        acc
+    }
 
     pub fn symbolic_degree_bound(&self, max_degrees: Vec<u128>) -> i128 {
         // Check if the polynomial is empty
@@ -542,5 +539,7 @@ fn test_symbolic_degree_bound() {
 }
 
 }
+
+
 
 
