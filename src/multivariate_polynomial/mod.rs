@@ -66,48 +66,38 @@ pub fn evaluate(&self, point: &Vec<FieldElement>)->FieldElement{
         acc
     }
 
-    pub fn evaluate_symbolic(
-        &self,
-        point: &Vec<MPolynomial>,
-        memo: &mut HashMap<(u128, u128), MPolynomial>,
-    ) -> MPolynomial {
-        let field = self.field;
-        let mut acc = MPolynomial::zero(self.field); // Accumulator for the result
+    pub fn variables(num_variables: usize, field: Field) -> Vec<Self> {
+      let mut variables = Vec::new();
 
-        for (exp, coeff) in &self.dictionary {
-            let mut prod = MPolynomial::constant(*coefficient, field.clone()); // Start with the coefficient as a constant
+      for i in 0..num_variables {
+          let mut exponent = vec![0; num_variables];
+          exponent[i] = 1; // Set the ith variable's exponent to 1
 
-            for (i, &exp) in exponents.iter().enumerate() {
-                let mut inner_acc = MPolynomial::one(&field); // Initialize to one
+          let mut dictionary = HashMap::new();
+          dictionary.insert(exponent, FieldElement::one(field));
 
-                let mut j = 0;
-                while (1 << j) <= exp {
-                    if !memo.contains_key(&(i, 1 << j)) {
-                        if j == 0 {
-                            memo.insert((i, 1 << j), point[i].clone());
-                        } else {
-                            let prev = memo.get(&(i, 1 << (j - 1))).unwrap().clone();
-                            memo.insert((i, 1 << j), prev.clone() * prev);
-                        }
-                    }
-                    let point_power = memo.get(&(i, 1 << j)).unwrap();
+          variables.push(MPolynomial::new(field, dictionary));
+      }
 
-                    if (exp & (1 << j)) != 0 {
-                        inner_acc = inner_acc * point_power.clone();
-                    }
-                    j += 1;
-                }
+      variables
+  }
+  // def lift(polynomial, variable_index):
+  //       if polynomial.is_zero():
+  //           return MPolynomial({})
+  //       field = polynomial.coefficients[0].field
+  //       variables = MPolynomial.variables(variable_index+1, field)
+  //       x = variables[-1]
+  //       acc = MPolynomial({})
+  //       for i in range(len(polynomial.coefficients)):
+  //           acc = acc + \
+  //               MPolynomial.constant(polynomial.coefficients[i]) * (x ^ i)
+  //       return acc
 
-                prod = prod * inner_acc; // Multiply by the result for this variable
-            }
+  pub fn lift(){
+    
+  }
 
-            acc = acc + prod; // Add the product for this term
-        }
 
-        acc
-    }
-
-}
     #[allow(dead_code)]
     pub fn neg(&self)->Self{
         let mut dictionary = HashMap::new();
