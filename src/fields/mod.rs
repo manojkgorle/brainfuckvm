@@ -1,8 +1,9 @@
+use core::hash::{Hash, Hasher};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 // Define a field
 // Define a field element
 // Define arithmetic operations on field elements
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Hash)]
 pub struct Field(pub u128);
 
 impl Field {
@@ -218,6 +219,24 @@ impl Neg for FieldElement {
     type Output = FieldElement;
     fn neg(self) -> FieldElement {
         FieldElement(self.1 .0 - self.0, self.1)
+    }
+}
+
+impl PartialEq for FieldElement {
+    fn eq(&self, other: &FieldElement) -> bool {
+        if self.1 != other.1 {
+            return false;
+        }
+        self.0 == other.0
+    }
+}
+
+impl Eq for FieldElement {}
+
+impl Hash for FieldElement {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
+        self.1.hash(state);
     }
 }
 
