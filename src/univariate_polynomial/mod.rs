@@ -82,6 +82,10 @@ impl Polynomial {
         // self.coefficients = result.clone();
         Polynomial::new_from_coefficients(result)
     }
+    pub fn zero(field:Field)->Self{
+        let poly=Polynomial::new_from_coefficients(vec![FieldElement::zero(Field::new(field.0))]);
+        poly
+    }
 
     pub fn q_div(self, poly2: Self) -> (Self, Self) {
         let mut q = Vec::new();
