@@ -1,4 +1,6 @@
 use crate::fields::{Field, FieldElement};
+use crate::multivariate_polynomial::*;
+
 
 #[derive(Debug, Clone)]
 pub struct table {
