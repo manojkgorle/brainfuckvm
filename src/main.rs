@@ -8,6 +8,7 @@ pub mod multivariate_polynomial;
 pub mod tables;
 pub mod univariate_polynomial;
 pub mod vm;
+pub mod ntt;
 
 fn main() {
     println!("Hello, world!");
