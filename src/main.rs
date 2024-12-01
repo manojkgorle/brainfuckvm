@@ -10,6 +10,8 @@ pub mod univariate_polynomial;
 pub mod vm;
 pub mod ntt;
 pub mod evaluation_argument;
+pub mod permutation_argument;
+pub mod merkle;
 
 fn main() {
     println!("Hello, world!");
