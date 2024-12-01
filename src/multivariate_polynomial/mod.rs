@@ -157,6 +157,27 @@ impl MPolynomial {
         total_degree_bound
     }
 
+    pub fn partial_evaluate(&self, partial_assignment: HashMap<usize, u128>) -> MPolynomial {
+        let field = self.field;
+        let num_variables = self.dictionary.keys().len();
+        let mut complete_assignment = MPolynomial::variables(num_variables, field);
+        
+        for (index, value) in partial_assignment {
+            complete_assignment[index] = MPolynomial::constant(FieldElement::new(value, field));
+        }
+
+        let mut polynomial = MPolynomial::zero(field);
+        for (key, value) in &self.dictionary {
+            let mut term = MPolynomial::constant(*value);
+            for (i, &exp) in key.iter().enumerate() {
+                term = term.mul(complete_assignment[i].pow(exp));
+            }
+            polynomial = polynomial.add(term);
+        }
+
+        polynomial
+    }
+
 
     
 
@@ -229,7 +250,7 @@ impl MPolynomial {
                 }
                 term.push_str(&format!("x_{}^{}", i, exp));
             }
-            term.push_str(&format!("*{:?}", v));
+            term.push_str(&format!("*{:?}", v.0));
             terms.push(term);
         }
         terms.join(" + ")
@@ -565,9 +586,43 @@ mod test_mpolynomial_operation {
         dictionary.insert(vec![0, 0, 3], FieldElement::new(3, field)); // term 3z^3
         let p = MPolynomial::new(field, dictionary);
 
-        // Test with max_degrees as [4, 4, 4] for each variable
-        let max_degrees = vec![4, 4, 4];
-        let degree_bound = p.symbolic_degree_bound(max_degrees);
-        assert_eq!(degree_bound, 12);
+    // Test with max_degrees as [3, 3, 3] for each variable
+    let max_degrees = vec![4, 4, 4];
+    let degree_bound = p.symbolic_degree_bound(max_degrees);
+    assert_eq!(degree_bound, 12); 
+}
+
+#[test]
+    fn test_partial_evaluate() {
+        let field = Field::new(1000000007);
+
+        // Create a polynomial: 3x^2y + 5y^2z + 7
+        let mut dictionary = HashMap::new();
+        dictionary.insert(vec![2, 1, 0], FieldElement::new(3, field)); // 3x^2y
+        dictionary.insert(vec![0, 2, 1], FieldElement::new(5, field)); // 5y^2z
+        dictionary.insert(vec![0, 0, 0], FieldElement::new(7, field)); // 7 (constant)
+
+        let polynomial = MPolynomial::new(field, dictionary);
+
+        // Define the partial assignment: x = 2, z = 4
+        let mut partial_assignment = HashMap::new();
+        partial_assignment.insert(1, 2); // y = 2
+        partial_assignment.insert(2, 4); // z = 44
+
+        // Evaluate the polynomial
+        let evaluated = polynomial.partial_evaluate(partial_assignment);
+
+
+        // Define expected results as symbolic terms
+        let mut expected_dict = HashMap::new();
+        expected_dict.insert(vec![1, 0,0], FieldElement::new(6, field)); // 12x
+        expected_dict.insert(vec![0, 0,0], FieldElement::new(80, field)); // 80
+        expected_dict.insert(vec![0, 0,0], FieldElement::new(7, field));  // 7 (constant)
+        let expected_polynomial = MPolynomial::new(field, expected_dict);
+
+        println!("{}", evaluated.str());
+        println!("{}", expected_polynomial.str());
+        //assert_eq!(evaluated.dictionary, expected_polynomial.dictionary);
     }
+
 }

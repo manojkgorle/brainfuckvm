@@ -388,7 +388,7 @@ pub fn gen_lagrange_polynomials_parallel(x: Vec<FieldElement>) -> Vec<Polynomial
 
             let roots = &x[..i];
             log::debug!("generating polynomial from roots, i:{:?}", i);
-            let numerator = gen_polynomial_from_roots([roots, &x[i + 1..]].concat());
+            let numerator: Polynomial = gen_polynomial_from_roots([roots, &x[i + 1..]].concat());
 
             for j in 0..n {
                 if i == j {
