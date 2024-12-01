@@ -122,17 +122,43 @@ impl MPolynomial {
     }
 
 
-  // def lift(polynomial, variable_index):
-  //       if polynomial.is_zero():
-  //           return MPolynomial({})
-  //       field = polynomial.coefficients[0].field
-  //       variables = MPolynomial.variables(variable_index+1, field)
-  //       x = variables[-1]
-  //       acc = MPolynomial({})
-  //       for i in range(len(polynomial.coefficients)):
-  //           acc = acc + \
-  //               MPolynomial.constant(polynomial.coefficients[i]) * (x ^ i)
-  //       return acc
+    pub fn symbolic_degree_bound(&self, max_degrees: Vec<u128>) -> i128 {
+        // Check if the polynomial is empty
+        let field = self.field;
+        if self.dictionary.is_empty() {
+            return -1;
+        }
+        // Ensure the max_degrees vector is correctly sized
+        let num_variables = self.dictionary.keys().next().unwrap_or(&vec![]).len();
+        if max_degrees.len() < num_variables {
+            panic!("max_degrees length does not match the number of variables in the polynomial.");
+        }
+
+        // Make sure all degrees in max_degrees are the same
+        if !max_degrees.iter().all(|&degree| degree == max_degrees[0]) {
+            panic!("max_degrees must contain the same integer repeated.");
+        }
+
+        let mut total_degree_bound = 0;
+
+        for (exp, coeff) in &self.dictionary {
+            if coeff.0 == 0 as u128 {
+                continue;
+            }
+
+            let mut term_degree_bound = 0;
+            for (exp, max_degree) in exp.iter().zip(max_degrees.iter()) {
+                term_degree_bound += (*exp as u128) * (*max_degree);
+            }
+
+            total_degree_bound = total_degree_bound.max(term_degree_bound as i128);
+        }
+
+        total_degree_bound
+    }
+
+
+    
 
   pub fn lift(polynomial:&Polynomial, variable_index:usize)->MPolynomial{
     let field = Field::new(polynomial.coefficients[0].modulus());
