@@ -1,6 +1,10 @@
 use crate::univariate_polynomial::*;
 use crate:: fields::*;
 
+//ntt is transforming coefficient form to point evaluation form, so that multiplication of polynomials can happen in O(nlogn), rather than O(n^2)
+//We have already written functions like lagrange interpolation, multiply polynomial and evaluate polynomial, so we will write these functions mainly for optimization
+//Will implement the ntt functions later on to improve time complexity of evaluation and multiplication
+
 pub fn batch_inverse(array: &Vec<FieldElement>)->Vec<FieldElement>{
     assert!(
         array.iter().all(|a| a.0!=0 as u128),
