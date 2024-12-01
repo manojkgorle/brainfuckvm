@@ -122,21 +122,7 @@ pub fn evaluate(&self, point: &Vec<FieldElement>)->FieldElement{
         acc
     }
 
-    pub fn variables(num_variables: usize, field: Field) -> Vec<Self> {
-      let mut variables = Vec::new();
 
-      for i in 0..num_variables {
-          let mut exponent = vec![0; num_variables];
-          exponent[i] = 1; // Set the ith variable's exponent to 1
-
-          let mut dictionary = HashMap::new();
-          dictionary.insert(exponent, FieldElement::one(field));
-
-          variables.push(MPolynomial::new(field, dictionary));
-      }
-
-      variables
-  }
   // def lift(polynomial, variable_index):
   //       if polynomial.is_zero():
   //           return MPolynomial({})
@@ -149,7 +135,20 @@ pub fn evaluate(&self, point: &Vec<FieldElement>)->FieldElement{
   //               MPolynomial.constant(polynomial.coefficients[i]) * (x ^ i)
   //       return acc
 
-  pub fn lift(){
+  pub fn lift(polynomial:&Polynomial, variable_index:usize)->MPolynomial{
+    let field = Field::new(polynomial.coefficients[0].modulus());
+    if polynomial.is_all_zeros(){
+      return MPolynomial::zero(field);
+    }
+    
+    let variables = MPolynomial::variables(variable_index+1, field);
+    let x = variables[variable_index].clone();
+    let mut acc = MPolynomial::zero(field);
+    for i in 0..polynomial.coefficients.len(){
+      acc = acc + MPolynomial::constant(polynomial.coefficients[i].clone()) * x.pow(i as u128);
+    }
+    acc
+
     
   }
 
@@ -191,6 +190,24 @@ pub fn evaluate(&self, point: &Vec<FieldElement>)->FieldElement{
     }
     pub fn is_zero(&self)->bool{
         self.dictionary.is_empty()
+    }
+    pub fn str(&self)->String{
+        let mut terms = Vec::new();
+        for (k, v) in &self.dictionary {
+            let mut term = String::new();
+            for (i, &exp) in k.iter().enumerate() {
+                if exp == 0 {
+                    continue;
+                }
+                if term.len() > 0 {
+                    term.push_str("*");
+                }
+                term.push_str(&format!("x_{}^{}", i, exp));
+            }
+            term.push_str(&format!("*{:?}", v));
+            terms.push(term);
+        }
+        terms.join(" + ")
     }
 }
 
