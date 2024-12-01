@@ -9,6 +9,7 @@ pub mod tables;
 pub mod univariate_polynomial;
 pub mod vm;
 pub mod ntt;
+pub mod evaluation_argument;
 
 fn main() {
     println!("Hello, world!");
