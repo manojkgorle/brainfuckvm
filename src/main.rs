@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_imports)]
+
 static CONSOLE_LOGGER: ConsoleLogger = ConsoleLogger;
 struct ConsoleLogger;
 

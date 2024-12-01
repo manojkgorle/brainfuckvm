@@ -322,7 +322,7 @@ mod test_field_operations {
         let y = x.pow(2);
         let b = field.primitive_nth_root(1 << 32);
         assert_eq!(b.0, x.0);
-        let c = field.primitive_nth_root(1<<31);
+        let c = field.primitive_nth_root(1 << 31);
         assert_eq!(c.0, y.0);
     }
 
