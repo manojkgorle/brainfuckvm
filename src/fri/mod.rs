@@ -93,7 +93,6 @@ impl FriDomain{
     pub fn list(&self)->Vec<FieldElement>{
         let mut list: Vec<FieldElement>= vec![];
         for i in 0..self.length{
-        for i in 0..self.length{
         list.push(self.omega.pow(i as u128)*self.offset);
         }
         list
