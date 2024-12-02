@@ -68,7 +68,7 @@ impl Fri{
     }
     pub fn eval_domain(&self)-> Vec<FieldElement>{
         let mut result:Vec<FieldElement>= vec![];
-        for i in 1..self.domain.length{
+        for i in 0..self.domain.length{
             result.push(self.domain.call(i));
         }
         result
@@ -92,7 +92,7 @@ impl FriDomain{
     }
     pub fn list(&self)->Vec<FieldElement>{
         let mut list: Vec<FieldElement>= vec![];
-        for i in 1..self.length{
+        for i in 0..self.length{
         list.push(self.omega.pow(i as u128)*self.offset);
         }
         list
@@ -100,7 +100,7 @@ impl FriDomain{
     pub fn evaluate(&self, polynomial: Polynomial)-> Vec<FieldElement>{
         let polynomial = polynomial.scalar_mul(self.offset);
         let mut result: Vec<FieldElement> = vec![];
-        for i in 1..polynomial.coefficients.len(){
+        for i in 0..polynomial.coefficients.len(){
             result.push(polynomial.evaluate(self.omega.pow(i as u128)));
         }
         result
