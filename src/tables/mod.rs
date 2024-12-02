@@ -3,6 +3,7 @@ use crate::multivariate_polynomial::*;
 use crate::univariate_polynomial::{interpolate_lagrange_polynomials, Polynomial};
 use rand::*;
 use crate::fri::*;
+use crate::ntt::*;
 // we will implement abstract methods in rust using the traits.
 
 #[derive(Debug, Clone)]
@@ -148,13 +149,41 @@ return polynomial;
 
 
 // }
+
+pub fn boundary_constraints_ext(self,challeneges:Vec<FieldElement>){
 }
-// pub trait BoundaryConstraintsExt {
-//     fn boundary_constraints_ext(&self, challenges: Vec<FieldElement>);
+// pub fn boundary_quotients(self,fri_domain:FriDomain,codewords:Vec<Vec<FieldElement>>,challenges:Vec<FieldElement>)->Vec<Vec<FieldElement>>{
+//     if (codewords.len()==0){
+//         println!("panic! because codewords' argument must have nonzero length")
 // }
-// impl BoundaryConstraintsExt for table {
-//     fn boundary_constraints_ext(&self, challenges: Vec<FieldElement>) ;
+// let mut quotient_codewords=Vec::new();
+// let boundary_constraints= self.boundary_constraints_ext(challenges);
+// let mut zeroifier = Vec::new();
+// let fri_values = fri_domain.list();
+// for i in 0..fri_domain.length{
+//     zeroifier.push(fri_values[i ]-FieldElement(1,self.field ))
+
+
+// }
+// let zerofier_inverse=batch_inverse(&zeroifier);
+// for l in 0..boundary_constraints.len(){
+//     // considering mpo as the univariate polynomial
+//   let  mpo:Polynomial=boundary_constraints[l as usize];
+//     for i in 0..fri_domain.length{
+//         let x=mpo.evaluate()
+
+
 //     }
+// }
+
+
+
+
+
+
+}
+
+
 
 
 

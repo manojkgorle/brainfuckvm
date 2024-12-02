@@ -77,9 +77,9 @@ impl Fri{
 }
 
 pub struct FriDomain{
-        offset: FieldElement,
+      pub  offset: FieldElement,
        pub  omega: FieldElement,
-        length: usize,
+       pub length: usize,
 }
 
 impl FriDomain{
