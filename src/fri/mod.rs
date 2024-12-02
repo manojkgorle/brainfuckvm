@@ -124,3 +124,4 @@ impl FriDomain{
     }
     //not written xinterpolate, as it is used for extension field
 }
+
