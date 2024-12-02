@@ -45,7 +45,7 @@ impl Polynomial {
     pub fn evaluate_domain(&self, x: Vec<FieldElement>) -> Vec<FieldElement> {
         let mut result = Vec::new();
         for i in 0..x.len() {
-            result.push(self.evaluate(x[i]));
+        result.push(self.evaluate(x[i]));
         }
         result
     }
