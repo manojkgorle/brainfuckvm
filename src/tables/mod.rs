@@ -2,6 +2,7 @@ use crate::fields::{Field, FieldElement};
 use crate::multivariate_polynomial::*;
 use crate::univariate_polynomial::{interpolate_lagrange_polynomials, Polynomial};
 use rand::*;
+use crate::fri::*;
 // we will implement abstract methods in rust using the traits.
 
 #[derive(Debug, Clone)]
@@ -139,10 +140,23 @@ for i in 0..self.height{
 
 return polynomial;
 }
-// fn lde(self,domain:Vec<FieldElement>)->Vec<FieldElement>{
-//     let polynomials = self.interpolate_columns(self.omicron, self.height, (0..self.full_width).collect());
+//  fn lde(self,domain:FriDomain)->Vec<FieldElement>{
+//     let polynomials = self.interpolate_columns(domain.omega, self.height, (0..self.full_width).collect());
+//     for p in polynomials{
 
+//     }
+
+
+// }
 }
+// pub trait BoundaryConstraintsExt {
+//     fn boundary_constraints_ext(&self, challenges: Vec<FieldElement>);
+// }
+// impl BoundaryConstraintsExt for table {
+//     fn boundary_constraints_ext(&self, challenges: Vec<FieldElement>) ;
+//     }
+
+
 
 
 
