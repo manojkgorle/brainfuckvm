@@ -56,30 +56,30 @@ impl ProgramEvaluationArgument{
             .map(|&i| challenges[i].clone())
             .collect();
         let [a, b, c, eta]: [FieldElement; 4] = trimmed_challenges.try_into().unwrap();
-        let xfield = FieldElement::zero(field);
         let mut running_sum = FieldElement::zero(field);
-        let mut previous_address = FieldElement::one(field);
+        let mut previous_address = -1 as isize;
 
         let padded_program: Vec<FieldElement> = self
             .program
             .iter()
             .map(|&p| FieldElement::new(p,field))
-            .chain(std::iter::once(FieldElement::zero(field)))
             .collect();
-
-        for i in 0..padded_program.len() - 1 {
-            let address = FieldElement::new(i as u128, field);
+        
+        //@todo ci goes till last element of program in last step of running sum, ni is zero for the last step
+        
+        for i in 0..padded_program.len()-1 {
+            let address = i as usize;
             let current_instruction = padded_program[i].clone();
             let next_instruction = padded_program[i + 1].clone();
 
-            if previous_address != address {
+            if previous_address != address as isize {
                 running_sum = running_sum * eta.clone()
-                    + a.clone() * address.clone()
+                    + a.clone() * FieldElement::new(address.clone() as u128, field)
                     + b.clone() * current_instruction
                     + c.clone() * next_instruction;
+                println!("{}:{}:{}:{}:{}", i, address, current_instruction.0, next_instruction.0, running_sum.0 );
             }
-
-            previous_address = address;
+            previous_address = address as isize;
         }
 
         let index = padded_program.len() - 1;
@@ -91,12 +91,89 @@ impl ProgramEvaluationArgument{
             + a.clone() * address
             + b.clone() * current_instruction
             + c.clone() * next_instruction;
-
+        println!("{}:{}:{}:{}:{}", index, address.0, current_instruction.0, next_instruction.0, running_sum.0 );
         running_sum
     }
 
     fn select_terminal(&self, terminals: &[FieldElement]) -> FieldElement {
         terminals[self.terminal_index].clone()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_evaluation_argument() {
+        // Create a mock field
+        let field = Field::new(17); // Example prime field with modulus 17
+
+        // Define challenge index, terminal index, and symbols
+        let challenge_index = 0;
+        let terminal_index = 1;
+        let symbols = vec![3, 5, 7]; // Example coefficients for the polynomial
+
+        // Create challenges
+        let challenges = vec![
+            FieldElement::new(2, field), // iota
+            FieldElement::new(4, field), // Some other challenge
+        ];
+
+        // Create terminals
+        let terminals = vec![
+            FieldElement::new(10, field),
+            FieldElement::new(12, field),
+        ];
+
+        // Instantiate EvaluationArgument
+        let eval_arg = EvaluationArgument::new(field.clone(), challenge_index, terminal_index, symbols);
+
+        // Compute terminal using challenges
+        let computed_terminal = eval_arg.compute_terminal(&challenges);
+
+        // Select terminal from the provided list
+        let selected_terminal = eval_arg.select_terminal(&terminals);
+
+        // Check results
+        assert_eq!(computed_terminal, selected_terminal);
+    }
+
+    #[test]
+    fn test_program_evaluation_argument() {
+        // Create a mock field
+        let field = Field::new(17); // Example prime field with modulus 17
+        
+        // Define challenge indices, terminal index, and program
+        let challenge_indices = vec![0, 1, 2, 3];
+        let terminal_index = 0;
+        let program = vec![1, 2, 3, 4]; // Example program instructions
+
+        // Create challenges
+        let challenges = vec![
+            FieldElement::new(2, field), // a
+            FieldElement::new(3, field), // b
+            FieldElement::new(5, field), // c
+            FieldElement::new(7, field), // eta
+        ];
+
+        // Create terminals
+        let terminals = vec![FieldElement::new(4, field)]; // Terminal at index 0
+
+        // Instantiate ProgramEvaluationArgument
+        let prog_eval_arg = ProgramEvaluationArgument::new(
+            field.clone(),
+            challenge_indices,
+            terminal_index,
+            program,
+        );
+
+        // Compute terminal using challenges
+        let computed_terminal = prog_eval_arg.compute_terminal(&challenges);
+        println!("{}",computed_terminal.0);
+        let selected_terminal = prog_eval_arg.select_terminal(&terminals);
+
+        assert_eq!(computed_terminal, selected_terminal); 
     }
 }
 
