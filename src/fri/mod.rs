@@ -12,31 +12,32 @@ pub struct Fri{
     num_colinearity_tests: usize,
 }
 
-impl Fri{
-    pub fn new(&self, offset: FieldElement, omega: FieldElement, initial_domain_length: usize, num_colinearity_tests: usize)-> Self{
-        Self { offset: (offset), omega: (omega), initial_domain_length: (initial_domain_length), domain: (FriDomain::new(offset, omega, initial_domain_length)), num_colinearity_tests: (num_colinearity_tests) }
-        assert!(self.num_rounds()>=1, "cannot do FRI with less than one round");
-    }
-    pub fn num_rounds(&self)-> usize{
-        let mut codeword_len = self.initial_domain_length;
-        let mut num =0;
-        while codeword_len>1 as usize{
-            codeword_len= codeword_len/2;
-            num+=1;
-        } 
-        num
-    }
-    pub fn sample_index(byte_array: [u8], size:usize)->u8{
+// impl Fri{
+//     pub fn new(&self, offset: FieldElement, omega: FieldElement, initial_domain_length: usize, num_colinearity_tests: usize)-> Self{
+//         Self { offset: (offset), omega: (omega), initial_domain_length: (initial_domain_length), domain: (FriDomain::new(offset, omega, initial_domain_length)), num_colinearity_tests: (num_colinearity_tests) }
+//         assert!(self.num_rounds()>=1, "cannot do FRI with less than one round");
+//     }
+//     pub fn num_rounds(&self)-> usize{
+//         let mut codeword_len = self.initial_domain_length;
+//         let mut num =0;
+//         while codeword_len>1 as usize{
+//             codeword_len= codeword_len/2;
+//             num+=1;
+//         } 
+//         num
+//     }
+// //     pub fn sample_index(byte_array: [u8], size:usize)->u8{
         
-    }
+// //     }
 
-}
+// // 
+// }
     
 
 pub struct FriDomain{
-        offset: FieldElement,
+      pub  offset: FieldElement,
        pub  omega: FieldElement,
-        length: usize,
+       pub length: usize,
 }
 
 impl FriDomain{
