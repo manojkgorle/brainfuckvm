@@ -2,7 +2,7 @@ use crate::fields::*;
 use crate::merkle::*;
 //we can use ntt fast fns for optimization, but rn we just implement using direct evaluate and multiply functions of polynomials
 use crate::univariate_polynomial::*;
-
+use blake2::{Blake2b512, Digest};
 //some fns, structs and parameters are changed accordingly compared to fri.py and ntt.py, because we are not using extension fields
 pub struct Fri{
     offset: FieldElement,
@@ -13,9 +13,10 @@ pub struct Fri{
 }
 
 impl Fri{
-    pub fn new(&self, offset: FieldElement, omega: FieldElement, initial_domain_length: usize, num_colinearity_tests: usize)-> Self{
-        Self { offset: (offset), omega: (omega), initial_domain_length: (initial_domain_length), domain: (FriDomain::new(offset, omega, initial_domain_length)), num_colinearity_tests: (num_colinearity_tests) }
-        assert!(self.num_rounds()>=1, "cannot do FRI with less than one round");
+    pub fn new(offset: FieldElement, omega: FieldElement, initial_domain_length: usize, num_colinearity_tests: usize)-> Self{
+        let result = Fri{ offset: (offset), omega: (omega), initial_domain_length: (initial_domain_length), domain: (FriDomain::new(offset, omega, initial_domain_length)), num_colinearity_tests: (num_colinearity_tests) };
+        assert!(result.num_rounds()>=1, "cannot do FRI with less than one round");
+        result
     }
     pub fn num_rounds(&self)-> usize{
         let mut codeword_len = self.initial_domain_length;
@@ -26,11 +27,55 @@ impl Fri{
         } 
         num
     }
-    pub fn sample_index(byte_array: [u8], size:usize)->u8{
-        
+    /*pub fn sample_index(byte_array: &[u8], size: usize) -> usize {
+        let mut acc: u64 = 0;
+        for &b in byte_array {
+            acc = (acc << 8) ^ (b as u64);
+        }
+        (acc % size as u64) as usize
     }
+    pub fn sample_indices(&self, seed: &[u8], size: usize, reduced_size: usize, number: usize) -> Vec<usize> {
+        assert!(
+            number <= reduced_size,
+            "Cannot sample more indices than available in last codeword; requested: {}, available: {}",
+            number, reduced_size
+        );
+        assert!(
+            number <= 2 * reduced_size,
+            "Not enough entropy in indices with respect to the last codeword"
+        );
+    
+        let mut indices = Vec::new();
+        let mut reduced_indices = std::collections::HashSet::new();
+        let mut counter: u64 = 0;
+    
+        while indices.len() < number {
+            let mut hasher = Blake2b512::new();
+            hasher.update(seed);
+            hasher.update(&counter.to_le_bytes());
+            let hash = hasher.finalize();
+    
+            let index = self.sample_index(&hash, size);
+            let reduced_index = index % reduced_size;
+    
+            if !reduced_indices.contains(&reduced_index) {
+                indices.push(index);
+                reduced_indices.insert(reduced_index);
+            }
+            counter += 1;
+        }
+        indices
+    }
+    pub fn eval_domain(&self)-> Vec<FieldElement>{
+        let mut result:Vec<FieldElement>= vec![];
+        for i in 1..self.domain.length{
+            result.push(self.domain.call(i));
+        }
+        result
+    }*/
 
 }
+
 pub struct FriDomain{
         offset: FieldElement,
         omega: FieldElement,
