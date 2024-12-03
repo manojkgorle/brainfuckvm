@@ -15,7 +15,7 @@ impl EvaluationArgument{
         Self {field, challenge_index, terminal_index, symbols}
     }
     
-    fn compute_terminal(&self, challenges: &Vec<FieldElement>)-> FieldElement{
+    fn compute_terminal(&self, challenges: &[FieldElement])-> FieldElement{
         let field = self.field;
         let iota = challenges[self.challenge_index];
         let mut acc = FieldElement::zero(field);
@@ -26,7 +26,7 @@ impl EvaluationArgument{
         acc
     }
 
-    fn select_terminal(&self, terminals: &Vec<FieldElement>)->FieldElement{
+    fn select_terminal(&self, terminals: &[FieldElement])->FieldElement{
         terminals[self.terminal_index]
     }
 }
@@ -48,7 +48,7 @@ impl ProgramEvaluationArgument{
         }
     }
 
-    fn compute_terminal(&self, challenges: &Vec<FieldElement>)->FieldElement{
+    fn compute_terminal(&self, challenges: &[FieldElement])->FieldElement{
         let field = self.field;
         let trimmed_challenges: Vec<FieldElement> = self
             .challenge_indices
@@ -127,7 +127,7 @@ mod tests {
         ];
 
         // Instantiate EvaluationArgument
-        let eval_arg = EvaluationArgument::new(field.clone(), challenge_index, terminal_index, symbols);
+        let eval_arg = EvaluationArgument::new(field, challenge_index, terminal_index, symbols);
 
         // Compute terminal using challenges
         let computed_terminal = eval_arg.compute_terminal(&challenges);
@@ -162,7 +162,7 @@ mod tests {
 
         // Instantiate ProgramEvaluationArgument
         let prog_eval_arg = ProgramEvaluationArgument::new(
-            field.clone(),
+            field,
             challenge_indices,
             terminal_index,
             program,

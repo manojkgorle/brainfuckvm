@@ -519,7 +519,7 @@ mod test_mpolynomial_operation {
         dictionary.insert(vec![2, 0, 0], FieldElement::new(3, field)); // 3x^2
         let p = MPolynomial::new(Field::new(17), dictionary);
 
-        assert_eq!(p.degree(), 6 as i128);
+        assert_eq!(p.degree(), 6_i128);
     }
 
     #[test]

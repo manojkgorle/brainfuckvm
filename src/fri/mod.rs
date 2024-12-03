@@ -132,7 +132,7 @@ mod test_fri{
     fn test_evaluate(){
         let field = Field::new(17);
         let   offset = FieldElement::new(2, field);
-        let length = 4 as u128;
+        let length = 4_u128;
         let omega = FieldElement::new(13, field);
         println!("omega ={:?}", omega);
         let domain = FriDomain::new(offset, omega, length);
@@ -149,7 +149,7 @@ mod test_fri{
     fn test_interpolate(){
         let field = Field::new(17);
         let   offset = FieldElement::new(2, field);
-        let length = 4 as u128;
+        let length = 4_u128;
         let omega = FieldElement::new(13, field);
         println!("omega ={:?}", omega);
         let domain = FriDomain::new(offset, omega, length);
