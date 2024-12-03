@@ -4,6 +4,7 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssi
 // Define a field
 // Define a field element
 // Define arithmetic operations on field elements
+#[allow(clippy::derived_hash_with_manual_eq)]
 #[derive(Debug, Clone, Copy, Hash)]
 pub struct Field(pub u128);
 

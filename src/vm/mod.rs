@@ -99,10 +99,10 @@ impl VirtualMachine {
                 memory.insert(memory_pointer, v);
             } else if program[instruction_pointer] == f('>') {
                 instruction_pointer += 1;
-                memory_pointer = memory_pointer + one;
+                memory_pointer += one;
             } else if program[instruction_pointer] == f('<') {
                 instruction_pointer += 1;
-                memory_pointer = memory_pointer - one;
+                memory_pointer -= one;
             } else if program[instruction_pointer] == f('[') {
                 if *memory.get(&memory_pointer).unwrap_or(&zero) == zero {
                     instruction_pointer = program[instruction_pointer + 1].0 as usize;
@@ -158,7 +158,7 @@ impl VirtualMachine {
             register.next_instruction = program[1];
         }
 
-        let mut memory: HashMap<FieldElement, FieldElement> = HashMap::new();
+        let memory: HashMap<FieldElement, FieldElement> = HashMap::new();
         let input_counter = 0;
         let output_data = String::new();
 

@@ -15,19 +15,19 @@ impl EvaluationArgument{
         Self {field, challenge_index, terminal_index, symbols}
     }
     
-    fn compute_terminal(&self, challenges: &Vec<FieldElement>)-> FieldElement{
+    fn compute_terminal(&self, challenges: &[FieldElement])-> FieldElement{
         let field = self.field;
         let iota = challenges[self.challenge_index];
         let mut acc = FieldElement::zero(field);
 
         for i in 0..self.symbols.len(){
-            acc = iota.clone()*acc + FieldElement::new(self.symbols[i], field);
+            acc = iota*acc + FieldElement::new(self.symbols[i], field);
         }
         acc
     }
 
-    fn select_terminal(&self, terminals: &Vec<FieldElement>)->FieldElement{
-        terminals[self.terminal_index].clone()
+    fn select_terminal(&self, terminals: &[FieldElement])->FieldElement{
+        terminals[self.terminal_index]
     }
 }
 
@@ -48,16 +48,16 @@ impl ProgramEvaluationArgument{
         }
     }
 
-    fn compute_terminal(&self, challenges: &Vec<FieldElement>)->FieldElement{
+    fn compute_terminal(&self, challenges: &[FieldElement])->FieldElement{
         let field = self.field;
         let trimmed_challenges: Vec<FieldElement> = self
             .challenge_indices
             .iter()
-            .map(|&i| challenges[i].clone())
+            .map(|&i| challenges[i])
             .collect();
         let [a, b, c, eta]: [FieldElement; 4] = trimmed_challenges.try_into().unwrap();
         let mut running_sum = FieldElement::zero(field);
-        let mut previous_address = -1 as isize;
+        let mut previous_address = -1_isize;
 
         let padded_program: Vec<FieldElement> = self
             .program
@@ -68,15 +68,15 @@ impl ProgramEvaluationArgument{
         //@todo ci goes till last element of program in last step of running sum, ni is zero for the last step
         
         for i in 0..padded_program.len()-1 {
-            let address = i as usize;
-            let current_instruction = padded_program[i].clone();
-            let next_instruction = padded_program[i + 1].clone();
+            let address = i;
+            let current_instruction = padded_program[i];
+            let next_instruction = padded_program[i + 1];
 
             if previous_address != address as isize {
-                running_sum = running_sum * eta.clone()
-                    + a.clone() * FieldElement::new(address.clone() as u128, field)
-                    + b.clone() * current_instruction
-                    + c.clone() * next_instruction;
+                running_sum = running_sum * eta
+                    + a * FieldElement::new(address as u128, field)
+                    + b * current_instruction
+                    + c * next_instruction;
                 println!("{}:{}:{}:{}:{}", i, address, current_instruction.0, next_instruction.0, running_sum.0 );
             }
             previous_address = address as isize;
@@ -84,19 +84,19 @@ impl ProgramEvaluationArgument{
 
         let index = padded_program.len() - 1;
         let address = FieldElement::new(index as u128, field);
-        let current_instruction = padded_program[index].clone();
+        let current_instruction = padded_program[index];
         let next_instruction = FieldElement::zero(field);
 
-        running_sum = running_sum * eta.clone()
-            + a.clone() * address
-            + b.clone() * current_instruction
-            + c.clone() * next_instruction;
+        running_sum = running_sum * eta
+            + a * address
+            + b * current_instruction
+            + c * next_instruction;
         println!("{}:{}:{}:{}:{}", index, address.0, current_instruction.0, next_instruction.0, running_sum.0 );
         running_sum
     }
 
     fn select_terminal(&self, terminals: &[FieldElement]) -> FieldElement {
-        terminals[self.terminal_index].clone()
+        terminals[self.terminal_index]
     }
 }
 
@@ -127,7 +127,7 @@ mod tests {
         ];
 
         // Instantiate EvaluationArgument
-        let eval_arg = EvaluationArgument::new(field.clone(), challenge_index, terminal_index, symbols);
+        let eval_arg = EvaluationArgument::new(field, challenge_index, terminal_index, symbols);
 
         // Compute terminal using challenges
         let computed_terminal = eval_arg.compute_terminal(&challenges);
@@ -162,7 +162,7 @@ mod tests {
 
         // Instantiate ProgramEvaluationArgument
         let prog_eval_arg = ProgramEvaluationArgument::new(
-            field.clone(),
+            field,
             challenge_indices,
             terminal_index,
             program,
