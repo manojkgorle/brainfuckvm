@@ -83,8 +83,8 @@ impl Polynomial {
         Polynomial::new_from_coefficients(result)
     }
     pub fn zero(field:Field)->Self{
-        let poly=Polynomial::new_from_coefficients(vec![FieldElement::zero(Field::new(field.0))]);
-        poly
+        
+        Polynomial::new_from_coefficients(vec![FieldElement::zero(Field::new(field.0))])
     }
 
     pub fn q_div(self, poly2: Self) -> (Self, Self) {
@@ -116,12 +116,12 @@ impl Polynomial {
         poly1_coeff.reverse();
         let poly1 = Polynomial::new_from_coefficients(poly1_coeff);
         if poly1.is_all_zeros() {
-            return (
+            (
                 Polynomial::new_from_coefficients(q),
                 Polynomial::new_from_coefficients(vec![FieldElement::new(0, field)]),
-            );
+            )
         } else {
-            return (Polynomial::new_from_coefficients(q), poly1);
+            (Polynomial::new_from_coefficients(q), poly1)
         }
     }
 
@@ -129,7 +129,7 @@ impl Polynomial {
         for i in 0..self.coefficients.len() {
             self.coefficients[i] *= mono.pow(i as u128);
         }
-        return self;
+        self
     }
     // new function added
     pub fn pow(self, exp: u128) -> Self {
@@ -144,7 +144,7 @@ impl Polynomial {
 
         while exp > 0 {
             if exp % 2 == 1 {
-                res = res * base.clone(); // Multiply res by base polynomial if current bit is 1
+                res *= base.clone(); // Multiply res by base polynomial if current bit is 1
             }
 
             base = base.clone() * base; // Square the base polynomial
@@ -170,11 +170,7 @@ impl Polynomial {
         let input: Vec<FieldElement> = evaluation_form.iter().map(|(x, _)| *x).collect();
         let output: Vec<FieldElement> = evaluation_form.iter().map(|(_, y)| *y).collect();
         let poly = interpolate_lagrange_polynomials(input.clone(), output.clone());
-        if poly.degree() == 1 {
-            return true;
-        } else {
-            false
-        }
+        poly.degree() == 1
     }
 }
 
@@ -300,8 +296,9 @@ impl Mul for Polynomial {
 
 impl MulAssign for Polynomial {
     fn mul_assign(&mut self, other: Polynomial) {
+        let field = self.coefficients[0].modulus();
         let mut result = vec![
-            FieldElement::new(0, Field::new(0));
+            FieldElement::new(0, Field::new(field));
             self.coefficients.len() + other.coefficients.len() - 1
         ];
 
@@ -402,8 +399,8 @@ pub fn gen_lagrange_polynomials_parallel(x: Vec<FieldElement>) -> Vec<Polynomial
                 |acc, x| acc * *x,
             );
 
-            let lagrange_polynomial = numerator.scalar_div(den_sum);
-            lagrange_polynomial
+            
+            numerator.scalar_div(den_sum)
         })
         .collect();
 

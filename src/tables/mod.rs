@@ -86,7 +86,7 @@ impl table {
     }
     
     pub fn interpolate_columns(self,omega:FieldElement,omega_order:u128, column_indices:Vec<u128>)->Vec<Polynomial>{
-        if has_order_po2(omega_order)==false{
+        if !has_order_po2(omega_order){
             panic!("omega does not have claimed order");
 
         }
@@ -139,7 +139,7 @@ for i in 0..self.height{
     }
  
 
-return polynomial;
+polynomial
 }
 //  fn lde(self,domain:FriDomain)->Vec<FieldElement>{
 //     let polynomials = self.interpolate_columns(domain.omega, self.height, (0..self.full_width).collect());
@@ -200,22 +200,22 @@ pub fn boundary_constraints_ext(self,challeneges:Vec<FieldElement>){
         // Calculate the next power of two
         let bit_representation = format!("{:b}", len - 1);
       
-       let result = 1 <<
-    (bit_representation.len() as u128);
+       
       
-       result
+       1 <<
+    (bit_representation.len() as u128)
 
     }
     // mutable or clone doubt
     pub fn derive_omicron(generator:FieldElement,generator_order:u128,target_order:u128)->FieldElement{
-        let mut t_generator=generator.clone();
-        let mut t_order=generator_order.clone();
+        let mut t_generator=generator;
+        let mut t_order=generator_order;
 
         while t_order!=target_order{
           t_generator=t_generator.pow(2);
             t_order/=2;
         }
-        return t_generator
+        t_generator
 
 
 
