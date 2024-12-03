@@ -7,7 +7,7 @@ use crate::ntt::*;
 // we will implement abstract methods in rust using the traits.
 
 #[derive(Debug, Clone)]
-pub struct table {
+pub struct Table {
     pub field: Field,
     base_width: u128,//number of base columns in the table.
     full_width: u128,//total no. of coloumn using extension and all
@@ -19,7 +19,7 @@ pub struct table {
     order: u128,//order of the generator.
     matrix: Vec<Vec<FieldElement>>,
 }
-impl table {
+impl Table {
     // Constructor method to create a new instance of `table`
     pub fn new(
         field: Field,
@@ -33,7 +33,7 @@ impl table {
         order: u128,
         matrix: Vec<Vec<FieldElement>>,
     ) -> Self {
-        table {
+        Table {
             field,
             base_width,
             full_width,
@@ -51,7 +51,7 @@ impl table {
      let height = roundup_npow2(length);
      let omicron = derive_omicron(generator, order, height);
      
-     table {
+     Table {
          field,
          base_width,
          full_width,
@@ -97,50 +97,47 @@ impl table {
            return  polynomial;
         }
 
-let mut omicron_domain:Vec<FieldElement>=Vec::new();
-let mut randomizer_domain:Vec<FieldElement>=Vec::new();
-for i in 0..self.height{
-    omicron_domain.push(self.omicron.pow(i));
-}
-for i in 0..self.height{
-    randomizer_domain.push(omega.pow(2*i+1));}
-    let mut domain:Vec<FieldElement>=vec![FieldElement::new(0,self.field);self.height as usize];
-    for i in 0..self.height{
-        domain[i as usize]=omicron_domain[i as usize]+randomizer_domain[i as usize];
-    }
+        let mut omicron_domain:Vec<FieldElement>=Vec::new();
+        let mut randomizer_domain:Vec<FieldElement>=Vec::new();
+        for i in 0..self.height{
+            omicron_domain.push(self.omicron.pow(i));
+        }
+        for i in 0..self.height{
+        randomizer_domain.push(omega.pow(2*i+1));}
+        let mut domain:Vec<FieldElement>=vec![FieldElement::new(0,self.field);self.height as usize];
+        for i in 0..self.height{
+            domain[i as usize]=omicron_domain[i as usize]+randomizer_domain[i as usize];
+        }
 
-    for c in column_indices{
-        let mut trace:Vec<FieldElement>=Vec::new();
+        for c in column_indices{
+            let mut trace:Vec<FieldElement>=Vec::new();
      
-        for row in self.matrix.iter(){
-            trace.push(row[c as usize]);
-        }
-        let mut randomizers:Vec<FieldElement>=Vec::new();
-        // doubt
-        for _i in 0..self.num_randomizers{
-            randomizers.push(FieldElement::new(random::<u128>(),Field::new(self.field.0)));
-        }
-        let mut values:Vec<FieldElement>=Vec::new();
-        let mut sum =FieldElement::zero(Field::new(self.field.0));
-        let zero = FieldElement::zero(Field::new(self.field.0));
+            for row in self.matrix.iter(){
+                trace.push(row[c as usize]);
+            }
+            let mut randomizers:Vec<FieldElement>=Vec::new();
+            // doubt
+            for _i in 0..self.num_randomizers{
+                randomizers.push(FieldElement::new(random::<u128>(),Field::new(self.field.0)));
+            }
+            let mut values:Vec<FieldElement>=Vec::new();
+            let mut sum =FieldElement::zero(Field::new(self.field.0));
+            let zero = FieldElement::zero(Field::new(self.field.0));
       
-        for i in 0..self.height {
+            for i in 0..self.height {
          
-            let x = trace.get(i as usize).unwrap_or(&zero);
-            sum =*x + randomizers[i as usize];
-            values.push(sum);
+                let x = trace.get(i as usize).unwrap_or(&zero);
+                sum =*x + randomizers[i as usize];
+                values.push(sum);
+            }
+            if values.len()!=omicron_domain.len(){
+                panic!("length of domain and values are unequal");
+            };
+        let poly= interpolate_lagrange_polynomials(domain.clone(), values);
+            polynomial.push(poly);  
         }
-       if values.len()!=omicron_domain.len(){
-            panic!("length of domain and values are unequal");
-        };
-   let poly= interpolate_lagrange_polynomials(domain.clone(), values);
-        polynomial.push(poly);
-
+        polynomial
     }
- 
-
-polynomial
-}
 //  fn lde(self,domain:FriDomain)->Vec<FieldElement>{
 //     let polynomials = self.interpolate_columns(domain.omega, self.height, (0..self.full_width).collect());
 //     for p in polynomials{
@@ -250,10 +247,10 @@ mod test_operations{
     }
     #[test]
     fn has_order_po2(){
-        let order =4 as u128;
-        let order2 =5 as u128;
-        assert_eq !(table::has_order_po2(order2),false);
-        assert_eq !(table::has_order_po2(order),true);
+        let order =4_u128;
+        let order2 =5_u128;
+        assert !(!Table::has_order_po2(order2));
+        assert !(Table::has_order_po2(order));
     }
 
 }

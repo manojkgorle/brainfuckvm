@@ -49,7 +49,7 @@ mod test_ntt {
         let inverses = batch_inverse(&array);
     
         for (a, inv) in array.iter().zip(inverses.iter()) {
-            let product = a.clone()* inv.clone();
+            let product = *a* *inv;
             assert_eq!(product, FieldElement::new(1, field));
         }
 }

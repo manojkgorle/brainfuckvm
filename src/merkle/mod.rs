@@ -74,9 +74,8 @@ mod test_merkle_implementation {
         let merkle_root = merkle_tree.inner.root().unwrap().to_vec();
         let proof = merkle_tree.get_authentication_path(0);
         let root = merkle_tree.clone().root().to_vec();
-        assert_eq!(
-            MerkleTree::validate(merkle_root.clone(), proof, 0, data[0].to_bytes(), 6),
-            true
+        assert!(
+            MerkleTree::validate(merkle_root.clone(), proof, 0, data[0].to_bytes(), 6)
         );
         assert_eq!(merkle_root, root);
         for i in 0..root.len(){

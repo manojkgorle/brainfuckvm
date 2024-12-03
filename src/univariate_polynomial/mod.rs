@@ -941,7 +941,7 @@ mod test_polynomials {
             (FieldElement::new(3, field), FieldElement::new(3, field)),
         ];
         let result = Polynomial::collinearity(evaluation_form);
-        assert_eq!(result, false);
+        assert!(!result);
     }
     #[test]
     fn test_collinearity2() {
@@ -951,6 +951,6 @@ mod test_polynomials {
             (FieldElement::new(2, field), FieldElement::new(2, field)),
         ];
         let result = Polynomial::collinearity(evaluation_form);
-        assert_eq!(result, true);
+        assert!(result);
     }
 }
