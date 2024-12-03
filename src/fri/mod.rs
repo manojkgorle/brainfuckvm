@@ -21,8 +21,8 @@ impl Fri{
     pub fn num_rounds(&self)-> usize{
         let mut codeword_len = self.initial_domain_length;
         let mut num =0;
-        while codeword_len>1 as u128{
-            codeword_len= codeword_len/2;
+        while codeword_len>1_u128{
+            codeword_len /= 2;
             num+=1;
         } 
         num
@@ -87,13 +87,13 @@ impl FriDomain{
         Self { offset, omega, length }
     }
     pub fn call(&self, index: usize)->FieldElement{
-        let _x = self.omega.pow(index as u128)*self.offset;
-        _x
+        
+        self.omega.pow(index as u128)*self.offset
     }
     pub fn list(&self)->Vec<FieldElement>{
         let mut list: Vec<FieldElement>= vec![];
         for i in 0..self.length{
-        list.push(self.omega.pow(i as u128)*self.offset);
+        list.push(self.omega.pow(i)*self.offset);
         }
         list
     }
@@ -102,7 +102,7 @@ impl FriDomain{
         let polynomial = polynomial.scalar_mul(self.offset);
         let mut result: Vec<FieldElement> = vec![];
         for i in 0..self.length{
-            result.push(polynomial.evaluate(self.omega.pow(i as u128)));
+            result.push(polynomial.evaluate(self.omega.pow(i)));
         }
         result
     }
@@ -120,8 +120,8 @@ impl FriDomain{
         for i in 0..values.len(){
             list.push(self.omega.pow(i as u128));
         }
-        let polynomial = interpolate_lagrange_polynomials(list, values).scalar_mul(self.offset.inverse());
-        polynomial
+        
+        interpolate_lagrange_polynomials(list, values).scalar_mul(self.offset.inverse())
     }
     //not written xinterpolate, as it is used for extension field
 }

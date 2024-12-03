@@ -18,13 +18,13 @@ pub struct MerkleTree {
 impl MerkleTree {
     pub fn new(data: &[FieldElement]) -> MerkleTree {
         let leaves: Vec<[u8; 32]> = data
-            .into_iter()
+            .iter()
             .map(|x| Sha256::hash(&x.to_bytes()))
             .collect();
         let merkle_tree = MerkleTreeTrait::<Sha256>::from_leaves(&leaves);
         MerkleTree {
             data: data.to_vec(),
-            leaves: leaves,
+            leaves,
             inner: merkle_tree,
         }
     }
