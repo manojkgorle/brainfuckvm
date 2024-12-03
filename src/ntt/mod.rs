@@ -9,21 +9,21 @@ use crate:: fields::*;
 
 pub fn batch_inverse(array: &Vec<FieldElement>)->Vec<FieldElement>{
     assert!(
-        array.iter().all(|a| a.0!=0 as u128),
+        array.iter().all(|a| a.0!=0_u128),
         "batch inverse does not work when input contains a zero"
     );
 
     let mut products = array.clone();
 
     for i in 1..products.len() {
-        products[i] = products[i - 1].clone() * array[i].clone();
+        products[i] = products[i - 1] * array[i];
     }
 
     let mut acc = products[products.len()-1].inverse();
 
     for i in (1..array.len()).rev() {
         products[i] = acc * products[i - 1];
-        acc *= array[i].clone();
+        acc *= array[i];
     }
 
     products[0] = acc;
@@ -49,7 +49,7 @@ mod test_ntt {
         let inverses = batch_inverse(&array);
     
         for (a, inv) in array.iter().zip(inverses.iter()) {
-            let product = a.clone()* inv.clone();
+            let product = *a* *inv;
             assert_eq!(product, FieldElement::new(1, field));
         }
 }
