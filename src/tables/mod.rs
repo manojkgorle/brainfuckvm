@@ -5,7 +5,9 @@ use rand::*;
 use crate::fri::*;
 use crate::ntt::*;
 // we will implement abstract methods in rust using the traits.
-
+pub mod instruction;
+pub mod memory;
+pub mod processor;
 #[derive(Debug, Clone)]
 pub struct Table {
     pub field: Field,
@@ -19,6 +21,7 @@ pub struct Table {
     order: u128,//order of the generator.
     matrix: Vec<Vec<FieldElement>>,
 }
+
 impl Table {
     // Constructor method to create a new instance of `table`
     pub fn new(
@@ -70,9 +73,8 @@ impl Table {
             return 0;
         }
         omega_order/self.height
-
-
     }
+
     // wrong implementation in py
     pub fn get_interpolating_domain_length( &self)->u128{
         self.height
@@ -137,18 +139,20 @@ impl Table {
             polynomial.push(poly);  
         }
         polynomial
-    }
+}
 //  fn lde(self,domain:FriDomain)->Vec<FieldElement>{
 //     let polynomials = self.interpolate_columns(domain.omega, self.height, (0..self.full_width).collect());
 //     for p in polynomials{
 
 //     }
 
-
+// trait TableOperations {
+//     type Field
+// }
 // }
 
-pub fn boundary_constraints_ext(self,challeneges:Vec<FieldElement>){
-}
+// pub fn boundary_constraints_ext(self,challeneges:Vec<FieldElement>){
+// }
 // pub fn boundary_quotients(self,fri_domain:FriDomain,codewords:Vec<Vec<FieldElement>>,challenges:Vec<FieldElement>)->Vec<Vec<FieldElement>>{
 //     if (codewords.len()==0){
 //         println!("panic! because codewords' argument must have nonzero length")
@@ -172,58 +176,34 @@ pub fn boundary_constraints_ext(self,challeneges:Vec<FieldElement>){
 
 //     }
 // }
-
-
-
-
-
-
 }
 
-
-
-
-
-
-
-    pub fn roundup_npow2( len:u128)->u128{
-        if len==0{
-            return    0;
-         
-        }
-        else if len == 1 {
-            return 1;
-        }
-        // Calculate the next power of two
-        let bit_representation = format!("{:b}", len - 1);
-      
-       
-      
-       1 <<
-    (bit_representation.len() as u128)
-
+pub fn roundup_npow2( len:u128)->u128{
+    if len==0{
+        return 0;
+    }else if len == 1 {
+        return 1;
     }
-    // mutable or clone doubt
-    pub fn derive_omicron(generator:FieldElement,generator_order:u128,target_order:u128)->FieldElement{
-        let mut t_generator=generator;
-        let mut t_order=generator_order;
+    // Calculate the next power of two
+    let bit_representation = format!("{:b}", len - 1);
+    1 << (bit_representation.len() as u128)
+}
 
-        while t_order!=target_order{
-          t_generator=t_generator.pow(2);
+// mutable or clone doubt
+pub fn derive_omicron(generator:FieldElement,generator_order:u128,target_order:u128)->FieldElement{
+    let mut t_generator=generator;
+    let mut t_order=generator_order;
+
+    while t_order!=target_order{
+        t_generator=t_generator.pow(2);
             t_order/=2;
-        }
-        t_generator
-
-
-
     }
-    pub fn has_order_po2( order: u128) -> bool {
-        (order & (order - 1)) == 0
-    }
-
-
-
+    t_generator
+}
     
+pub fn has_order_po2( order: u128) -> bool {
+    (order & (order - 1)) == 0
+}
 
 #[cfg(test)]
 mod test_operations{
@@ -254,6 +234,4 @@ mod test_operations{
     }
 
 }
-
-
 
