@@ -22,8 +22,6 @@ impl Channel {
         log::debug!("sending to channel");
         let data_for_digest = format!("{}:{:?}", self.state, s.clone());
         self.state = sha256::digest(data_for_digest);
-        // in stark101 from starkware, we push parent function and s into the proof.
-        // there is no straight forward way to know parent function in rust.
         self.proof.push(s.clone());
         self.compressed_proof.push(s);
     }

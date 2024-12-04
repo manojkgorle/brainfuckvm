@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 use core::hash::{Hash, Hasher};
+use std::fmt::write;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::cmp::{Ord, PartialOrd};
+use std::fmt::{Debug, Display};
 // Define a field
 // Define a field element
 // Define arithmetic operations on field elements
@@ -46,7 +49,7 @@ impl PartialEq for Field {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct FieldElement(pub u128, pub Field);
 
 impl FieldElement {
@@ -239,6 +242,36 @@ impl Hash for FieldElement {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.0.hash(state);
         self.1.hash(state);
+    }
+}
+
+impl PartialOrd for FieldElement {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        if self.1 != other.1 {
+            return None;
+        }
+        self.0.partial_cmp(&other.0)
+    }
+}
+
+impl Ord for FieldElement {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        if self.1 != other.1 {
+            panic!("Fields must be same");
+        }
+        self.0.cmp(&other.0)
+    }
+}
+
+impl Display for FieldElement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Debug for FieldElement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
