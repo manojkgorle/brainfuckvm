@@ -30,7 +30,7 @@ impl ProcessorTable {
         let height = roundup_npow2(length);
         let omicron = derive_omicron(generator, order, height);
         let matrix = vec![vec![FieldElement::zero(field); full_width as usize]; height as usize];
-        let table = Table::new(field, base_width, full_width, length, num_randomizers, height, omicron, generator, order, matrix);
+        let table = Table::new(field, base_width, full_width, length,  height, omicron, generator, order, matrix);
         Self { table: table }
     }
 
@@ -57,6 +57,7 @@ impl ProcessorTable {
             matrix.push(new_row);
         }
     }
+    
 }
 
 // @todo test processor table padding
