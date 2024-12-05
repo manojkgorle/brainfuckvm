@@ -25,6 +25,7 @@ pub enum IndicesPoly{
     Difference,
 }
 
+
 pub enum ChallengeIndices{
     A, B, C, D, E, F, Alpha, Beta, Delta, Gamma, Eta
 }
@@ -123,11 +124,11 @@ impl Memory {
         let PPA = interpolated[Indices::PermutationArg as usize].clone();
 
         let mut next_interpolated:Vec<Polynomial>=Vec::new();
-        if self.table.height ==0{
-            let poly=Polynomial::new_from_coefficients(vec![FieldElement::zero(Field::new(self.table.field.0))]);
-            next_interpolated.push(poly);
-           return next_interpolated;
-        }
+        // if self.table.height ==0{
+        //     let poly=Polynomial::new_from_coefficients(vec![FieldElement::zero(Field::new(self.table.field.0))]);
+        //     next_interpolated.push(poly);
+        //    return next_interpolated;
+        // }
         
         let mut omicron_domain:Vec<FieldElement>=Vec::new();
         omicron_domain.push(self.table.omicron.pow(self.table.height-1));

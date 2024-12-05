@@ -2,6 +2,7 @@
 use crate::fields::{FieldElement, Field};
 use super::Table;
 use super::{roundup_npow2, derive_omicron};
+use crate::univariate_polynomial::*;
 
 pub struct ProcessorTable {
     table: Table
@@ -22,7 +23,8 @@ pub enum Indices {
     InputEvaluation,
     OutputEvaluation,
 }
-pub enum IndicesPoly{
+#[allow(non_camel_case_types)]
+pub enum IndicesPoly {
     //i0 = [, 
     //i1 = ],
     // i2 = <,
@@ -131,6 +133,30 @@ impl ProcessorTable {
         deselectors
     }
  // this is after padding and extension
+//  pub fn generate_AIR(&self,challenges:Vec<FieldElement>)->Vec<Polynomial>{
+//     let interpolated = self.table.clone().interpolate_columns(vec![Indices::Cycle as u128, Indices::InstructionPointer as u128, Indices::CurrentInstruction as u128, Indices::NextInstruction as u128, Indices::MemoryPointer as u128, Indices::MemoryValue as u128, Indices::MemoryValueInvers as u128, Indices::InstructionPermutaion as u128, Indices::MemoryPermuation as u128, Indices::InputEvaluation as u128, Indices::OutputEvaluation as u128]);
+//     let clk=interpolated[Indices::Cycle as usize].clone();
+//     let ip=interpolated[Indices::InstructionPointer as usize].clone();
+//     let ci=interpolated[Indices::CurrentInstruction as usize].clone();
+//     let ni=interpolated[Indices::NextInstruction as usize].clone();
+//     let mp=interpolated[Indices::MemoryPointer as usize].clone();
+//     let mv=interpolated[Indices::MemoryValue as usize].clone();
+//     let inv_mv=interpolated[Indices::MemoryValueInvers as usize].clone();
+//     let ipa=interpolated[Indices::InstructionPermutaion as usize].clone();
+//     let mpa=interpolated[Indices::MemoryPermuation as usize].clone();
+//     let iea=interpolated[Indices::InputEvaluation as usize].clone();
+//     let oea=interpolated[Indices::OutputEvaluation as usize].clone();
+//     let mut next_poly:Vec<Polynomial>=Vec::new();
+
+  
+
+    
+
+    
+
+//  }
+
+
 
 
 
