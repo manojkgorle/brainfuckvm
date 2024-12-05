@@ -7,6 +7,7 @@ use crate::ntt::*;
 pub mod instruction;
 pub mod memory;
 pub mod processor;
+pub mod io;
 #[derive(Debug, Clone)]
 // we are not going to use the randomizers in the table
 pub struct Table {
