@@ -122,37 +122,7 @@ impl Memory {
         let MV = interpolated[Indices::MemoryValue as usize].clone();
         let PPA = interpolated[Indices::PermutationArg as usize].clone();
 
-        let mut next_interpolated:Vec<Polynomial>=Vec::new();
-        if self.table.height ==0{
-            let poly=Polynomial::new_from_coefficients(vec![FieldElement::zero(Field::new(self.table.field.0))]);
-            next_interpolated.push(poly);
-           return next_interpolated;
-        }
-        
-        let mut omicron_domain:Vec<FieldElement>=Vec::new();
-        omicron_domain.push(self.table.omicron.pow(self.table.height-1));
-        for i in 0..self.table.height-1{
-            omicron_domain.push(self.table.omicron.pow(i));
-        }
-
-        for c in 0..self.table.matrix[0].len(){
-            let mut trace:Vec<FieldElement>=Vec::new();
-            for row in self.table.matrix.iter(){
-                trace.push(row[c as usize]);
-            }       
-        let mut values:Vec<FieldElement>=Vec::new();
-           
-        values=trace.clone();
-        if values.len()!=omicron_domain.len(){
-            panic!("length of domain and values are unequal");
-        };
-        println!("domain ={:?}", omicron_domain);
-        println!("values ={:?}", values);
-
-        let poly= interpolate_lagrange_polynomials(omicron_domain.clone(), values);
-        println!("poly ={:?}", poly);
-            next_interpolated.push(poly);
-        }
+        let next_interpolated = self.table.clone().next_interpolate_columns(vec![Indices::Cycle as u128, Indices::MemoryPointer as u128, Indices::MemoryValue as u128, Indices::PermutationArg as u128]);
 
         let CLK_next = next_interpolated[Indices::Cycle as usize].clone();
         let MP_next = next_interpolated[Indices::MemoryPointer as usize].clone();
