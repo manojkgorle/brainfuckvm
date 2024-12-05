@@ -110,28 +110,32 @@ impl Table {
                 trace.push(row[c as usize]);
             }
          let mut values:Vec<FieldElement>=Vec::new();
-            let mut sum =FieldElement::zero(Field::new(self.field.0));
-            let zero = FieldElement::zero(Field::new(self.field.0));
-     for i in 0..self.height {
-                if i < trace.len() as u128 {
-                    // Push values from trace
-                    values.push(trace[i as usize].clone());
-                } else {
-                    // Push the last value of trace or zero if trace is empty
-                    let last_value = trace.last().unwrap_or(&zero).clone();
-                    values.push(last_value);
-                }
-            }
+           
+         values=trace.clone();
+
             if values.len()!=omicron_domain.len(){
                 panic!("length of domain and values are unequal");
             };
+            println!("domain ={:?}", domain);
+            println!("values ={:?}", values);
         let poly= interpolate_lagrange_polynomials(domain.clone(), values);
+        println!("poly ={:?}", poly);
             polynomial.push(poly);  
         }
         polynomial
-}
+    }
+// in the codewords matrix you are getting is coloumns*rows (rows and coloums reference to the intial table)
+pub fn lde(self,domain:FriDomain)->Vec<Vec<FieldElement>>{
+    let x = self.base_width;
+    let polynomial = self.interpolate_columns((0..x).collect());
+    let mut self_codewords=Vec::new();
+    for p in polynomial{
+        let codeword=domain.evaluate(p);
+        self_codewords.push(codeword);}
+    self_codewords
+}}
 
-}
+
 
 pub fn roundup_npow2( len:u128)->u128{
     if len==0{
@@ -186,6 +190,57 @@ mod test_operations{
         let order2 =5_u128;
         assert !(!Table::has_order_po2(order2));
         assert !(Table::has_order_po2(order));
+    }
+    #[test]
+    fn test_interpolate_columns(){
+        let field = Field::new(17);
+        let   offset = FieldElement::new(2, field);
+        let length = 4_u128;
+        let omega = FieldElement::new(13, field);
+        let domain = FriDomain::new(offset, omega, length);
+        let generator = FieldElement::new(3, field);
+        let order = 16;
+        let mut table = Table::new_2(field, 3, 5, 4, generator, order);
+        let mut matrix: Vec<Vec<FieldElement>> = Vec::new();
+        matrix.push(vec![FieldElement::new(1, field), FieldElement::new(2, field), FieldElement::new(3, field), FieldElement::new(4, field), FieldElement::new(5, field)]);
+        matrix.push(vec![FieldElement::new(6, field), FieldElement::new(7, field), FieldElement::new(8, field), FieldElement::new(9, field), FieldElement::new(10, field)]);
+        matrix.push(vec![FieldElement::new(11, field), FieldElement::new(12, field), FieldElement::new(13, field), FieldElement::new(14, field), FieldElement::new(15, field)]);
+        matrix.push(vec![FieldElement::new(16, field), FieldElement::new(17, field), FieldElement::new(18, field), FieldElement::new(19, field), FieldElement::new(20, field)]);
+        table.matrix = matrix;
+        let column_indices = vec![0, 1, 2];
+        let polynomials = table.interpolate_columns(column_indices);
+        let expected_polynomials = vec![
+            Polynomial::new_from_coefficients(vec![FieldElement::new(0, field), FieldElement::new(13, field), FieldElement::new(6, field), FieldElement::new(16, field)])];
+            println!("polynomials ={:?}", polynomials[0]);
+        assert_eq!(polynomials[0], expected_polynomials[0]);
+
+    }
+    #[test]
+    fn test_lde(){
+        let field = Field::new(17);
+        let   offset = FieldElement::new(2, field);
+        let length = 4_u128;
+        let omega = FieldElement::new(13, field);
+        let domain = FriDomain::new(offset, omega, length);
+        let generator = FieldElement::new(3, field);
+        let order = 16;
+        let mut table = Table::new_2(field, 3, 5, 4, generator, order);
+        let mut matrix: Vec<Vec<FieldElement>> = Vec::new();
+        matrix.push(vec![FieldElement::new(1, field), FieldElement::new(2, field), FieldElement::new(3, field), FieldElement::new(4, field), FieldElement::new(5, field)]);
+        matrix.push(vec![FieldElement::new(6, field), FieldElement::new(7, field), FieldElement::new(8, field), FieldElement::new(9, field), FieldElement::new(10, field)]);
+        matrix.push(vec![FieldElement::new(11, field), FieldElement::new(12, field), FieldElement::new(13, field), FieldElement::new(14, field), FieldElement::new(15, field)]);
+        matrix.push(vec![FieldElement::new(16, field), FieldElement::new(17, field), FieldElement::new(18, field), FieldElement::new(19, field), FieldElement::new(20, field)]);
+        table.matrix = matrix;
+        let codewords = table.lde(domain);
+        let expected_codewords = vec![
+            vec![FieldElement::new(2, field), FieldElement::new(12, field), FieldElement::new(5, field), FieldElement::new(15, field)],
+            vec![FieldElement::new(4, field), FieldElement::new(14, field), FieldElement::new(7, field), FieldElement::new(0, field)],
+            vec![FieldElement::new(6, field), FieldElement::new(16, field), FieldElement::new(9, field), FieldElement::new(2, field)],
+          
+        ];
+        assert_eq!(codewords, expected_codewords);
+
+        
     }
 
 }
