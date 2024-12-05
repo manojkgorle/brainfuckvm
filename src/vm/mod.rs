@@ -163,27 +163,27 @@ impl VirtualMachine {
         let mut output_data = String::new();
 
         let mut processor_materix = Vec::new();
-        let mut instruction_matrix: Vec<Vec<FieldElement>> = (0..program.len() - 1).map(|i| vec![FieldElement::new(i as u128, field),program[i].clone(),program[i + 1].clone()]).collect();
+        let mut instruction_matrix: Vec<Vec<FieldElement>> = (0..program.len() - 1).map(|i| vec![FieldElement::new(i as u128, field),program[i],program[i + 1]]).collect();
         // Adding the last element to the instruction matrix
-        instruction_matrix.push(vec![FieldElement::new((program.len() - 1) as u128, field),program.last().unwrap().clone(),FieldElement::zero(field)]);
+        instruction_matrix.push(vec![FieldElement::new((program.len() - 1) as u128, field),*program.last().unwrap(),FieldElement::zero(field)]);
         let mut input_matrix = Vec::new();
         let mut output_matrix = Vec::new();
 
         while register.instruction_pointer.0 < program.len() as u128{
             let new_processor_matrix_row = vec![
-                register.cycle.clone(),
-                register.instruction_pointer.clone(),
-                register.current_instruction.clone(),
-                register.next_instruction.clone(),
-                register.memory_pointer.clone(),
-                register.memory_value.clone(),
-                register.memory_value_inverse.clone(),
+                register.cycle,
+                register.instruction_pointer,
+                register.current_instruction,
+                register.next_instruction,
+                register.memory_pointer,
+                register.memory_value,
+                register.memory_value_inverse,
             ];
             processor_materix.push(new_processor_matrix_row);
             let new_instruction_matrix = vec![
-                register.instruction_pointer.clone(),
-                register.current_instruction.clone(),
-                register.next_instruction.clone(),
+                register.instruction_pointer,
+                register.current_instruction,
+                register.next_instruction,
             ];
             instruction_matrix.push(new_instruction_matrix);
             // update registers.
@@ -253,7 +253,7 @@ impl VirtualMachine {
                 register.next_instruction = zero;
             }
 
-            register.memory_value = memory.get(&register.memory_pointer).unwrap_or(&zero).clone();
+            register.memory_value = *memory.get(&register.memory_pointer).unwrap_or(&zero);
 
             // update memory value
             if register.memory_value == zero {
@@ -265,19 +265,19 @@ impl VirtualMachine {
 
         // collect last rows in processor and instruciton matrix
         let new_processor_matrix_row = vec![
-            register.cycle.clone(),
-            register.instruction_pointer.clone(),
-            register.current_instruction.clone(),
-            register.next_instruction.clone(),
-            register.memory_pointer.clone(),
-            register.memory_value.clone(),
-            register.memory_value_inverse.clone(),
+            register.cycle,
+            register.instruction_pointer,
+            register.current_instruction,
+            register.next_instruction,
+            register.memory_pointer,
+            register.memory_value,
+            register.memory_value_inverse,
         ];
         processor_materix.push(new_processor_matrix_row);
         let new_instruction_matrix_row = vec![
-            register.instruction_pointer.clone(),
-            register.current_instruction.clone(),
-            register.next_instruction.clone(),
+            register.instruction_pointer,
+            register.current_instruction,
+            register.next_instruction,
         ];
         instruction_matrix.push(new_instruction_matrix_row);
         // sort instruction matrix

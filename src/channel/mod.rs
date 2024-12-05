@@ -9,6 +9,12 @@ pub struct Channel {
     pub compressed_proof: Vec<Vec<u8>>,
 }
 
+impl Default for Channel {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Channel {
     pub fn new() -> Channel {
         Channel {
