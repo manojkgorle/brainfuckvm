@@ -8,6 +8,7 @@ use crate::ntt::*;
 pub mod instruction;
 pub mod memory;
 pub mod processor;
+pub mod io;
 #[derive(Debug, Clone)]
 pub struct Table {
     pub field: Field,
