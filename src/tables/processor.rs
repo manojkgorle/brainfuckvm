@@ -24,7 +24,7 @@ pub enum Indices {
 }
 
 impl ProcessorTable {
-    pub fn new(field: Field, length:u128, num_randomizers: u128, generator: FieldElement, order: u128) -> Self {
+    pub fn new(field: Field, length:u128,  generator: FieldElement, order: u128) -> Self {
         let base_width = 7;
         let full_width = base_width + 4;
         let height = roundup_npow2(length);
@@ -57,7 +57,64 @@ impl ProcessorTable {
             matrix.push(new_row);
         }
     }
+
+
+    // define a selector polynomial for a specific instruction.
+    //todo for a set of instructions.
+   pub fn deselector_polynomial(
+        instruction: char, 
+        indeterminate: FieldElement, 
+        field: Field,
+    ) -> FieldElement {
+        let f = |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, field) };
+        let mut acc = FieldElement::new(1, field); // Start with the multiplicative identity (1)
+        
+        for c in "[]<>,.+-".chars() {
+            if c != instruction {
+                acc = acc * (indeterminate - f(c));
+            }
+        }
+          acc
+    }
+    // define a selector polynomial for a valid set
+   pub fn universal_deselector(
+        indeterminate: FieldElement, 
+        field: Field,
+        char:Vec<char>
+    ) -> Vec<(char, FieldElement)> {
+        let f = |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, field) };
+        let mut deselectors = Vec::new();
     
+        for target_char in "[]<>,.+-".chars() {
+            let mut acc = FieldElement::new(1, field); // Start with the multiplicative identity (1)
+    
+            for c in char.iter() {
+                if *c != target_char {
+                    acc = acc * (indeterminate - f(*c));
+                }
+            }
+    
+            deselectors.push((target_char, acc));
+        }
+    
+        deselectors
+    }
+    //boundary constraints for the base coloumns
+    // the values of instructionpermutaion ipa and mpa I am taking as 1
+    // pub fn boundary_constraint(self)->Polynomial{
+
+        
+
+    // }
+    
+
+
+
+
+
+    
+
 }
+    
 
 // @todo test processor table padding
