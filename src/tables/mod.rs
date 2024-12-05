@@ -4,19 +4,18 @@ use crate::univariate_polynomial::{interpolate_lagrange_polynomials, Polynomial}
 use rand::*;
 use crate::fri::*;
 use crate::ntt::*;
-// we will implement abstract methods in rust using the traits.
 pub mod instruction;
 pub mod memory;
 pub mod processor;
 pub mod io;
 #[derive(Debug, Clone)]
+// we are not going to use the randomizers in the table
 pub struct Table {
     pub field: Field,
     base_width: u128,//number of base columns in the table.
     full_width: u128,//total no. of coloumn using extension and all
     length: u128,//Number of rows in the table.
-    num_randomizers: u128,//number of randomizer columns added for cryptographic or redundancy purposes.
-    height: u128,//Represents the rounded-up next power of two of the table length 
+     height: u128,//Represents the rounded-up next power of two of the table length 
     omicron: FieldElement,//represent the generator eval_domain depends on the generator and the order of the subgroup
     generator: FieldElement,// A generator for the multiplicative group of the field
     order: u128,//order of the generator.
@@ -30,8 +29,7 @@ impl Table {
         base_width: u128,
         full_width: u128,
         length: u128,
-        num_randomizers: u128,
-        height: u128,
+         height: u128,
         omicron: FieldElement,
         generator: FieldElement,
         order: u128,
@@ -42,7 +40,7 @@ impl Table {
             base_width,
             full_width,
             length,
-            num_randomizers,
+          
             height,
             omicron,
             generator,
@@ -51,7 +49,7 @@ impl Table {
         }
     }
     fn new_2(field: Field, base_width: u128, full_width: u128, length: u128,
-        num_randomizers: u128, generator:FieldElement, order: u128) -> Self {
+         generator:FieldElement, order: u128) -> Self {
      let height = roundup_npow2(length);
      let omicron = derive_omicron(generator, order, height);
      
@@ -60,7 +58,7 @@ impl Table {
          base_width,
          full_width,
          length,
-         num_randomizers,
+        //  num_randomizers,
          height,
          omicron,
          generator,
@@ -76,7 +74,7 @@ impl Table {
         omega_order/self.height
     }
 
-    // wrong implementation in py
+    
     pub fn get_interpolating_domain_length( &self)->u128{
         self.height
     }
@@ -88,11 +86,8 @@ impl Table {
         (order & (order - 1)) == 0
     }
     
-    pub fn interpolate_columns(self,omega:FieldElement,omega_order:u128, column_indices:Vec<u128>)->Vec<Polynomial>{
-        if !has_order_po2(omega_order){
-            panic!("omega does not have claimed order");
-
-        }
+    pub fn interpolate_columns(self, column_indices:Vec<u128>)->Vec<Polynomial>{
+     
         let mut polynomial:Vec<Polynomial>=Vec::new();
         if self.height ==0{
             let poly=Polynomial::new_from_coefficients(vec![FieldElement::zero(Field::new(self.field.0))]);
@@ -101,15 +96,12 @@ impl Table {
         }
 
         let mut omicron_domain:Vec<FieldElement>=Vec::new();
-        let mut randomizer_domain:Vec<FieldElement>=Vec::new();
-        for i in 0..self.height{
+      for i in 0..self.height{
             omicron_domain.push(self.omicron.pow(i));
         }
-        for i in 0..self.height{
-        randomizer_domain.push(omega.pow(2*i+1));}
         let mut domain:Vec<FieldElement>=vec![FieldElement::new(0,self.field);self.height as usize];
         for i in 0..self.height{
-            domain[i as usize]=omicron_domain[i as usize]+randomizer_domain[i as usize];
+            domain[i as usize]=omicron_domain[i as usize];
         }
 
         for c in column_indices{
@@ -118,66 +110,33 @@ impl Table {
             for row in self.matrix.iter(){
                 trace.push(row[c as usize]);
             }
-            let mut randomizers:Vec<FieldElement>=Vec::new();
-            // doubt
-            for _i in 0..self.num_randomizers{
-                randomizers.push(FieldElement::new(random::<u128>(),Field::new(self.field.0)));
-            }
-            let mut values:Vec<FieldElement>=Vec::new();
-            let mut sum =FieldElement::zero(Field::new(self.field.0));
-            let zero = FieldElement::zero(Field::new(self.field.0));
-      
-            for i in 0..self.height {
-         
-                let x = trace.get(i as usize).unwrap_or(&zero);
-                sum =*x + randomizers[i as usize];
-                values.push(sum);
-            }
+         let mut values:Vec<FieldElement>=Vec::new();
+           
+         values=trace.clone();
+
             if values.len()!=omicron_domain.len(){
                 panic!("length of domain and values are unequal");
             };
+            println!("domain ={:?}", domain);
+            println!("values ={:?}", values);
         let poly= interpolate_lagrange_polynomials(domain.clone(), values);
+        println!("poly ={:?}", poly);
             polynomial.push(poly);  
         }
         polynomial
-}
-//  fn lde(self,domain:FriDomain)->Vec<FieldElement>{
-//     let polynomials = self.interpolate_columns(domain.omega, self.height, (0..self.full_width).collect());
-//     for p in polynomials{
-
-//     }
-
-// trait TableOperations {
-//     type Field
-// }
-// }
-
-// pub fn boundary_constraints_ext(self,challeneges:Vec<FieldElement>){
-// }
-// pub fn boundary_quotients(self,fri_domain:FriDomain,codewords:Vec<Vec<FieldElement>>,challenges:Vec<FieldElement>)->Vec<Vec<FieldElement>>{
-//     if (codewords.len()==0){
-//         println!("panic! because codewords' argument must have nonzero length")
-// }
-// let mut quotient_codewords=Vec::new();
-// let boundary_constraints= self.boundary_constraints_ext(challenges);
-// let mut zeroifier = Vec::new();
-// let fri_values = fri_domain.list();
-// for i in 0..fri_domain.length{
-//     zeroifier.push(fri_values[i ]-FieldElement(1,self.field ))
+    }
+// in the codewords matrix you are getting is coloumns*rows (rows and coloums reference to the intial table)
+pub fn lde(self,domain:FriDomain)->Vec<Vec<FieldElement>>{
+    let x = self.base_width;
+    let polynomial = self.interpolate_columns((0..x).collect());
+    let mut self_codewords=Vec::new();
+    for p in polynomial{
+        let codeword=domain.evaluate(p);
+        self_codewords.push(codeword);}
+    self_codewords
+}}
 
 
-// }
-// let zerofier_inverse=batch_inverse(&zeroifier);
-// for l in 0..boundary_constraints.len(){
-//     // considering mpo as the univariate polynomial
-//   let  mpo:Polynomial=boundary_constraints[l as usize];
-//     for i in 0..fri_domain.length{
-//         let x=mpo.evaluate()
-
-
-//     }
-// }
-}
 
 pub fn roundup_npow2( len:u128)->u128{
     if len==0{
@@ -232,6 +191,57 @@ mod test_operations{
         let order2 =5_u128;
         assert !(!Table::has_order_po2(order2));
         assert !(Table::has_order_po2(order));
+    }
+    #[test]
+    fn test_interpolate_columns(){
+        let field = Field::new(17);
+        let   offset = FieldElement::new(2, field);
+        let length = 4_u128;
+        let omega = FieldElement::new(13, field);
+        let domain = FriDomain::new(offset, omega, length);
+        let generator = FieldElement::new(3, field);
+        let order = 16;
+        let mut table = Table::new_2(field, 3, 5, 4, generator, order);
+        let mut matrix: Vec<Vec<FieldElement>> = Vec::new();
+        matrix.push(vec![FieldElement::new(1, field), FieldElement::new(2, field), FieldElement::new(3, field), FieldElement::new(4, field), FieldElement::new(5, field)]);
+        matrix.push(vec![FieldElement::new(6, field), FieldElement::new(7, field), FieldElement::new(8, field), FieldElement::new(9, field), FieldElement::new(10, field)]);
+        matrix.push(vec![FieldElement::new(11, field), FieldElement::new(12, field), FieldElement::new(13, field), FieldElement::new(14, field), FieldElement::new(15, field)]);
+        matrix.push(vec![FieldElement::new(16, field), FieldElement::new(17, field), FieldElement::new(18, field), FieldElement::new(19, field), FieldElement::new(20, field)]);
+        table.matrix = matrix;
+        let column_indices = vec![0, 1, 2];
+        let polynomials = table.interpolate_columns(column_indices);
+        let expected_polynomials = vec![
+            Polynomial::new_from_coefficients(vec![FieldElement::new(0, field), FieldElement::new(13, field), FieldElement::new(6, field), FieldElement::new(16, field)])];
+            println!("polynomials ={:?}", polynomials[0]);
+        assert_eq!(polynomials[0], expected_polynomials[0]);
+
+    }
+    #[test]
+    fn test_lde(){
+        let field = Field::new(17);
+        let   offset = FieldElement::new(2, field);
+        let length = 4_u128;
+        let omega = FieldElement::new(13, field);
+        let domain = FriDomain::new(offset, omega, length);
+        let generator = FieldElement::new(3, field);
+        let order = 16;
+        let mut table = Table::new_2(field, 3, 5, 4, generator, order);
+        let mut matrix: Vec<Vec<FieldElement>> = Vec::new();
+        matrix.push(vec![FieldElement::new(1, field), FieldElement::new(2, field), FieldElement::new(3, field), FieldElement::new(4, field), FieldElement::new(5, field)]);
+        matrix.push(vec![FieldElement::new(6, field), FieldElement::new(7, field), FieldElement::new(8, field), FieldElement::new(9, field), FieldElement::new(10, field)]);
+        matrix.push(vec![FieldElement::new(11, field), FieldElement::new(12, field), FieldElement::new(13, field), FieldElement::new(14, field), FieldElement::new(15, field)]);
+        matrix.push(vec![FieldElement::new(16, field), FieldElement::new(17, field), FieldElement::new(18, field), FieldElement::new(19, field), FieldElement::new(20, field)]);
+        table.matrix = matrix;
+        let codewords = table.lde(domain);
+        let expected_codewords = vec![
+            vec![FieldElement::new(2, field), FieldElement::new(12, field), FieldElement::new(5, field), FieldElement::new(15, field)],
+            vec![FieldElement::new(4, field), FieldElement::new(14, field), FieldElement::new(7, field), FieldElement::new(0, field)],
+            vec![FieldElement::new(6, field), FieldElement::new(16, field), FieldElement::new(9, field), FieldElement::new(2, field)],
+          
+        ];
+        assert_eq!(codewords, expected_codewords);
+
+        
     }
 
 }

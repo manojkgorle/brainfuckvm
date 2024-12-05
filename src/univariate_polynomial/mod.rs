@@ -408,10 +408,13 @@ pub fn gen_lagrange_polynomials_parallel(x: Vec<FieldElement>) -> Vec<Polynomial
 }
 
 pub fn interpolate_lagrange_polynomials(x: Vec<FieldElement>, y: Vec<FieldElement>) -> Polynomial {
+    println!("x ={:?}", x);
+    println!("y ={:?}", y);
     let n = x.len();
     log::debug!("generating lagrange polynomials");
     let start_time = Local::now();
-    let lagrange_polynomials = gen_lagrange_polynomials_parallel(x.clone());
+    let lagrange_polynomials = gen_lagrange_polynomials(x.clone());
+    println!("lagrange polynomials generated in {:?}",lagrange_polynomials);
     let field = Field::new(x[0].modulus());
     let mut result = Polynomial::new_from_coefficients(vec![FieldElement::new(0, field); n]);
 
@@ -423,6 +426,19 @@ pub fn interpolate_lagrange_polynomials(x: Vec<FieldElement>, y: Vec<FieldElemen
         (Local::now() - start_time).num_microseconds().unwrap()
     );
     result
+}
+impl PartialEq for Polynomial {
+    fn eq(&self, other: &Self) -> bool {
+        if self.coefficients.len() != other.coefficients.len() {
+            return false;
+        }
+        for i in 0..self.coefficients.len() {
+            if self.coefficients[i] != other.coefficients[i] {
+                return false;
+            }
+        }
+        true
+    }
 }
 
 #[cfg(test)]
