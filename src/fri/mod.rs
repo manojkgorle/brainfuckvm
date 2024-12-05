@@ -101,9 +101,14 @@ impl FriDomain{
 
         let polynomial = polynomial.scalar_mul(self.offset);
         let mut result: Vec<FieldElement> = vec![];
+        // let mut  domain_gen:Vec<FieldElement>=Vec::new();
         for i in 0..self.length{
+            // let x=self.omega.pow(i);
             result.push(polynomial.evaluate(self.omega.pow(i)));
+            // domain_gen.push(x);
         }
+        // println!("domain_gen ={:?}", domain_gen);
+      
         result
     }
     //needed if we use extension field

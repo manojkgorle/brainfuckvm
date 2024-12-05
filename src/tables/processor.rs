@@ -1,3 +1,4 @@
+
 use crate::fields::{FieldElement, Field};
 use super::Table;
 use super::{roundup_npow2, derive_omicron};
