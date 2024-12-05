@@ -1,8 +1,8 @@
 use core::panic;
-use std::collections::HashMap;
+use std::{collections::HashMap, mem};
 
-use crate::fields::{Field, FieldElement};
-
+use crate::{fields::{Field, FieldElement}, tables::memory};
+use crate::tables::memory::Memory;
 // Struct holding all the registers.
 pub struct Register {
     pub field: Field,
@@ -99,10 +99,10 @@ impl VirtualMachine {
                 memory.insert(memory_pointer, v);
             } else if program[instruction_pointer] == f('>') {
                 instruction_pointer += 1;
-                memory_pointer = memory_pointer + one;
+                memory_pointer += one;
             } else if program[instruction_pointer] == f('<') {
                 instruction_pointer += 1;
-                memory_pointer = memory_pointer - one;
+                memory_pointer -= one;
             } else if program[instruction_pointer] == f('[') {
                 if *memory.get(&memory_pointer).unwrap_or(&zero) == zero {
                     instruction_pointer = program[instruction_pointer + 1].0 as usize;
@@ -144,7 +144,7 @@ impl VirtualMachine {
         (running_time, input_data, output_data)
     }
 
-    pub fn simulate(&self, program: &[FieldElement], input_data: String) {
+    pub fn simulate(&self, program: &[FieldElement], input_data: String) -> (Vec<Vec<FieldElement>>, Vec<Vec<FieldElement>>, Vec<Vec<FieldElement>>, Vec<Vec<FieldElement>>, Vec<Vec<FieldElement>>){
         let field = self.field;
         let zero = FieldElement::zero(field);
         let one = FieldElement::one(field);
@@ -159,15 +159,142 @@ impl VirtualMachine {
         }
 
         let mut memory: HashMap<FieldElement, FieldElement> = HashMap::new();
-        let input_counter = 0;
-        let output_data = String::new();
+        let mut input_counter = 0;
+        let mut output_data = String::new();
 
         // @todo create tables.
+        let mut processor_materix = Vec::new();
+        let mut instruction_matrix: Vec<Vec<FieldElement>> = (0..program.len() - 1).map(|i| vec![FieldElement::new(i as u128, field),program[i].clone(),program[i + 1].clone()]).collect();
+        // Adding the last element to the instruction matrix
+        instruction_matrix.push(vec![FieldElement::new((program.len() - 1) as u128, field),program.last().unwrap().clone(),FieldElement::zero(field)]);
+        let mut input_matrix = Vec::new();
+        let mut output_matrix = Vec::new();
+        // let mut i = 0;
+        while register.instruction_pointer.0 < program.len() as u128{
+            let new_processor_matrix_row = vec![
+                register.cycle.clone(),
+                register.instruction_pointer.clone(),
+                register.current_instruction.clone(),
+                register.next_instruction.clone(),
+                register.memory_pointer.clone(),
+                register.memory_value.clone(),
+                register.memory_value_inverse.clone(),
+            ];
+            processor_materix.push(new_processor_matrix_row);
+            let new_instruction_matrix = vec![
+                register.instruction_pointer.clone(),
+                register.current_instruction.clone(),
+                register.next_instruction.clone(),
+            ];
+            // println!("instruction matrix len: {:?}, i: {}", instruction_matrix.len(), i);
+            // i += 1;
+            instruction_matrix.push(new_instruction_matrix);
+            // update registers.
+            if register.current_instruction == f('[') {
+                if register.memory_value == zero {
+                    register.instruction_pointer = program[register.instruction_pointer.0 as usize + 1];
+                } else {
+                    register.instruction_pointer += two;
+                }
+            }else if register.current_instruction == f(']') {
+                if register.memory_value != zero {
+                    register.instruction_pointer = program[register.instruction_pointer.0 as usize + 1];
+                } else {
+                    register.instruction_pointer += two;
+                }
+            } else if register.current_instruction == f('+') {
+                register.instruction_pointer += one;
+                let v = *memory.get(&register.memory_pointer).unwrap_or(&zero) + one;
+                memory.insert(register.memory_pointer, v);
+            } else if register.current_instruction == f('-') {
+                register.instruction_pointer += one;
+                let v = *memory.get(&register.memory_pointer).unwrap_or(&zero) - one;
+                memory.insert(register.memory_pointer, v);
+            } else if register.current_instruction == f('>') {
+                register.instruction_pointer += one;
+                register.memory_pointer += one;
+            } else if register.current_instruction == f('<') {
+                register.instruction_pointer += one;
+                register.memory_pointer -= one;
+            } else if register.current_instruction == f('.') {
+                register.instruction_pointer += one;
+                output_matrix.push(vec![*memory.get(&register.memory_pointer).unwrap_or(&zero)]);
+                let result_char = char::from_u32((memory[&register.memory_pointer].0 % 256) as u32)
+                    .expect("Value out of valid Unicode range");
+                output_data.push(result_char);
+            } else if register.current_instruction == f(',') {
+                register.instruction_pointer += one;
+                if input_counter < input_data.len() {
+                    let c = input_data.chars().nth(input_counter).unwrap();
+                    input_counter += 1;
+                    memory.insert(register.memory_pointer, f(c));
+                    input_matrix.push(vec![*memory.get(&register.memory_pointer).unwrap_or(&zero)]);
+                } else {
+                    // @todo implement getch handler?
+                }
+            } else {
+                panic!(
+                    "unrecognized instruction at {:?}, {:?}",
+                    register.instruction_pointer,
+                    char::from_u32((register.current_instruction.0 % 256) as u32)
+                );
+            }
+
+            register.cycle += one;
+
+            // update current instruction
+            if register.instruction_pointer.0 < program.len() as u128 {
+                register.current_instruction = program[register.instruction_pointer.0 as usize];
+            } else {
+                register.current_instruction = zero;
+            }
+
+            // update next instruction
+            if register.instruction_pointer.0 < (program.len() - 1) as u128 {
+                register.next_instruction = program[register.instruction_pointer.0 as usize + 1];
+            } else {
+                register.next_instruction = zero;
+            }
+
+            register.memory_value = memory.get(&register.memory_pointer).unwrap_or(&zero).clone();
+
+            // update memory value
+            if register.memory_value == zero {
+                register.memory_value_inverse = zero;
+            }else {
+                register.memory_value_inverse = register.memory_value.inverse();
+            }
+        }
+
+        // collect last rows in processor and instruciton matrix
+        let new_processor_matrix_row = vec![
+            register.cycle.clone(),
+            register.instruction_pointer.clone(),
+            register.current_instruction.clone(),
+            register.next_instruction.clone(),
+            register.memory_pointer.clone(),
+            register.memory_value.clone(),
+            register.memory_value_inverse.clone(),
+        ];
+        processor_materix.push(new_processor_matrix_row);
+        let new_instruction_matrix_row = vec![
+            register.instruction_pointer.clone(),
+            register.current_instruction.clone(),
+            register.next_instruction.clone(),
+        ];
+        instruction_matrix.push(new_instruction_matrix_row);
+        // sort instruction matrix
+        instruction_matrix.sort();
+        // build memory matrix
+        let memory_matrix = Memory::derive_matrix(&processor_materix);
+        (processor_materix, memory_matrix, instruction_matrix, input_matrix, output_matrix)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::tables::processor;
+
     use super::*;
 
     #[test]
@@ -190,5 +317,44 @@ mod tests {
         let (running_time, input_data, output_data) = vm.execute(code);
         let expected_output = "Hello World!\n";
         assert_eq!(output_data, expected_output);
+    }
+
+    #[test]
+    fn test_simulate() {
+        let vm = VirtualMachine::new(Field(18446744069414584321));
+        let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
+        let program = vm.compile(code);
+        vm.run(&program, "".to_string());
+        // assert_eq!(program.len(), 2);
+        let (processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix) = vm.simulate(&program, "".to_string());
+        println!("program matrix");
+        for row in program.clone() {
+            println!("{:?}", row);
+        }
+        println!("\nprocessor matrix");
+        for row in processor_matrix.clone(){
+            println!("{:?}", row);
+        }
+        println!("\ninstruction matrix");
+        for row in instruction_matrix.clone(){
+            println!("{:?}", row);
+        }
+        println!("\nmemory matrix");
+        for row in memory_matrix.clone(){
+            println!("{:?}", row);
+        }
+        println!("\ninput matrix");
+        for row in input_matrix.clone(){
+            println!("{:?}", row);
+        }
+        println!("\noutput matrix");
+        for row in output_matrix.clone(){
+            println!("{:?}", row);
+        }
+        // assert_eq!(processor_matrix.len(), 3);  
+        // assert_eq!(instruction_matrix.len(), 5);
+        // assert_eq!(memory_matrix.len(), 2);
+        // assert_eq!(input_matrix.len(), 0);
+        // assert_eq!(output_matrix.len(), 0);
     }
 }

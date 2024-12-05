@@ -18,13 +18,13 @@ pub struct MerkleTree {
 impl MerkleTree {
     pub fn new(data: &[FieldElement]) -> MerkleTree {
         let leaves: Vec<[u8; 32]> = data
-            .into_iter()
+            .iter()
             .map(|x| Sha256::hash(&x.to_bytes()))
             .collect();
         let merkle_tree = MerkleTreeTrait::<Sha256>::from_leaves(&leaves);
         MerkleTree {
             data: data.to_vec(),
-            leaves: leaves,
+            leaves,
             inner: merkle_tree,
         }
     }
@@ -74,9 +74,8 @@ mod test_merkle_implementation {
         let merkle_root = merkle_tree.inner.root().unwrap().to_vec();
         let proof = merkle_tree.get_authentication_path(0);
         let root = merkle_tree.clone().root().to_vec();
-        assert_eq!(
-            MerkleTree::validate(merkle_root.clone(), proof, 0, data[0].to_bytes(), 6),
-            true
+        assert!(
+            MerkleTree::validate(merkle_root.clone(), proof, 0, data[0].to_bytes(), 6)
         );
         assert_eq!(merkle_root, root);
         for i in 0..root.len(){

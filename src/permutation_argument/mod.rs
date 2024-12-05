@@ -4,7 +4,7 @@ use crate::tables::*;
 use crate::univariate_polynomial::*;
 
 pub struct PermutationArgument{
-    all_tables: table,
+    all_tables: Table,
     lhs: (usize, usize),
     rhs: (usize, usize),
 }

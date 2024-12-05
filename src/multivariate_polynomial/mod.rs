@@ -17,7 +17,7 @@ impl MPolynomial {
     // Function to create a zero polynomial
     pub fn zero(field: Field) -> Self {
         MPolynomial {
-            field: field,
+            field,
             dictionary: HashMap::new(), // Empty dictionary represents a zero polynomial
         }
     }
@@ -31,7 +31,7 @@ impl MPolynomial {
         let max_degree = self
             .dictionary
             .iter() // Iterate over the key-value pairs in the dictionary
-            .filter(|(_, coefficient)| coefficient.0 != 0 as u128) // Filter out terms with zero coefficients
+            .filter(|(_, coefficient)| coefficient.0 != 0_u128) // Filter out terms with zero coefficients
             .map(|(exponents, _)| exponents.iter().sum::<u128>()) // Sum the exponents for non-zero terms
             .max() // Find the maximum sum of exponents
             .unwrap_or(0); // Default to 0 if no non-zero terms
@@ -73,9 +73,9 @@ impl MPolynomial {
             );
 
             for (i, &exp) in exp.iter().enumerate() {
-                prod = prod * point[i].pow(exp as u128);
+                prod *= point[i].pow(exp);
             }
-            acc = acc + prod;
+            acc += prod;
         }
         acc
     }
@@ -108,15 +108,15 @@ impl MPolynomial {
                     let point_power = memo.get(&(i as u128, 1 << j)).unwrap();
 
                     if (exp & (1 << j)) != 0 {
-                        inner_acc = inner_acc * point_power.clone();
+                        inner_acc *= point_power.clone();
                     }
                     j += 1;
                 }
 
-                prod = prod * inner_acc; // Multiply by the result for this variable
+                prod *= inner_acc; // Multiply by the result for this variable
             }
 
-            acc = acc + prod; // Add the product for this term
+            acc += prod; // Add the product for this term
         }
         acc
     }
@@ -142,13 +142,13 @@ impl MPolynomial {
         let mut total_degree_bound = 0;
 
         for (exp, coeff) in &self.dictionary {
-            if coeff.0 == 0 as u128 {
+            if coeff.0 == 0_u128 {
                 continue;
             }
 
             let mut term_degree_bound = 0;
             for (exp, max_degree) in exp.iter().zip(max_degrees.iter()) {
-                term_degree_bound += (*exp as u128) * (*max_degree);
+                term_degree_bound += { *exp } * (*max_degree);
             }
 
             total_degree_bound = total_degree_bound.max(term_degree_bound as i128);
@@ -174,7 +174,6 @@ impl MPolynomial {
             }
             polynomial = polynomial.add(term);
         }
-
         polynomial
     }
 
@@ -191,7 +190,7 @@ impl MPolynomial {
     let x = variables[variable_index].clone();
     let mut acc = MPolynomial::zero(field);
     for i in 0..polynomial.coefficients.len(){
-      acc = acc + MPolynomial::constant(polynomial.coefficients[i].clone()) * x.pow(i as u128);
+      acc += MPolynomial::constant(polynomial.coefficients[i]) * x.pow(i as u128);
     }
     acc
 
@@ -245,8 +244,8 @@ impl MPolynomial {
                 if exp == 0 {
                     continue;
                 }
-                if term.len() > 0 {
-                    term.push_str("*");
+                if !term.is_empty() {
+                    term.push('*');
                 }
                 term.push_str(&format!("x_{}^{}", i, exp));
             }
@@ -272,7 +271,7 @@ impl Add for MPolynomial {
         for (k, v) in &self.dictionary {
             let mut pad = k.clone();
             pad.extend(std::iter::repeat(0).take(num_variables - k.len()));
-            dictionary.insert(pad, v.clone());
+            dictionary.insert(pad, *v);
         }
         // Add the second polynomial's terms to the new dictionary
         for (k, v) in &other.dictionary {
@@ -284,7 +283,7 @@ impl Add for MPolynomial {
                 *existing_coeff = existing_coeff.add(*v);
             } else {
                 // If the exponent vector does not exist, insert the new one
-                dictionary.insert(pad, v.clone());
+                dictionary.insert(pad, *v);
             }
         }
 
@@ -520,7 +519,7 @@ mod test_mpolynomial_operation {
         dictionary.insert(vec![2, 0, 0], FieldElement::new(3, field)); // 3x^2
         let p = MPolynomial::new(Field::new(17), dictionary);
 
-        assert_eq!(p.degree(), 6 as i128);
+        assert_eq!(p.degree(), 6_i128);
     }
 
     #[test]
