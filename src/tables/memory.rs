@@ -191,6 +191,19 @@ impl Memory {
         AIR
     }
 
+    pub fn generate_zerofier(&self)-> Vec<Polynomial>{  
+        let mut zerofiers = vec![];
+        let omicron = self.table.omicron;
+        let x = Polynomial::new_from_coefficients(vec![FieldElement::zero(self.table.field), FieldElement::one(self.table.field)]);
+
+        let boundary_zerofier = x - Polynomial::new_from_coefficients(vec![omicron.clone().pow(0)]);
+        zerofiers.push(boundary_zerofier);
+
+        //let transition_zerofier = Polynomial::new
+
+        zerofiers
+    }
+
 }
 
 //@todo test extend column ppa
