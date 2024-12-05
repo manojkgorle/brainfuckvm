@@ -22,7 +22,15 @@ pub enum Indices {
     InputEvaluation,
     OutputEvaluation,
 }
-
+pub enum IndicesPoly{
+    Boundary,
+    Transition,
+    Terminal,
+    Difference,
+}
+pub enum ChallengeIndices{
+    A, B, C, D, E, F, Alpha, Beta, Delta, Gamma, Eta
+}
 impl ProcessorTable {
     pub fn new(field: Field, length:u128,  generator: FieldElement, order: u128) -> Self {
         let base_width = 7;
@@ -99,14 +107,11 @@ impl ProcessorTable {
     
         deselectors
     }
-    //boundary constraints for the base coloumns
-    // the values of instructionpermutaion ipa and mpa I am taking as 1
-    // pub fn boundary_constraint(self)->Polynomial{
+ // this is after padding and extension
 
-        
 
-    // }
-    
+
+
 
 
 
