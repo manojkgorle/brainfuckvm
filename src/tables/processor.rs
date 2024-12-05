@@ -23,14 +23,37 @@ pub enum Indices {
     OutputEvaluation,
 }
 pub enum IndicesPoly{
+    //i0 = [, 
+    //i1 = ],
+    // i2 = <,
+    // i3 = >,
+    // i4 = +,
+    // i5 = -,
+    // i6 = ",",
+    // i7 = ".",
     Boundary,
-    Transition,
+    Transition_i0,
+    Transition_i1,
+    Transition_i2,
+    Transition_i3,
+    Transition_i4,
+    Transition_i5,
+    Transition_i6,
+    Transition_i7,
+    Transition_all,
+    //clk*-clk-1
+    //inv.(1-inv.mv)
+    //ci.(ipa.(a.ip+b.ci+c.ni-alpha)-ipa*)+(ipa*-ipa).deselector
+    //mpa.(d.clk+e.mp+f.mv-beta)-mpa*
+    Transition_iea, 
+    Transition_oea,
     Terminal,
     Difference,
 }
 pub enum ChallengeIndices{
     A, B, C, D, E, F, Alpha, Beta, Delta, Gamma, Eta
 }
+
 impl ProcessorTable {
     pub fn new(field: Field, length:u128,  generator: FieldElement, order: u128) -> Self {
         let base_width = 7;
