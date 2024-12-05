@@ -119,18 +119,51 @@ impl Table {
         polynomial
     }
 
-    // in the codewords matrix you are getting is coloumns*rows (rows and coloums reference to the intial table)
-    pub fn lde(self,domain:FriDomain)->Vec<Vec<FieldElement>>{
-        let x = self.base_width;
-        let polynomial = self.interpolate_columns((0..x).collect());
-        let mut self_codewords=Vec::new();
-        for p in polynomial{
-            let codeword=domain.evaluate(p);
-            self_codewords.push(codeword);
+    pub fn next_interpolate_columns(self, column_indices: Vec<u128>)->Vec<Polynomial>{
+    let mut next_interpolated:Vec<Polynomial>=Vec::new();
+        if self.height ==0{
+            let poly=Polynomial::new_from_coefficients(vec![FieldElement::zero(Field::new(self.field.0))]);
+            next_interpolated.push(poly);
+           return next_interpolated;
         }
-        self_codewords
+        
+        let mut omicron_domain:Vec<FieldElement>=Vec::new();
+        omicron_domain.push(self.omicron.pow(self.height-1));
+        for i in 0..self.height-1{
+            omicron_domain.push(self.omicron.pow(i));
+        }
+
+        for c in 0..self.matrix[0].len(){
+            let mut trace:Vec<FieldElement>=Vec::new();
+            for row in self.matrix.iter(){
+                trace.push(row[c as usize]);
+            }       
+        let mut values:Vec<FieldElement>=Vec::new();
+           
+        values=trace.clone();
+        if values.len()!=omicron_domain.len(){
+            panic!("length of domain and values are unequal");
+        };
+        println!("domain ={:?}", omicron_domain);
+        println!("values ={:?}", values);
+
+        let poly= interpolate_lagrange_polynomials(omicron_domain.clone(), values);
+        println!("poly ={:?}", poly);
+            next_interpolated.push(poly);
+        }
+        next_interpolated
     }
-}
+
+// in the codewords matrix you are getting is coloumns*rows (rows and coloums reference to the intial table)
+pub fn lde(self,domain:FriDomain)->Vec<Vec<FieldElement>>{
+    let x = self.base_width;
+    let polynomial = self.interpolate_columns((0..x).collect());
+    let mut self_codewords=Vec::new();
+    for p in polynomial{
+        let codeword=domain.evaluate(p);
+        self_codewords.push(codeword);}
+    self_codewords
+}}
 
 
 
