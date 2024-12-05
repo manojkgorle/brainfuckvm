@@ -36,6 +36,7 @@ pub struct ProgramEvaluationArgument{
     challenge_indices: Vec<usize>,
     terminal_index: usize,
     program: Vec<u128>,
+    //@todo soumya- if program is passed as a vec of field elements directly, then can skip padded program part
 }
 
 impl ProgramEvaluationArgument{
