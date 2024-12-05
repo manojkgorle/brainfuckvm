@@ -190,6 +190,36 @@ impl Memory {
         AIR
     }
 
+    pub fn generate_zerofier(&self)-> Vec<Polynomial>{  
+        let mut zerofiers = vec![];
+        let omicron = self.table.omicron;
+        let x = Polynomial::new_from_coefficients(vec![FieldElement::zero(self.table.field), FieldElement::one(self.table.field)]);
+
+        let boundary_zerofier = x.clone() - Polynomial::new_from_coefficients(vec![omicron.clone().pow(0)]);
+        zerofiers.push(boundary_zerofier);
+
+        let mut transition_zerofier = Polynomial::new_from_coefficients(vec![]);
+        for i in 0..self.table.length-1{
+            transition_zerofier*=(x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]));
+        }
+        zerofiers.push(transition_zerofier);
+
+        let terminal_zerofier = x.clone() - Polynomial::new_from_coefficients(vec![omicron.clone().pow(self.table.length-1)]);
+
+        zerofiers
+    }
+
+    pub fn generate_quotients(&self, challenges: Vec<FieldElement>)->Vec<Polynomial>{
+        let mut quotients = vec![];
+        let AIR = self.generate_AIR(challenges);
+        let zerofiers = self.generate_zerofier();
+
+        for i in 0..AIR.len(){
+            quotients.push(AIR[i].clone().q_div(zerofiers[i].clone()).0);
+        }
+        quotients
+    }
+
 }
 
 //@todo test extend column ppa
