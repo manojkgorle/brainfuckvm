@@ -127,7 +127,7 @@ impl VirtualMachine {
                     c = input_data.chars().nth(input_counter).unwrap();
                     input_counter += 1;
                 } else {
-                    // @todo implement getch handler?
+                    // TODO: implement getch handler?
                 }
                 memory.insert(memory_pointer, f(c));
             } else {
@@ -162,14 +162,13 @@ impl VirtualMachine {
         let mut input_counter = 0;
         let mut output_data = String::new();
 
-        // @todo create tables.
         let mut processor_materix = Vec::new();
         let mut instruction_matrix: Vec<Vec<FieldElement>> = (0..program.len() - 1).map(|i| vec![FieldElement::new(i as u128, field),program[i].clone(),program[i + 1].clone()]).collect();
         // Adding the last element to the instruction matrix
         instruction_matrix.push(vec![FieldElement::new((program.len() - 1) as u128, field),program.last().unwrap().clone(),FieldElement::zero(field)]);
         let mut input_matrix = Vec::new();
         let mut output_matrix = Vec::new();
-        // let mut i = 0;
+
         while register.instruction_pointer.0 < program.len() as u128{
             let new_processor_matrix_row = vec![
                 register.cycle.clone(),
@@ -186,8 +185,6 @@ impl VirtualMachine {
                 register.current_instruction.clone(),
                 register.next_instruction.clone(),
             ];
-            // println!("instruction matrix len: {:?}, i: {}", instruction_matrix.len(), i);
-            // i += 1;
             instruction_matrix.push(new_instruction_matrix);
             // update registers.
             if register.current_instruction == f('[') {
@@ -230,7 +227,7 @@ impl VirtualMachine {
                     memory.insert(register.memory_pointer, f(c));
                     input_matrix.push(vec![*memory.get(&register.memory_pointer).unwrap_or(&zero)]);
                 } else {
-                    // @todo implement getch handler?
+                    // TODO: implement getch handler?
                 }
             } else {
                 panic!(
@@ -288,6 +285,10 @@ impl VirtualMachine {
         // build memory matrix
         let memory_matrix = Memory::derive_matrix(&processor_materix);
         (processor_materix, memory_matrix, instruction_matrix, input_matrix, output_matrix)
+    }
+
+    pub fn num_challenges() -> u32 {
+        11
     }
 }
 
