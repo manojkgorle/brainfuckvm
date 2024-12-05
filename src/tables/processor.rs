@@ -2,6 +2,7 @@
 use crate::fields::{FieldElement, Field};
 use super::Table;
 use super::{roundup_npow2, derive_omicron};
+use crate::univariate_polynomial::*;
 
 pub struct ProcessorTable {
     table: Table
@@ -22,7 +23,8 @@ pub enum Indices {
     InputEvaluation,
     OutputEvaluation,
 }
-pub enum IndicesPoly{
+#[allow(non_camel_case_types)]
+pub enum IndicesPoly {
     //i0 = [, 
     //i1 = ],
     // i2 = <,
@@ -188,10 +190,19 @@ impl ProcessorTable {
     // the values of instructionpermutaion ipa and mpa I am taking as 1
     // pub fn boundary_constraint(self)->Polynomial{
 
-        
+  
 
-    // }
     
+
+    
+
+//  }
+
+
+
+
+
+
 
 
 
