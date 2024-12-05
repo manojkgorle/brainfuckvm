@@ -13,7 +13,7 @@ pub enum Indices {
 }
 
 impl IOTable {
-    pub fn new(field: Field, length:u128, num_randomizers: u128, generator: FieldElement, order: u128) -> Self {
+    pub fn new(field: Field, length:u128,  generator: FieldElement, order: u128) -> Self {
         let base_width = 1;
         let full_width = base_width + 1;
         let height = roundup_npow2(length);

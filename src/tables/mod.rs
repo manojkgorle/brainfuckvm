@@ -58,7 +58,7 @@ impl Table {
          base_width,
          full_width,
          length,
-        //  num_randomizers,
+        
          height,
          omicron,
          generator,
@@ -99,11 +99,7 @@ impl Table {
       for i in 0..self.height{
             omicron_domain.push(self.omicron.pow(i));
         }
-        let mut domain:Vec<FieldElement>=vec![FieldElement::new(0,self.field);self.height as usize];
-        for i in 0..self.height{
-            domain[i as usize]=omicron_domain[i as usize];
-        }
-
+        
         for c in column_indices{
             let mut trace:Vec<FieldElement>=Vec::new();
      
@@ -117,9 +113,8 @@ impl Table {
             if values.len()!=omicron_domain.len(){
                 panic!("length of domain and values are unequal");
             };
-            println!("domain ={:?}", domain);
-            println!("values ={:?}", values);
-        let poly= interpolate_lagrange_polynomials(domain.clone(), values);
+          
+        let poly= interpolate_lagrange_polynomials(omicron_domain.clone(), values);
         println!("poly ={:?}", poly);
             polynomial.push(poly);  
         }
@@ -170,7 +165,7 @@ mod test_operations{
     use super::*;
 
 
-    
+
     #[test]
     fn test_roundup_npow2(){
         let len:u128 =2;
