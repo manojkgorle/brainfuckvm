@@ -39,3 +39,5 @@ impl InstructionTable {
         }
     }
 }
+
+// @todo test instruction table padding.
