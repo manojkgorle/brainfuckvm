@@ -1,4 +1,5 @@
 use crate::fields::{Field, FieldElement};
+use crate::univariate_polynomial::Polynomial;
 use super::processor::Indices as ProcessorIndices;
 use super::Table;
 use super::{roundup_npow2, derive_omicron};
@@ -17,6 +18,7 @@ pub enum Indices {
 }
 
 impl Memory {
+
     pub fn new(field: Field, length:u128, num_randomizers: u128, generator: FieldElement, order: u128) -> Self {
         let base_width = 4;
         let full_width = base_width + 1;
@@ -44,6 +46,7 @@ impl Memory {
         }
     }
 
+    // processor matrix that goes here is unpadded
     pub fn derive_matrix(processor_matrix: &[Vec::<FieldElement>]) -> Vec<Vec<FieldElement>> {
         let field = processor_matrix[0][0].1;
         let zero = FieldElement::zero(field);
@@ -68,6 +71,7 @@ impl Memory {
         });
 
         // Insert dummy rows for smooth clock jumps
+        //@todo dummy rows should not be added since the contraint that mv= mv* when cycle jumps more than 1 will be disturbed
         let mut i = 0;
         while i < matrix.len() - 1 {
             if matrix[i][Indices::MemoryPointer as usize] == matrix[i + 1][Indices::MemoryPointer as usize] && matrix[i + 1][Indices::Cycle as usize] != matrix[i][Indices::Cycle as usize] + one{
@@ -83,6 +87,32 @@ impl Memory {
     }
     matrix
     }
+
+    //the matrix taken here is padded
+    pub fn extension_column_ppa(challenges: Vec<FieldElement>, challenge_indices: Vec<usize>, matrix: Vec<Vec<FieldElement>>)-> Vec<Vec<FieldElement>>{
+        let e_matrix = matrix.clone();
+        //@todo taking init 1 for now, change to random secret initial value which we check by difference constraint of Tmpa = Tppa
+        let mut init = FieldElement::one(matrix.clone()[0][0].1);
+        for mut row in e_matrix.clone() {
+            let weighted_sum = row[Indices::Cycle as usize].clone() * challenges[challenge_indices[0]]
+                + row[Indices::MemoryPointer as usize].clone() * challenges[challenge_indices[1]]
+                + row[Indices::MemoryValue as usize] * challenges[challenge_indices[2]] - challenges[challenge_indices[3]];
+            row.push(init*weighted_sum); 
+            init = init*weighted_sum;
+        }
+        e_matrix
+    }
+    
+
+    pub fn constraints(&self)-> Vec<Polynomial>{
+        let interpolated = self.table.interpolate_columns(vec![0,1,2]);
+
+        //Boundary constraints
+        //interpolated[]
+    }
 }
 
 // @todo test memory table padding
+
+    
+
