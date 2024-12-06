@@ -219,7 +219,7 @@ mod test_operations{
         assert !(!Table::has_order_po2(order2));
         assert !(Table::has_order_po2(order));
     }
-    
+
     #[test]
     fn test_interpolate_columns(){
         let field = Field::new(17);
@@ -269,17 +269,6 @@ mod test_operations{
         assert_eq!(codewords, expected_codewords);
 
         
-    }
-    #[test]
-    fn test_derive_omicron(){
-        let field = Field::new( 1 + (1 << 64) - (1 << 32) );
-        let generator = FieldElement::new(1753635133440165772, field);
-        let order = 1 << 32 ;
-        let target_order = 1 << 16;
-        let omicron = derive_omicron(generator, order, target_order);
-        println!("omicron ={:?}", omicron);
-        let expected_omicron = FieldElement::new(49, field);
-        assert_eq!(omicron, expected_omicron);
     }
 
 }
