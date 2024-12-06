@@ -48,8 +48,9 @@ pub enum IndicesPoly {
     //inv.(1-inv.mv)
     //ci.(ipa.(a.ip+b.ci+c.ni-alpha)-ipa*)+(ipa*-ipa).deselector
     //mpa.(d.clk+e.mp+f.mv-beta)-mpa*
-    //iea transition constraint
-    //oea transition constraint
+    //selector(,)(ci) . (iea.gamma + mv - iea*) + (ci -  “,”) . (iea - iea*)
+    //selector(.)(ci) . (oea.delta + mv - oea*) + (ci -  “.”) . (oea - oea*)
+    
     Terminal,
     Difference,
 }
@@ -65,7 +66,7 @@ impl ProcessorTable {
         let omicron = derive_omicron(generator, order, height);
         let matrix = vec![vec![FieldElement::zero(field); full_width as usize]; height as usize];
         let table = Table::new(field, base_width, full_width, length,  height, omicron, generator, order, matrix);
-        Self { table: table }
+        Self { table }
     }
 
     // Note: Before padding initiate the matrix in table.
@@ -102,19 +103,19 @@ impl ProcessorTable {
 
         self.table.matrix[0].push(ipa);
         for i in 0..self.table.length-1 {
-            let weighted_sum = self.table.matrix[i as usize][Indices::InstructionPointer as usize].clone() * challenges[ChallengeIndices::A as usize]
-                + self.table.matrix[i as usize][Indices::CurrentInstruction as usize].clone() * challenges[ChallengeIndices::B as usize]
-                + self.table.matrix[i as usize][Indices::NextInstruction as usize].clone() * challenges[ChallengeIndices::C as usize] - challenges[ChallengeIndices::Alpha as usize];
+            let weighted_sum = self.table.matrix[i as usize][Indices::InstructionPointer as usize] * challenges[ChallengeIndices::A as usize]
+                + self.table.matrix[i as usize][Indices::CurrentInstruction as usize] * challenges[ChallengeIndices::B as usize]
+                + self.table.matrix[i as usize][Indices::NextInstruction as usize] * challenges[ChallengeIndices::C as usize] - challenges[ChallengeIndices::Alpha as usize];
             self.table.matrix[(i+1) as usize].push(ipa*weighted_sum); 
-            ipa = ipa*weighted_sum;
+            ipa *= weighted_sum;
     }
         self.table.matrix[0].push(mpa);
         for i in 0..self.table.length-1 {
-            let weighted_sum = self.table.matrix[i as usize][Indices::Cycle as usize].clone() * challenges[ChallengeIndices::D as usize]
-                + self.table.matrix[i as usize][Indices::MemoryPointer as usize].clone() * challenges[ChallengeIndices::E as usize]
-                + self.table.matrix[i as usize][Indices::MemoryValue as usize].clone() * challenges[ChallengeIndices::F as usize] - challenges[ChallengeIndices::Beta as usize];
+            let weighted_sum = self.table.matrix[i as usize][Indices::Cycle as usize] * challenges[ChallengeIndices::D as usize]
+                + self.table.matrix[i as usize][Indices::MemoryPointer as usize] * challenges[ChallengeIndices::E as usize]
+                + self.table.matrix[i as usize][Indices::MemoryValue as usize] * challenges[ChallengeIndices::F as usize] - challenges[ChallengeIndices::Beta as usize];
             self.table.matrix[(i+1) as usize].push(mpa*weighted_sum); 
-            mpa = mpa*weighted_sum;
+            mpa *= weighted_sum;
     }
 
         self.table.matrix[0].push(iea);
@@ -257,9 +258,9 @@ impl ProcessorTable {
     //     quotients
     // }
 
-    // define a selector polynomial for a specific instruction.
+    //define a selector polynomial for a specific instruction.
     //todo for a set of instructions.
-   pub fn deselector_polynomial(
+   pub fn selector_polynomial(
         instruction: char, 
         indeterminate: FieldElement, 
         field: Field,
@@ -269,14 +270,14 @@ impl ProcessorTable {
         
         for c in "[]<>,.+-".chars() {
             if c != instruction {
-                acc = acc * (indeterminate - f(c));
+                acc *= indeterminate - f(c);
             }
         }
         acc
     }
 
     // define a selector polynomial for a valid set
-   pub fn universal_deselector(
+   pub fn universal_selector(
         indeterminate: FieldElement, 
         field: Field,
         char:Vec<char>
@@ -286,13 +287,11 @@ impl ProcessorTable {
     
         for target_char in "[]<>,.+-".chars() {
             let mut acc = FieldElement::new(1, field); // Start with the multiplicative identity (1)
-    
             for c in char.iter() {
                 if *c != target_char {
-                    acc = acc * (indeterminate - f(*c));
+                    acc *= indeterminate - f(*c);
                 }
             }
-    
             deselectors.push((target_char, acc));
         }
         
@@ -300,10 +299,144 @@ impl ProcessorTable {
     }
 }
 
-//@todo test extend column
-//@todo test generate AIR
-//@todo test generate zerofier
-//@todo test generate quotient
+
+
+    //boundary constraints for the base coloumns
+    // the values of instructionpermutaion ipa and mpa I am taking as 1
+    pub fn generate_AIR(&self,challenges:Vec<FieldElement>)->Vec<Polynomial>{
+            let interpolated = self.table.clone().interpolate_columns(vec![Indices::Cycle as u128, Indices::InstructionPointer as u128, Indices::CurrentInstruction as u128, Indices::NextInstruction as u128, Indices::MemoryPointer as u128, Indices::MemoryValue as u128, Indices::MemoryValueInvers as u128, Indices::InstructionPermutaion as u128, Indices::MemoryPermuation as u128, Indices::InputEvaluation as u128, Indices::OutputEvaluation as u128]);
+            let clk=interpolated[Indices::Cycle as usize].clone();
+            let ip=interpolated[Indices::InstructionPointer as usize].clone();
+            let ci=interpolated[Indices::CurrentInstruction as usize].clone();
+            let ni=interpolated[Indices::NextInstruction as usize].clone();
+            let mp=interpolated[Indices::MemoryPointer as usize].clone();
+            let mv=interpolated[Indices::MemoryValue as usize].clone();
+            let inv_mv=interpolated[Indices::MemoryValueInvers as usize].clone();
+            let ipa=interpolated[Indices::InstructionPermutaion as usize].clone();
+            let mpa=interpolated[Indices::MemoryPermuation as usize].clone();
+            let iea=interpolated[Indices::InputEvaluation as usize].clone();
+            let oea=interpolated[Indices::OutputEvaluation as usize].clone();
+            let next_interpolated = self.table.clone().next_interpolate_columns(vec![Indices::Cycle as u128, Indices::InstructionPointer as u128, Indices::CurrentInstruction as u128, Indices::NextInstruction as u128, Indices::MemoryPointer as u128, Indices::MemoryValue as u128, Indices::MemoryValueInvers as u128, Indices::InstructionPermutaion as u128, Indices::MemoryPermuation as u128, Indices::InputEvaluation as u128, Indices::OutputEvaluation as u128]);
+            let clk_next=next_interpolated[Indices::Cycle as usize].clone();
+            let ip_next=next_interpolated[Indices::InstructionPointer as usize].clone();
+            let ci_next=next_interpolated[Indices::CurrentInstruction as usize].clone();
+            let ni_next=next_interpolated[Indices::NextInstruction as usize].clone();
+            let mp_next=next_interpolated[Indices::MemoryPointer as usize].clone();
+            let mv_next=next_interpolated[Indices::MemoryValue as usize].clone();
+            let inv_mv_next=next_interpolated[Indices::MemoryValueInvers as usize].clone();
+            let ipa_next=next_interpolated[Indices::InstructionPermutaion as usize].clone();
+            let mpa_next=next_interpolated[Indices::MemoryPermuation as usize].clone();
+            let iea_next=next_interpolated[Indices::InputEvaluation as usize].clone();
+            let oea_next=next_interpolated[Indices::OutputEvaluation as usize].clone();
+            let one=Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
+            let mut AIR=vec![];
+            //Boundary contsraints :clk=mp=mv=inv=ip=0
+            //iea=oea=1 (we are using 1 instead of any random number)
+            let poly_two=Polynomial::new_from_coefficients(vec![FieldElement::new(2,self.table.field)]);
+            let boundaryAIR=clk.clone()+ip.clone()+mp.clone()+mv.clone()+inv_mv.clone()+ipa.clone()+mpa.clone()+iea.clone()+oea.clone()-poly_two.clone();
+            AIR.push(boundaryAIR);
+    //         Transition_i0,
+    // Transition_i1,
+    // Transition_i2,
+    // Transition_i3,
+    // Transition_i4,
+    // Transition_i5,
+    // Transition_i6,
+    // Transition_i7,
+    // Transition_all,
+    let poly_one=Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
+    let mv_is_zero=poly_one.clone()-mv.clone()*inv_mv.clone();
+//(ip⋆−ip−2)⋅mv+(ip⋆−ni)⋅iszero
+// mp⋆−mp
+// mv⋆−mv
+    let trasition_i0=(mv.clone()*(ip_next.clone()-ip.clone()-poly_two.clone())
+    +mv_is_zero.clone()*(ip_next.clone()-ni.clone()))+
+    (mp_next.clone()-mp.clone())+
+    (mv_next.clone()-mv.clone());
+    AIR.push(trasition_i0);
+    // (ip⋆−ip−2)⋅iszero+(ip⋆−ni)⋅mv
+    // mp⋆−mp
+    // mv⋆−mv
+    
+
+    let trasition_i1=mv_is_zero.clone()*(ip_next.clone()-ip.clone()-poly_two.clone())+
+    (ip_next.clone()-ni.clone())*mv.clone()+
+    (mv_next.clone()-mv.clone())+
+    (mp_next.clone()-mp.clone());
+    AIR.push(trasition_i1);
+
+// ip⋆−ip−1
+// mp⋆−mp+1
+     let trasition_i2=
+(ip_next.clone()-ip.clone()-poly_one.clone())+
+    (mp_next.clone()-mp.clone()+poly_one.clone());
+    AIR.push(trasition_i2);
+// ip⋆−ip−1
+// mp⋆−mp+1
+let trasition_i3=(ip_next.clone()-ip.clone()-poly_one.clone())+
+     (mp_next.clone()-mp.clone()+poly_one.clone());
+        AIR.push(trasition_i3);
+
+//ip⋆−ip−1
+// mp⋆−mp
+// mv⋆−mv−1
+
+     let trasition_i4=(ip_next.clone()-ip.clone()-poly_one.clone())+
+     (mp_next.clone()-mp.clone())+
+     (mv_next.clone()-mv.clone()-poly_one.clone());
+        AIR.push(trasition_i4);
+// ip⋆−ip−1
+// mp⋆−mp
+// mv⋆−mv+1
+  let trasition_i5=(ip_next.clone()-ip.clone()-poly_one.clone())+
+    (mp_next.clone()-mp.clone())+
+    (mv_next.clone()-mv.clone()-poly_one.clone());
+    AIR.push(trasition_i5);
+//  ip⋆−ip−1
+// mp⋆−mp
+
+
+    let trasition_i6=(ip_next.clone()-ip.clone()-poly_one.clone())+
+    (mp_next.clone()-mp.clone());
+    AIR.push(trasition_i6);
+//  ip⋆−ip−1
+// mp⋆−mp
+// mv⋆−mv
+ let trasition_i7=(ip_next.clone()-ip.clone()-poly_one.clone())+(mp_next.clone()-mp.clone())+
+    (mv_next.clone()-mv.clone());
+    AIR.push(trasition_i7);
+    //clk⋆−clk−1
+    // inv⋅(1−inv⋅mv) 
+     //ci.(ipa.(a.ip+b.ci+c.ni-alpha)-ipa*)+(ipa*-ipa).deselector
+    //mpa.(d.clk+e.mp+f.mv-beta)-mpa*
+    //selector(,)(ci) . (iea.gamma + mv - iea*) + (ci -  “,”) . (iea - iea*)
+    //selector(.)(ci) . (oea.delta + mv - oea*) + (ci -  “.”) . (oea - oea*)
+    
+// @todo
+    let trasition_all=(clk_next.clone()-clk.clone()-poly_one.clone())+
+    (inv_mv.clone()*(mv_is_zero.clone()));
+    AIR.push(trasition_all);
+
+
+             
+            
+
+
+
+            
+
+            
+
+         
+
+        
+          
+        
+            
+     AIR   
+            
+    }
+         }
 
 
 
@@ -318,7 +451,7 @@ impl ProcessorTable {
 
     
 
-//}
+
     
 
 // @todo test processor table padding
