@@ -5,11 +5,24 @@ use crate::univariate_polynomial::*;
 //we can use ntt fast fns for optimization, but rn we just implement using direct evaluate and multiply functions of polynomials
 //some fns, structs and parameters are changed accordingly compared to fri.py and ntt.py, because we are not using extension fields
 
-//pub fn combination_polynomial(boundary:Vec<Polynomials, quotient, ) ->  {
-//     a1.pow(2) + a0.pow(2)
-// }
+//@todo pass difference quotient polynomial as a parameter too if using random secret initials
+//challenges = [alpha, beta], given by fiat shamir
 
-// pub fn generate_trace(a0: FieldElement, a1: FieldElement, n: usize) -> Vec<FieldElement> {
+//@todo this has to be inside prover/main?, check once
+//boundary_q includes boundary constraints for all tables together, similarly for others
+pub fn combination_polynomial(boundary_q:Vec<Polynomial>, transition_q:Vec<Polynomial>, terminal_q:Vec<Polynomial>, challenges: Vec<FieldElement>, degree: usize, field: Field) -> Polynomial{
+    let mut combination = Polynomial::new_from_coefficients(vec![]);
+    let alpha = challenges[0];
+    let beta = challenges[1];
+    let x = Polynomial::new_from_coefficients(vec![FieldElement::zero(field), FieldElement::one(field)]);
+    let degree = degree;
+
+    for i in 0..boundary_q.len(){
+        let d= degree - boundary_q[i].degree();
+        //combination += Polynomialalpha*boundary_q[i] + beta*x.pow()
+        }
+        combination
+}
 //     let mut trace = vec![a0, a1];
 //     for i in 2..n {
 //         let next = fibonnaci_sq(trace[i - 2], trace[i - 1]);

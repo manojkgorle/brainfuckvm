@@ -23,8 +23,6 @@ pub enum IndicesPoly{
     Terminal,
     Difference,
 }
-
-
 pub enum ChallengeIndices{
     A, B, C, D, E, F, Alpha, Beta, Delta, Gamma, Eta
 }
