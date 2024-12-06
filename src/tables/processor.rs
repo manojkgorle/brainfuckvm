@@ -65,7 +65,7 @@ impl ProcessorTable {
         let omicron = derive_omicron(generator, order, height);
         let matrix = vec![vec![FieldElement::zero(field); full_width as usize]; height as usize];
         let table = Table::new(field, base_width, full_width, length,  height, omicron, generator, order, matrix);
-        Self { table: table }
+        Self { table }
     }
 
     // Note: Before padding initiate the matrix in table.
@@ -143,7 +143,7 @@ impl ProcessorTable {
             }
     }
 
-    // define a selector polynomial for a specific instruction.
+    //define a selector polynomial for a specific instruction.
     //todo for a set of instructions.
    pub fn selector_polynomial(
         instruction: char, 
@@ -155,7 +155,7 @@ impl ProcessorTable {
         
         for c in "[]<>,.+-".chars() {
             if c != instruction {
-                acc = acc * (indeterminate - f(c));
+                acc *= indeterminate - f(c);
             }
         }
           acc
@@ -171,13 +171,11 @@ impl ProcessorTable {
     
         for target_char in "[]<>,.+-".chars() {
             let mut acc = FieldElement::new(1, field); // Start with the multiplicative identity (1)
-    
             for c in char.iter() {
                 if *c != target_char {
-                    acc = acc * (indeterminate - f(*c));
+                    acc *= indeterminate - f(*c);
                 }
             }
-    
             deselectors.push((target_char, acc));
         }
     
