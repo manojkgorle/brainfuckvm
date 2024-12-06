@@ -199,7 +199,7 @@ impl ProcessorTable {
         for i in 0..self.table.length-1{
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f('+') == ci {
-            transition_i4_zerofier*=(x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]));
+            transition_i4_zerofier*=x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]);
             }
         }
         zerofiers.push(transition_i4_zerofier);
