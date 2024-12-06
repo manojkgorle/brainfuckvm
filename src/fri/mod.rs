@@ -292,7 +292,6 @@ impl FriDomain{
             // domain_gen.push(x);
         }
         // println!("domain_gen ={:?}", domain_gen);
-      
         result
     }
     //needed if we use extension field

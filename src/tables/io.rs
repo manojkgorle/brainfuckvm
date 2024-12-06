@@ -36,5 +36,14 @@ impl IOTable {
         }
     }
 
-    // add extension columns. @soumyathakur44
+    pub fn extend_column_ea(&mut self, randFieldElem: u128, challenge: FieldElement){
+        let mut ea = FieldElement::new(randFieldElem,self.table.field); // take randFieldElem as zero if no random secret implementation
+        self.table.matrix[0][1] = ea; 
+        for i in 0..self.table.length-1 {
+            ea = self.table.matrix[i as usize][1]*challenge + self.table.matrix[(i+1) as usize][0];
+            self.table.matrix[(i+1) as usize][1] = ea; 
+        //Tea = IOTable.matrix[length-1][1] 
+        }
+    }
+
 }
