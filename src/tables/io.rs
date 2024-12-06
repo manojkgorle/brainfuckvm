@@ -20,7 +20,7 @@ impl IOTable {
         let omicron = derive_omicron(generator, order, height);
         let matrix = vec![vec![FieldElement::zero(field); full_width as usize]; height as usize];
         let table = Table::new(field, base_width, full_width, length, height, omicron, generator, order, matrix);
-        Self { table: table }
+        Self { table }
     }
 
     pub fn pad(&mut self) {

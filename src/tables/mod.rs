@@ -29,7 +29,7 @@ impl Table {
         base_width: u128,
         full_width: u128,
         length: u128,
-         height: u128,
+        height: u128,
         omicron: FieldElement,
         generator: FieldElement,
         order: u128,
@@ -48,24 +48,28 @@ impl Table {
             matrix,
         }
     }
-    fn new_2(field: Field, base_width: u128, full_width: u128, length: u128,
-         generator:FieldElement, order: u128) -> Self {
-     let height = roundup_npow2(length);
-     let omicron = derive_omicron(generator, order, height);
-     
-     Table {
-         field,
-         base_width,
-         full_width,
-         length,
-        
-         height,
-         omicron,
-         generator,
-         order,
-         matrix: Vec::new(), // Initialize as empty
-     }
- }
+    fn new_2(
+        field: Field, 
+        base_width: u128, 
+        full_width: u128, 
+        length: u128,
+        generator:FieldElement, 
+        order: u128
+    ) -> Self {
+    let height = roundup_npow2(length);
+    let omicron = derive_omicron(generator, order, height);
+    Table {
+        field,
+        base_width,
+        full_width,
+        length,
+        height,
+        omicron,
+        generator,
+        order,
+        matrix: Vec::new(), // Initialize as empty
+    }
+    }
     // dont know how to implement this method
     pub fn unit_distance(&self, omega_order:u128)->u128{
         if self.height ==0{
@@ -74,20 +78,19 @@ impl Table {
         omega_order/self.height
     }
 
-    
     pub fn get_interpolating_domain_length( &self)->u128{
         self.height
     }
+
     pub fn interpolate_degree(self)->u128{
         self.get_interpolating_domain_length()-1
-
     }
-      pub fn has_order_po2(order: u128) -> bool {
+
+    pub fn has_order_po2(order: u128) -> bool {
         (order & (order - 1)) == 0
     }
     
     pub fn interpolate_columns(self, column_indices:Vec<u128>)->Vec<Polynomial>{
-     
         let mut polynomial:Vec<Polynomial>=Vec::new();
         if self.height ==0{
             let poly=Polynomial::new_from_coefficients(vec![FieldElement::zero(Field::new(self.field.0))]);
@@ -96,26 +99,21 @@ impl Table {
         }
 
         let mut omicron_domain:Vec<FieldElement>=Vec::new();
-      for i in 0..self.height{
+        for i in 0..self.height{
             omicron_domain.push(self.omicron.pow(i));
         }
         
         for c in column_indices{
             let mut trace:Vec<FieldElement>=Vec::new();
-     
             for row in self.matrix.iter(){
                 trace.push(row[c as usize]);
             }
-         let mut values:Vec<FieldElement>=Vec::new();
-           
-         values=trace.clone();
-
+            let values:Vec<FieldElement>=trace.clone();
             if values.len()!=omicron_domain.len(){
                 panic!("length of domain and values are unequal");
             };
-          
-        let poly= interpolate_lagrange_polynomials(omicron_domain.clone(), values);
-        println!("poly ={:?}", poly);
+            let poly= interpolate_lagrange_polynomials(omicron_domain.clone(), values);
+            println!("poly ={:?}", poly);
             polynomial.push(poly);  
         }
         polynomial
@@ -241,8 +239,7 @@ mod test_operations{
         table.matrix = matrix;
         let column_indices = vec![0, 1, 2];
         let polynomials = table.interpolate_columns(column_indices);
-        let expected_polynomials = vec![
-            Polynomial::new_from_coefficients(vec![FieldElement::new(0, field), FieldElement::new(13, field), FieldElement::new(6, field), FieldElement::new(16, field)])];
+        let expected_polynomials = [Polynomial::new_from_coefficients(vec![FieldElement::new(0, field), FieldElement::new(13, field), FieldElement::new(6, field), FieldElement::new(16, field)])];
             println!("polynomials ={:?}", polynomials[0]);
         assert_eq!(polynomials[0], expected_polynomials[0]);
 
