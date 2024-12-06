@@ -170,7 +170,7 @@ impl ProcessorTable {
         for i in 0..self.table.length-1{
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f('[') == ci {
-            transition_i0_zerofier*=(x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]));
+            transition_i0_zerofier*=x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]);
             }
         }
         zerofiers.push(transition_i0_zerofier);
@@ -180,7 +180,7 @@ impl ProcessorTable {
         for i in 0..self.table.length-1{
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f(']') == ci {
-            transition_i1_zerofier*=(x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]));
+            transition_i1_zerofier*=x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]);
             }
         }
         zerofiers.push(transition_i1_zerofier);
@@ -190,7 +190,7 @@ impl ProcessorTable {
         for i in 0..self.table.length-1{
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f('<') == ci {
-            transition_i2_zerofier*=(x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]));
+            transition_i2_zerofier*=x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]);
             }
         }
         zerofiers.push(transition_i2_zerofier);
@@ -200,7 +200,7 @@ impl ProcessorTable {
         for i in 0..self.table.length-1{
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f('>') == ci {
-            transition_i3_zerofier*=(x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]));
+            transition_i3_zerofier*=x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]);
             }
         }
         zerofiers.push(transition_i3_zerofier);
@@ -210,7 +210,7 @@ impl ProcessorTable {
         for i in 0..self.table.length-1{
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f('+') == ci {
-            transition_i4_zerofier*=(x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]));
+            transition_i4_zerofier*=x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]);
             }
         }
         zerofiers.push(transition_i4_zerofier);
@@ -220,7 +220,7 @@ impl ProcessorTable {
         for i in 0..self.table.length-1{
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f('-') == ci {
-            transition_i5_zerofier*=(x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]));
+            transition_i5_zerofier*=x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]);
             }
         }
         zerofiers.push(transition_i5_zerofier);
@@ -230,7 +230,7 @@ impl ProcessorTable {
         for i in 0..self.table.length-1{
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f(',') == ci {
-            transition_i6_zerofier*=(x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]));
+            transition_i6_zerofier*=x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]);
             }
         }
         zerofiers.push(transition_i6_zerofier);
@@ -240,7 +240,7 @@ impl ProcessorTable {
         for i in 0..self.table.length-1{
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f('.') == ci {
-            transition_i7_zerofier*=(x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]));
+            transition_i7_zerofier*=x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]);
             }
         }
         zerofiers.push(transition_i7_zerofier);
@@ -248,7 +248,7 @@ impl ProcessorTable {
         //all
         let mut transition_all_zerofier = Polynomial::new_from_coefficients(vec![]);
         for i in 0..self.table.length-1{
-            transition_all_zerofier*=(x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]));
+            transition_all_zerofier*=x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]);
         }
         zerofiers.push(transition_all_zerofier);
 
