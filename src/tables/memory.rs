@@ -100,6 +100,7 @@ impl Memory {
         }
     }
     
+    
     //this is after padding and extension
     pub fn generate_air(&self, challenges: Vec<FieldElement>)-> Vec<Polynomial>{
         let interpolated = self.table.clone().interpolate_columns(vec![Indices::Cycle as u128, Indices::MemoryPointer as u128, Indices::MemoryValue as u128, Indices::PermutationArg as u128]);
