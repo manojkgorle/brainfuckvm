@@ -65,7 +65,6 @@ impl Memory {
         let field = processor_matrix[0][0].1;
         let zero = FieldElement::zero(field);
         let one = FieldElement::one(field);
-        println!("processor matrix len: {}", processor_matrix.len());
         let mut matrix: Vec<Vec<FieldElement>> = processor_matrix
         .iter()
         // .filter(|pt| pt[ProcessorIndices::CurrentInstruction as usize] != zero), we need the last processor row, right?
@@ -91,11 +90,11 @@ impl Memory {
         let mut ppa = FieldElement::new(randFieldElem,self.table.field);
         self.table.matrix[0][Indices::PermutationArg as usize] = ppa; 
         for i in 0..self.table.length-1 {
-            let weighted_sum = - (self.table.matrix[i as usize][Indices::Cycle as usize] * challenges[ChallengeIndices::D as usize]
+            let weighted_sum = self.table.matrix[i as usize][Indices::Cycle as usize] * challenges[ChallengeIndices::D as usize]
                 + self.table.matrix[i as usize][Indices::MemoryPointer as usize] * challenges[ChallengeIndices::E as usize]
-                + self.table.matrix[i as usize][Indices::MemoryValue as usize] * challenges[ChallengeIndices::F as usize] - challenges[ChallengeIndices::Beta as usize]);
-            self.table.matrix[(i+1) as usize][Indices::PermutationArg as usize] = (ppa*weighted_sum); 
+                + self.table.matrix[i as usize][Indices::MemoryValue as usize] * challenges[ChallengeIndices::F as usize] - challenges[ChallengeIndices::Beta as usize];
             ppa *= weighted_sum;
+            self.table.matrix[(i+1) as usize][Indices::PermutationArg as usize] = ppa; 
         }
     }
     
@@ -139,8 +138,9 @@ impl Memory {
         //@todo Tppa and Tmpa given by prover, for now just taking it as empty polynomials to write constraint without error
         let Tppa = Polynomial::new_from_coefficients(vec![]);
         let Tmpa = Polynomial::new_from_coefficients(vec![]);
-        let terminalAIR = PPA*(CLK.scalar_mul(challenges[ChallengeIndices::D as usize]) + MP.scalar_mul(challenges[ChallengeIndices::E as usize]) + MV.scalar_mul(challenges[ChallengeIndices::F as usize]) - Polynomial::new_from_coefficients(vec![challenges[ChallengeIndices::Beta as usize]])) - Tppa.clone()
-        + Tppa - Tmpa;
+        let terminalAIR = PPA*(
+            CLK.scalar_mul(challenges[ChallengeIndices::D as usize]) + MP.scalar_mul(challenges[ChallengeIndices::E as usize]) + MV.scalar_mul(challenges[ChallengeIndices::F as usize]) - Polynomial::new_from_coefficients(vec![challenges[ChallengeIndices::Beta as usize]])
+        ) - Tppa.clone()+ Tppa - Tmpa;
         AIR.push(terminalAIR);
 
         AIR
@@ -200,34 +200,16 @@ mod test_memory_table {
         let input = "a".to_string();
         // vm.run(&program, input.c);
         let (processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix) = vm.simulate(&program, input);
-        for row in processor_matrix.iter() {
-            println!("{:?}", row);
-        }
-        println!("memory matrix");
-        for row in memory_matrix.iter() {
-            println!("{:?}", row);
-        }
         let generator = field.generator();
         let order = 1 << 32;
         let zero = FieldElement::zero(field);
         let mut mem = Memory::new(field, memory_matrix.len() as u128, generator, order, memory_matrix);
-        println!("memory table initialized, len:{}", mem.table.matrix.len());
-
-        for row in mem.table.matrix.iter() {
-            println!("{:?}", row);
-        }
         let mut challenges = vec![zero; 11];
         challenges[ChallengeIndices::Beta as usize] = FieldElement::new(3, field);
         challenges[ChallengeIndices::D as usize] = FieldElement::new(1, field);
         challenges[ChallengeIndices::E as usize] = FieldElement::new(1, field);
         challenges[ChallengeIndices::F as usize] = FieldElement::new(1, field);
-        println!("memory matrix before extension");
         mem.extend_column_ppa(7, challenges);
-        println!("row memory matrix after extension, {:?}", mem.table.matrix.len());
-        println!("memory matrix after extension");
-        for row in mem.table.matrix.iter() {
-            println!("{:?}", row);
-        }
     }
 
     //#[test]
