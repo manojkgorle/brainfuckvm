@@ -120,6 +120,7 @@ impl FriDomain{
         }
         result
     }
+    // doubt
     pub fn interpolate(&self, values: Vec<FieldElement>)->Polynomial{
         let mut list:Vec<FieldElement> =vec![];
         for i in 0..values.len(){
@@ -128,6 +129,17 @@ impl FriDomain{
         
         interpolate_lagrange_polynomials(list, values).scalar_mul(self.offset.inverse())
     }
+    //interpolate without offset
+    pub fn real_interpolate(&self, values: Vec<FieldElement>)->Polynomial{
+        let mut list:Vec<FieldElement> =vec![];
+        for i in 0..values.len(){
+            list.push(self.omega.pow(i as u128));
+        }
+        
+        interpolate_lagrange_polynomials(list, values)
+    }
+    
+
     //not written xinterpolate, as it is used for extension field
 }
 #[cfg(test)]
@@ -165,4 +177,5 @@ mod test_fri{
         println!("interpolated ={:?}", interpolated);
         assert_eq!(interpolated.coefficients, polynomial.coefficients);
     }
+
 }
