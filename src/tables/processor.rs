@@ -4,6 +4,7 @@ use super::Table;
 use super::{roundup_npow2, derive_omicron};
 use crate::univariate_polynomial::*;
 
+
 pub struct ProcessorTable {
     table: Table
 }
@@ -47,8 +48,8 @@ pub enum IndicesPoly {
     //inv.(1-inv.mv)
     //ci.(ipa.(a.ip+b.ci+c.ni-alpha)-ipa*)+(ipa*-ipa).deselector
     //mpa.(d.clk+e.mp+f.mv-beta)-mpa*
-    Transition_iea, 
-    Transition_oea,
+    //iea transition constraint
+    //oea transition constraint
     Terminal,
     Difference,
 }
@@ -130,7 +131,6 @@ impl ProcessorTable {
     }
 
         self.table.matrix[0].push(oea);
-        let f = |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, self.table.field) };
         for i in 0..self.table.length-1 {
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f('.') == ci {
@@ -141,6 +141,121 @@ impl ProcessorTable {
                 self.table.matrix[(i+1) as usize].push(oea);
             }
     }
+}
+
+    pub fn generate_zerofier(&self)-> Vec<Polynomial>{  
+        let mut zerofiers = vec![];
+        let omicron = self.table.omicron;
+        let x = Polynomial::new_from_coefficients(vec![FieldElement::zero(self.table.field), FieldElement::one(self.table.field)]);
+        let f = |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, self.table.field) };
+        
+        //boundary
+        let boundary_zerofier = x.clone() - Polynomial::new_from_coefficients(vec![omicron.clone().pow(0)]);
+        zerofiers.push(boundary_zerofier);
+
+        //i0
+        let mut transition_i0_zerofier = Polynomial::new_from_coefficients(vec![]);
+        for i in 0..self.table.length-1{
+            let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
+            if f('[') == ci {
+            transition_i0_zerofier*=(x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]));
+            }
+        }
+        zerofiers.push(transition_i0_zerofier);
+
+        //i1
+        let mut transition_i1_zerofier = Polynomial::new_from_coefficients(vec![]);
+        for i in 0..self.table.length-1{
+            let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
+            if f(']') == ci {
+            transition_i1_zerofier*=(x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]));
+            }
+        }
+        zerofiers.push(transition_i1_zerofier);
+
+        //i2
+        let mut transition_i2_zerofier = Polynomial::new_from_coefficients(vec![]);
+        for i in 0..self.table.length-1{
+            let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
+            if f('<') == ci {
+            transition_i2_zerofier*=(x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]));
+            }
+        }
+        zerofiers.push(transition_i2_zerofier);
+
+        //i3
+        let mut transition_i3_zerofier = Polynomial::new_from_coefficients(vec![]);
+        for i in 0..self.table.length-1{
+            let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
+            if f('>') == ci {
+            transition_i3_zerofier*=(x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]));
+            }
+        }
+        zerofiers.push(transition_i3_zerofier);
+        
+        //i4
+        let mut transition_i4_zerofier = Polynomial::new_from_coefficients(vec![]);
+        for i in 0..self.table.length-1{
+            let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
+            if f('+') == ci {
+            transition_i4_zerofier*=(x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]));
+            }
+        }
+        zerofiers.push(transition_i4_zerofier);
+
+        //i5
+        let mut transition_i5_zerofier = Polynomial::new_from_coefficients(vec![]);
+        for i in 0..self.table.length-1{
+            let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
+            if f('-') == ci {
+            transition_i5_zerofier*=(x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]));
+            }
+        }
+        zerofiers.push(transition_i5_zerofier);
+
+        //i6
+        let mut transition_i6_zerofier = Polynomial::new_from_coefficients(vec![]);
+        for i in 0..self.table.length-1{
+            let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
+            if f(',') == ci {
+            transition_i6_zerofier*=(x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]));
+            }
+        }
+        zerofiers.push(transition_i6_zerofier);
+
+        //i7
+        let mut transition_i7_zerofier = Polynomial::new_from_coefficients(vec![]);
+        for i in 0..self.table.length-1{
+            let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
+            if f('.') == ci {
+            transition_i7_zerofier*=(x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]));
+            }
+        }
+        zerofiers.push(transition_i7_zerofier);
+
+        //all
+        let mut transition_all_zerofier = Polynomial::new_from_coefficients(vec![]);
+        for i in 0..self.table.length-1{
+            transition_all_zerofier*=(x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]));
+        }
+        zerofiers.push(transition_all_zerofier);
+
+        //terminal
+        let terminal_zerofier = x.clone() - Polynomial::new_from_coefficients(vec![omicron.clone().pow(self.table.length-1)]);
+
+        zerofiers
+    }
+
+    // pub fn generate_quotients(&self, challenges: Vec<FieldElement>)->Vec<FieldElement>{
+    //     let mut quotients = vec![];
+    //     let AIR = self.generate_AIR(challenges);
+    //     let zerofiers = self.generate_zerofier();
+
+    //     for i in 0..AIR.len(){
+    //         quotients.push(AIR[i].clone().q_div(zerofiers[i].clone()).0);
+    //     }
+    //     quotients
+    // }
 
     // define a selector polynomial for a specific instruction.
     //todo for a set of instructions.
@@ -157,8 +272,9 @@ impl ProcessorTable {
                 acc = acc * (indeterminate - f(c));
             }
         }
-          acc
+        acc
     }
+
     // define a selector polynomial for a valid set
    pub fn universal_deselector(
         indeterminate: FieldElement, 
@@ -179,24 +295,16 @@ impl ProcessorTable {
     
             deselectors.push((target_char, acc));
         }
-    
+        
         deselectors
     }
 }
-}
 
+//@todo test extend column
+//@todo test generate AIR
+//@todo test generate zerofier
+//@todo test generate quotient
 
-    //boundary constraints for the base coloumns
-    // the values of instructionpermutaion ipa and mpa I am taking as 1
-    // pub fn boundary_constraint(self)->Polynomial{
-
-  
-
-    
-
-    
-
-//  }
 
 
 
