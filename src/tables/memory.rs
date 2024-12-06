@@ -101,7 +101,7 @@ impl Memory {
         }
     }
     
-    
+
     //this is after padding and extension
     pub fn generate_air(&self, challenges: Vec<FieldElement>)-> Vec<Polynomial>{
         let interpolated = self.table.clone().interpolate_columns(vec![Indices::Cycle as u128, Indices::MemoryPointer as u128, Indices::MemoryValue as u128, Indices::PermutationArg as u128]);
@@ -190,6 +190,7 @@ impl Memory {
 mod test_memory_table {
     use crate::fields::{Field, FieldElement};
     use crate::tables::memory::ChallengeIndices;
+    use crate::tables::Table;
     use crate::vm::VirtualMachine;
     use super::Memory;
     #[test]
@@ -230,4 +231,42 @@ mod test_memory_table {
             println!("{:?}", row);
         }
     }
+
+    //#[test]
+    // fn test_extend_column_ppa() {
+    //     // Mock field and FieldElement implementation (use actual implementation if available)
+    //     let field = Field::new(101);
+    //     let zero = FieldElement::zero(field);
+    //     let one= FieldElement::one(field);
+
+    //     // Create a mock table structure
+    //     let mut matrix = vec![
+    //         vec![FieldElement::new(1, field), FieldElement::new(2, field), FieldElement::new(3, field), zero.clone()],
+    //         vec![FieldElement::new(4, field), FieldElement::new(5, field), FieldElement::new(6, field), zero.clone()],
+    //         vec![FieldElement::new(7, field), FieldElement::new(8, field), FieldElement::new(9, field), zero.clone()],
+    //         vec![FieldElement::new(1, field), FieldElement::new(2, field), FieldElement::new(3, field), zero.clone()],
+    //         vec![FieldElement::new(10, field), FieldElement::new(12, field), FieldElement::new(13, field), zero.clone()],
+    //         vec![FieldElement::new(1, field), FieldElement::new(2, field), FieldElement::new(3, field), zero.clone()],
+    //     ];
+    //     // Create the challenges
+    //     let challenges = vec![
+    //         FieldElement::new(3, field),  // D
+    //         FieldElement::new(4, field),  // E
+    //         FieldElement::new(5, field),  // F
+    //         FieldElement::new(2, field),  // Beta
+    //     ];
+    //     let mut ppa = FieldElement::new(1, field);
+    //     println!("{}:0", ppa.0);
+    //     matrix[0].push(FieldElement::one(field));
+    //     for i in 0..matrix.len()-1 {
+    //         let weighted_sum = (matrix[i as usize][0] * challenges[0]
+    //             + matrix[i as usize][1] * challenges[1]
+    //             + matrix[i as usize][2] * challenges[2] - challenges[3]);
+    //         matrix[(i+1) as usize].push(ppa*weighted_sum); 
+    //         ppa *= weighted_sum;
+    //         println!("{} + {} + {} - {}", (matrix[i as usize][0]*challenges[0]).0, (matrix[i as usize][1]*challenges[1]).0, (matrix[i as usize][2]*challenges[2]).0, challenges[3].0);
+    //         println!("{}:{}", ppa.0, i+1);
+    //     }
+    // }
+
 }
