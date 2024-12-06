@@ -136,7 +136,7 @@ impl Table {
         for c in 0..self.matrix[0].len(){
             let mut trace:Vec<FieldElement>=Vec::new();
             for row in self.matrix.iter(){
-                trace.push(row[c as usize]);
+                trace.push(row[c]);
             }       
         let mut values:Vec<FieldElement>=Vec::new();
            
@@ -184,8 +184,7 @@ pub fn derive_omicron(generator:FieldElement,generator_order:u128,target_order:u
     let mut t_order=generator_order;
      while t_order!=target_order {
         t_generator=t_generator.pow(2);
-            t_order/=2;
-            println!("t_order ={:?}", t_order);
+        t_order/=2;
     }
     t_generator}
     
@@ -196,8 +195,6 @@ pub fn has_order_po2( order: u128) -> bool {
 #[cfg(test)]
 mod test_operations{
     use super::*;
-
-
 
     #[test]
     fn test_roundup_npow2(){
@@ -214,6 +211,7 @@ mod test_operations{
 
         assert_eq!(round3,16);
     }
+
     #[test]
     fn has_order_po2(){
         let order =4_u128;
@@ -221,6 +219,7 @@ mod test_operations{
         assert !(!Table::has_order_po2(order2));
         assert !(Table::has_order_po2(order));
     }
+
     #[test]
     fn test_interpolate_columns(){
         let field = Field::new(17);
