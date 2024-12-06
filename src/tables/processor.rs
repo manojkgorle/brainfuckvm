@@ -297,9 +297,6 @@ impl ProcessorTable {
         
         deselectors
     }
-}
-
-
 
     //boundary constraints for the base coloumns
     // the values of instructionpermutaion ipa and mpa I am taking as 1
@@ -416,27 +413,11 @@ let trasition_i3=(ip_next.clone()-ip.clone()-poly_one.clone())+
     let trasition_all=(clk_next.clone()-clk.clone()-poly_one.clone())+
     (inv_mv.clone()*(mv_is_zero.clone()));
     AIR.push(trasition_all);
-
-
-             
-            
-
-
-
-            
-
-            
-
-         
-
-        
-          
-        
-            
-     AIR   
+    
+    AIR   
             
     }
-         }
+}
 
 
 
