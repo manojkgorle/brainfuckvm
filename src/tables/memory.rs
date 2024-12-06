@@ -30,14 +30,19 @@ pub enum ChallengeIndices{
 }
 
 impl Memory {
-    pub fn new(field: Field, length:u128, generator: FieldElement, order: u128) -> Self {
+    pub fn new(field: Field, length:u128, generator: FieldElement, order: u128, matrix: Vec<Vec<FieldElement>>) -> Self {
         let base_width = 3;
         let full_width = base_width + 1;
         let height = roundup_npow2(length);
-        println!("height: {}", height);
         let omicron = derive_omicron(generator, order, height);
-        let matrix= vec![vec![FieldElement::zero(field); full_width as usize]; height as usize];
-        let table = Table::new(field, base_width, full_width, length,  height, omicron, generator, order, matrix);
+        // let omicron = FieldElement::new(2, field); // @todo dummy omicron value, as omicron generation is not working as intended.
+        let mut gmatrix= vec![vec![FieldElement::zero(field); full_width as usize]; height as usize];
+        for i in 0..matrix.len(){
+            gmatrix[i][Indices::Cycle as usize] = matrix[i][Indices::Cycle as usize];
+            gmatrix[i][Indices::MemoryPointer as usize] = matrix[i][Indices::MemoryPointer as usize];
+            gmatrix[i][Indices::MemoryValue as usize] = matrix[i][Indices::MemoryValue as usize];
+        }
+        let table = Table::new(field, base_width, full_width, length,  height, omicron, generator, order, gmatrix);
         Self { table }
     }
 
@@ -67,9 +72,9 @@ impl Memory {
         .iter()
         // .filter(|pt| pt[ProcessorIndices::CurrentInstruction as usize] != zero), we need the last processor row, right?
         .map(|pt| vec![
-            pt[ProcessorIndices::Cycle as usize].clone(),
-            pt[ProcessorIndices::MemoryPointer as usize].clone(),
-            pt[ProcessorIndices::MemoryValue as usize].clone(),
+            pt[ProcessorIndices::Cycle as usize],
+            pt[ProcessorIndices::MemoryPointer as usize],
+            pt[ProcessorIndices::MemoryValue as usize],
         ])
         .collect();
 
@@ -86,18 +91,18 @@ impl Memory {
     //the matrix taken here is padded
     pub fn extend_column_ppa(&mut self, randFieldElem: u128, challenges: Vec<FieldElement>){
         let mut ppa = FieldElement::new(randFieldElem,self.table.field);
-        self.table.matrix[0].push(ppa); 
+        self.table.matrix[0][Indices::PermutationArg as usize] = ppa; 
         for i in 0..self.table.length-1 {
-            let weighted_sum = self.table.matrix[i as usize][Indices::Cycle as usize] * challenges[ChallengeIndices::D as usize]
+            let weighted_sum = - (self.table.matrix[i as usize][Indices::Cycle as usize] * challenges[ChallengeIndices::D as usize]
                 + self.table.matrix[i as usize][Indices::MemoryPointer as usize] * challenges[ChallengeIndices::E as usize]
-                + self.table.matrix[i as usize][Indices::MemoryValue as usize] * challenges[ChallengeIndices::F as usize] - challenges[ChallengeIndices::Beta as usize];
-            self.table.matrix[(i+1) as usize].push(ppa*weighted_sum); 
+                + self.table.matrix[i as usize][Indices::MemoryValue as usize] * challenges[ChallengeIndices::F as usize] - challenges[ChallengeIndices::Beta as usize]);
+            self.table.matrix[(i+1) as usize][Indices::PermutationArg as usize] = (ppa*weighted_sum); 
             ppa *= weighted_sum;
         }
     }
     
     //this is after padding and extension
-    pub fn generate_AIR(&self, challenges: Vec<FieldElement>)-> Vec<Polynomial>{
+    pub fn generate_air(&self, challenges: Vec<FieldElement>)-> Vec<Polynomial>{
         let interpolated = self.table.clone().interpolate_columns(vec![Indices::Cycle as u128, Indices::MemoryPointer as u128, Indices::MemoryValue as u128, Indices::PermutationArg as u128]);
         let CLK = interpolated[Indices::Cycle as usize].clone();
         let MP = interpolated[Indices::MemoryPointer as usize].clone();
@@ -163,7 +168,7 @@ impl Memory {
 
     pub fn generate_quotients(&self, challenges: Vec<FieldElement>)->Vec<Polynomial>{
         let mut quotients = vec![];
-        let AIR = self.generate_AIR(challenges);
+        let AIR = self.generate_air(challenges);
         let zerofiers = self.generate_zerofier();
 
         for i in 0..AIR.len(){
@@ -203,10 +208,14 @@ mod test_memory_table {
             println!("{:?}", row);
         }
         let generator = field.generator();
-        let order = field.0 - 1;
+        let order = 1 << 32;
         let zero = FieldElement::zero(field);
-        let mut mem = Memory::new(field, memory_matrix.len() as u128, generator, order);
-        println!("memory table initialized");
+        let mut mem = Memory::new(field, memory_matrix.len() as u128, generator, order, memory_matrix);
+        println!("memory table initialized, len:{}", mem.table.matrix.len());
+
+        for row in mem.table.matrix.iter() {
+            println!("{:?}", row);
+        }
         let mut challenges = vec![zero; 11];
         challenges[ChallengeIndices::Beta as usize] = FieldElement::new(3, field);
         challenges[ChallengeIndices::D as usize] = FieldElement::new(1, field);
@@ -214,6 +223,7 @@ mod test_memory_table {
         challenges[ChallengeIndices::F as usize] = FieldElement::new(1, field);
         println!("memory matrix before extension");
         mem.extend_column_ppa(7, challenges);
+        println!("row memory matrix after extension, {:?}", mem.table.matrix.len());
         println!("memory matrix after extension");
         for row in mem.table.matrix.iter() {
             println!("{:?}", row);

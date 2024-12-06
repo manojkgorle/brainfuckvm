@@ -102,19 +102,19 @@ impl ProcessorTable {
 
         self.table.matrix[0].push(ipa);
         for i in 0..self.table.length-1 {
-            let weighted_sum = self.table.matrix[i as usize][Indices::InstructionPointer as usize].clone() * challenges[ChallengeIndices::A as usize]
-                + self.table.matrix[i as usize][Indices::CurrentInstruction as usize].clone() * challenges[ChallengeIndices::B as usize]
-                + self.table.matrix[i as usize][Indices::NextInstruction as usize].clone() * challenges[ChallengeIndices::C as usize] - challenges[ChallengeIndices::Alpha as usize];
+            let weighted_sum = self.table.matrix[i as usize][Indices::InstructionPointer as usize] * challenges[ChallengeIndices::A as usize]
+                + self.table.matrix[i as usize][Indices::CurrentInstruction as usize] * challenges[ChallengeIndices::B as usize]
+                + self.table.matrix[i as usize][Indices::NextInstruction as usize] * challenges[ChallengeIndices::C as usize] - challenges[ChallengeIndices::Alpha as usize];
             self.table.matrix[(i+1) as usize].push(ipa*weighted_sum); 
-            ipa = ipa*weighted_sum;
+            ipa *= weighted_sum;
     }
         self.table.matrix[0].push(mpa);
         for i in 0..self.table.length-1 {
-            let weighted_sum = self.table.matrix[i as usize][Indices::Cycle as usize].clone() * challenges[ChallengeIndices::D as usize]
-                + self.table.matrix[i as usize][Indices::MemoryPointer as usize].clone() * challenges[ChallengeIndices::E as usize]
-                + self.table.matrix[i as usize][Indices::MemoryValue as usize].clone() * challenges[ChallengeIndices::F as usize] - challenges[ChallengeIndices::Beta as usize];
+            let weighted_sum = self.table.matrix[i as usize][Indices::Cycle as usize] * challenges[ChallengeIndices::D as usize]
+                + self.table.matrix[i as usize][Indices::MemoryPointer as usize] * challenges[ChallengeIndices::E as usize]
+                + self.table.matrix[i as usize][Indices::MemoryValue as usize] * challenges[ChallengeIndices::F as usize] - challenges[ChallengeIndices::Beta as usize];
             self.table.matrix[(i+1) as usize].push(mpa*weighted_sum); 
-            mpa = mpa*weighted_sum;
+            mpa *= weighted_sum;
     }
 
         self.table.matrix[0].push(iea);

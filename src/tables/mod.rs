@@ -136,7 +136,7 @@ impl Table {
         for c in 0..self.matrix[0].len(){
             let mut trace:Vec<FieldElement>=Vec::new();
             for row in self.matrix.iter(){
-                trace.push(row[c as usize]);
+                trace.push(row[c]);
             }       
         let mut values:Vec<FieldElement>=Vec::new();
            
@@ -185,7 +185,6 @@ pub fn derive_omicron(generator:FieldElement,generator_order:u128,target_order:u
      while t_order!=target_order {
         t_generator=t_generator.pow(2);
             t_order/=2;
-            println!("t_order ={:?}", t_order);
     }
     t_generator}
     
