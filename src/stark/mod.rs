@@ -12,9 +12,6 @@ pub struct Stark<'a>{
     num_collinearity_checks: u32
 }
 
-impl Stark{
-
-}
 
 #[cfg(test)]
 mod stark_test {

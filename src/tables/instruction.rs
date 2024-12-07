@@ -163,7 +163,7 @@ impl InstructionTable {
         zerofiers.push(transition_zerofier);
 
         let terminal_zerofier = x.clone() - Polynomial::new_from_coefficients(vec![omicron.clone().pow(self.table.length-1)]);
-
+        
         zerofiers
     }
 
