@@ -84,21 +84,22 @@ impl ProcessorTable {
         let matrix = &mut self.table.matrix;
         let field = self.table.field;
         let zero = FieldElement::zero(field);
-        while matrix.len() & (matrix.len() -1 ) != 0 {
-            let last_row = matrix.last().unwrap();
-            let mut new_row = vec![FieldElement::zero(self.table.field); self.table.full_width as usize];
+        let last_row = matrix[self.table.length as usize - 1].clone();
+        for i in 0..(self.table.height - self.table.length) as usize  {
+            // let last_row = &mut matrix.last().unwrap();
+            let curr_row = &mut matrix[self.table.length as usize + i];
+            // let mut new_row = vec![FieldElement::zero(self.table.field); self.table.full_width as usize];
             // Increment cycle by one for every new padded row.
-            new_row[Indices::Cycle as usize] = last_row[Indices::Cycle as usize] + FieldElement::one(self.table.field);
+            curr_row[Indices::Cycle as usize] = last_row[Indices::Cycle as usize] + FieldElement::new((i+1) as u128, field) * FieldElement::one(self.table.field);
             // keep the instruction pointer same as the last row in every padded row.
-            new_row[Indices::InstructionPointer as usize] = last_row[Indices::InstructionPointer as usize];
+            curr_row[Indices::InstructionPointer as usize] = last_row[Indices::InstructionPointer as usize];
             // keep the current instruction and next instruction as zero.
-            new_row[Indices::CurrentInstruction as usize] = zero;
-            new_row[Indices::NextInstruction as usize] = zero;
+            curr_row[Indices::CurrentInstruction as usize] = zero;
+            curr_row[Indices::NextInstruction as usize] = zero;
             // keep the memory pointer and memory value as last.
-            new_row[Indices::MemoryPointer as usize] = last_row[Indices::MemoryPointer as usize];
-            new_row[Indices::MemoryValue as usize] = last_row[Indices::MemoryValue as usize];
-            new_row[Indices::MemoryValueInverse as usize] = last_row[Indices::MemoryValueInverse as usize];
-            matrix.push(new_row);
+            curr_row[Indices::MemoryPointer as usize] = last_row[Indices::MemoryPointer as usize];
+            curr_row[Indices::MemoryValue as usize] = last_row[Indices::MemoryValue as usize];
+            curr_row[Indices::MemoryValueInverse as usize] = last_row[Indices::MemoryValueInverse as usize];
         }
     }
 
@@ -298,9 +299,6 @@ impl ProcessorTable {
 //             } acc
 //     }
 
-
-
-
     //boundary constraints for the base coloumns
     // the values of instructionpermutaion ipa and mpa I am taking as 1
     pub fn generate_AIR(&self,challenges:Vec<FieldElement>)->Vec<Polynomial>{
@@ -482,3 +480,26 @@ fn test_selector_poly(){
     
 
 // @todo test processor table padding
+#[cfg(test)]
+mod test_processor {
+    use crate::tables::processor::Indices;
+    use crate::vm::VirtualMachine;
+    use crate::fields::Field;
+    use super::ProcessorTable;
+    #[test]
+    fn test_padding() {
+        let field = Field(18446744069414584321);
+        let generator = field.generator();
+        let order = 1<<32;
+        let vm = VirtualMachine::new(field);
+        let code2 = ">>[++-]<".to_string();
+        let program = vm.compile(code2);
+        let (runtime, _, _ ) = vm.run(&program, "".to_string());
+        let (processor_matrix, _memory_matrix, _instruction_matrix, _input_matrix, _output_matrix) = vm.simulate(&program, "".to_string());
+        assert!(runtime == processor_matrix.len() as i32);
+        let mut processor_table = ProcessorTable::new(field, processor_matrix.len() as u128, generator, order, processor_matrix);
+        processor_table.pad();
+        assert!(processor_table.table.matrix.len().is_power_of_two());
+        assert_eq!(processor_table.table.matrix[(processor_table.table.matrix.len()-1) as usize][Indices::Cycle as usize].0, processor_table.table.matrix.len() as u128 - 1);
+    }
+}

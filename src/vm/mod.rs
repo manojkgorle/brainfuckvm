@@ -324,7 +324,8 @@ mod tests {
     fn test_simulate() {
         let vm = VirtualMachine::new(Field(18446744069414584321));
         let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
-        let program = vm.compile(code);
+        let code2 = ">>[++-]<".to_string();
+        let program = vm.compile(code2);
         vm.run(&program, "".to_string());
         // assert_eq!(program.len(), 2);
         let (processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix) = vm.simulate(&program, "".to_string());
