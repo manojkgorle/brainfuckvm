@@ -296,15 +296,14 @@ impl FriDomain{
         result
     }
     //needed if we use extension field
-    // pub fn xevaluate(&self, polynomial: Polynomial)-> Vec<FieldElement>{
-    //     let polynomial = polynomial.scalar_mul(self.offset);
-    //     let mut result: Vec<FieldElement> = vec![];
-    //     for i in 0..polynomial.coefficients.len(){
-    //         result.push(polynomial.evaluate(self.omega.pow(i as u128)));
-    //     }
-    //     result
-    // }
-
+    pub fn xevaluate(&self, polynomial: Polynomial)-> Vec<FieldElement>{
+        let polynomial = polynomial.scalar_mul(self.offset);
+        let mut result: Vec<FieldElement> = vec![];
+        for i in 0..polynomial.coefficients.len(){
+            result.push(polynomial.evaluate(self.omega.pow(i as u128)));
+        }
+        result
+    }
     pub fn interpolate(&self, values: Vec<FieldElement>)->Polynomial{
         let mut list:Vec<FieldElement> =vec![];
         for i in 0..values.len(){

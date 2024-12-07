@@ -252,13 +252,13 @@ impl ProcessorTable {
         }
         zerofiers.push(transition_all_zerofier);
 
-        //terminal
+        //terminal-
         let terminal_zerofier = x.clone() - Polynomial::new_from_coefficients(vec![omicron.clone().pow(self.table.length-1)]);
 
         zerofiers
     }
 
-    pub fn generate_quotients(&self, challenges: Vec<FieldElement>)->Vec<FieldElement>{
+    pub fn generate_quotients(&self, challenges: Vec<FieldElement>)->Vec<Polynomial>{
         let mut quotients = vec![];
         let AIR = self.generate_AIR(challenges);
         let zerofiers = self.generate_zerofier();
@@ -305,26 +305,26 @@ impl ProcessorTable {
     // the values of instructionpermutaion ipa and mpa I am taking as 1
     pub fn generate_AIR(&self,challenges:Vec<FieldElement>)->Vec<Polynomial>{
         let f = |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, self.table.field)};
-            let interpolated = self.table.clone().interpolate_columns(vec![Indices::Cycle as u128, Indices::InstructionPointer as u128, Indices::CurrentInstruction as u128, Indices::NextInstruction as u128, Indices::MemoryPointer as u128, Indices::MemoryValue as u128, Indices::MemoryValueInvers as u128, Indices::InstructionPermutaion as u128, Indices::MemoryPermuation as u128, Indices::InputEvaluation as u128, Indices::OutputEvaluation as u128]);
+            let interpolated = self.table.clone().interpolate_columns(vec![Indices::Cycle as u128, Indices::InstructionPointer as u128, Indices::CurrentInstruction as u128, Indices::NextInstruction as u128, Indices::MemoryPointer as u128, Indices::MemoryValue as u128, Indices::MemoryValueInverse as u128, Indices::InstructionPermutaion as u128, Indices::MemoryPermuation as u128, Indices::InputEvaluation as u128, Indices::OutputEvaluation as u128]);
             let clk=interpolated[Indices::Cycle as usize].clone();
             let ip=interpolated[Indices::InstructionPointer as usize].clone();
             let ci=interpolated[Indices::CurrentInstruction as usize].clone();
             let ni=interpolated[Indices::NextInstruction as usize].clone();
             let mp=interpolated[Indices::MemoryPointer as usize].clone();
             let mv=interpolated[Indices::MemoryValue as usize].clone();
-            let inv_mv=interpolated[Indices::MemoryValueInvers as usize].clone();
+            let inv_mv=interpolated[Indices::MemoryValueInverse as usize].clone();
             let ipa=interpolated[Indices::InstructionPermutaion as usize].clone();
             let mpa=interpolated[Indices::MemoryPermuation as usize].clone();
             let iea=interpolated[Indices::InputEvaluation as usize].clone();
             let oea=interpolated[Indices::OutputEvaluation as usize].clone();
-            let next_interpolated = self.table.clone().next_interpolate_columns(vec![Indices::Cycle as u128, Indices::InstructionPointer as u128, Indices::CurrentInstruction as u128, Indices::NextInstruction as u128, Indices::MemoryPointer as u128, Indices::MemoryValue as u128, Indices::MemoryValueInvers as u128, Indices::InstructionPermutaion as u128, Indices::MemoryPermuation as u128, Indices::InputEvaluation as u128, Indices::OutputEvaluation as u128]);
+            let next_interpolated = self.table.clone().next_interpolate_columns(vec![Indices::Cycle as u128, Indices::InstructionPointer as u128, Indices::CurrentInstruction as u128, Indices::NextInstruction as u128, Indices::MemoryPointer as u128, Indices::MemoryValue as u128, Indices::MemoryValueInverse as u128, Indices::InstructionPermutaion as u128, Indices::MemoryPermuation as u128, Indices::InputEvaluation as u128, Indices::OutputEvaluation as u128]);
             let clk_next=next_interpolated[Indices::Cycle as usize].clone();
             let ip_next=next_interpolated[Indices::InstructionPointer as usize].clone();
             let ci_next=next_interpolated[Indices::CurrentInstruction as usize].clone();
             let ni_next=next_interpolated[Indices::NextInstruction as usize].clone();
             let mp_next=next_interpolated[Indices::MemoryPointer as usize].clone();
             let mv_next=next_interpolated[Indices::MemoryValue as usize].clone();
-            let inv_mv_next=next_interpolated[Indices::MemoryValueInvers as usize].clone();
+            let inv_mv_next=next_interpolated[Indices::MemoryValueInverse as usize].clone();
             let ipa_next=next_interpolated[Indices::InstructionPermutaion as usize].clone();
             let mpa_next=next_interpolated[Indices::MemoryPermuation as usize].clone();
             let iea_next=next_interpolated[Indices::InputEvaluation as usize].clone();
