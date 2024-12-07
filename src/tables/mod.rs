@@ -142,9 +142,8 @@ impl Table {
             for row in self.matrix.iter() {
                 trace.push(row[c]);
             }
-            let mut values: Vec<FieldElement> = Vec::new();
+            let values = trace.clone();
 
-            values = trace.clone();
             if values.len() != omicron_domain.len() {
                 panic!("length of domain and values are unequal");
             };
@@ -203,6 +202,7 @@ pub fn has_order_po2(order: u128) -> bool {
 
 #[cfg(test)]
 mod test_operations {
+    #![allow(unused_variables)]
     use super::*;
 
     #[test]

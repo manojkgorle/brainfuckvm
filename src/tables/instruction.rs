@@ -83,8 +83,8 @@ impl InstructionTable {
         }
     }
 
-    pub fn extend_column(&mut self, randFieldElem: u128, challenges: Vec<FieldElement>) {
-        let mut ppa = FieldElement::new(randFieldElem, self.table.field);
+    pub fn extend_column(&mut self, rand_field_elem: u128, challenges: Vec<FieldElement>) {
+        let mut ppa = FieldElement::new(rand_field_elem, self.table.field);
         //take randFieldElement = 1 when not implementing random secret diff constraint
         let pea = FieldElement::zero(self.table.field);
 
@@ -121,11 +121,11 @@ impl InstructionTable {
             Indices::PermutationArg as u128,
             Indices::EvaluationArg as u128,
         ]);
-        let IP = interpolated[Indices::Address as usize].clone();
-        let CI = interpolated[Indices::CurrentInstruction as usize].clone();
-        let NI = interpolated[Indices::NextInstruction as usize].clone();
-        let PPA = interpolated[Indices::PermutationArg as usize].clone();
-        let PEA = interpolated[Indices::EvaluationArg as usize].clone();
+        let ip = interpolated[Indices::Address as usize].clone();
+        let ci = interpolated[Indices::CurrentInstruction as usize].clone();
+        let ni = interpolated[Indices::NextInstruction as usize].clone();
+        let ppa = interpolated[Indices::PermutationArg as usize].clone();
+        let pea = interpolated[Indices::EvaluationArg as usize].clone();
 
         let next_interpolated = self.table.clone().next_interpolate_columns(vec![
             Indices::Address as u128,
@@ -135,24 +135,24 @@ impl InstructionTable {
             Indices::EvaluationArg as u128,
         ]);
 
-        let IP_next = next_interpolated[Indices::Address as usize].clone();
-        let CI_next = next_interpolated[Indices::CurrentInstruction as usize].clone();
-        let NI_next = next_interpolated[Indices::NextInstruction as usize].clone();
-        let PPA_next = next_interpolated[Indices::PermutationArg as usize].clone();
-        let PEA_next = next_interpolated[Indices::EvaluationArg as usize].clone();
+        let ip_next = next_interpolated[Indices::Address as usize].clone();
+        let ci_next = next_interpolated[Indices::CurrentInstruction as usize].clone();
+        let ni_next = next_interpolated[Indices::NextInstruction as usize].clone();
+        let ppa_next = next_interpolated[Indices::PermutationArg as usize].clone();
+        let pea_next = next_interpolated[Indices::EvaluationArg as usize].clone();
 
         let one = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
-        let mut AIR = vec![];
+        let mut air = vec![];
 
         //Boundary constraint: ip=0
         //@todo ppa and pea initial value from extended fn, see once
 
-        let boundaryAIR = IP.clone() + PPA.clone()
+        let boundaryair = ip.clone() + ppa.clone()
             - Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)])
-            + PEA.clone()
+            + pea.clone()
             - Polynomial::new_from_coefficients(vec![FieldElement::zero(self.table.field)]);
         //@todo check this once!! initial value is not zero and one, set it to req value
-        AIR.push(boundaryAIR);
+        air.push(boundaryair);
 
         //Transition constraints: * == next
         //1. (ip-ip*).(ip*-ip-1)
@@ -164,60 +164,60 @@ impl InstructionTable {
         //7. (ip*-ip-1).(pea*-pea)
         //8. (ip*-ip).(pea* - pea.eta - (a.ip*+b.ci*+c.ni*))
 
-        let transitionAIR = (IP.clone() - IP_next.clone())
-            * (IP_next.clone() - IP.clone() - one.clone())
-            + (IP.clone() - IP_next.clone()) * (NI.clone() - CI_next.clone())
-            + (IP_next.clone() - IP.clone() - one.clone()) * (CI_next.clone() - CI.clone())
-            + (IP_next.clone() - IP.clone() - one.clone()) * (NI_next.clone() - NI.clone())
-            + (IP.clone() + one.clone() - IP_next.clone())
-                * (PPA_next.clone()
-                    - PPA.clone()
-                        * (IP_next
+        let transitionair = (ip.clone() - ip_next.clone())
+            * (ip_next.clone() - ip.clone() - one.clone())
+            + (ip.clone() - ip_next.clone()) * (ni.clone() - ci_next.clone())
+            + (ip_next.clone() - ip.clone() - one.clone()) * (ci_next.clone() - ci.clone())
+            + (ip_next.clone() - ip.clone() - one.clone()) * (ni_next.clone() - ni.clone())
+            + (ip.clone() + one.clone() - ip_next.clone())
+                * (ppa_next.clone()
+                    - ppa.clone()
+                        * (ip_next
                             .clone()
                             .scalar_mul(challenges[ChallengeIndices::A as usize])
-                            + CI_next
+                            + ci_next
                                 .clone()
                                 .scalar_mul(challenges[ChallengeIndices::B as usize])
-                            + NI_next
+                            + ni_next
                                 .clone()
                                 .scalar_mul(challenges[ChallengeIndices::C as usize])
                             - Polynomial::new_from_coefficients(vec![
                                 challenges[ChallengeIndices::A as usize],
                             ])))
-            + (IP.clone() - IP_next.clone()) * (PPA_next.clone() - PPA.clone())
-            + (IP_next.clone() - IP.clone() - one) * (PEA_next.clone() - PEA.clone())
-            + (IP.clone() - IP_next.clone())
-                * (PEA_next.clone()
-                    - PEA
+            + (ip.clone() - ip_next.clone()) * (ppa_next.clone() - ppa.clone())
+            + (ip_next.clone() - ip.clone() - one) * (pea_next.clone() - pea.clone())
+            + (ip.clone() - ip_next.clone())
+                * (pea_next.clone()
+                    - pea
                         .clone()
                         .scalar_mul(challenges[ChallengeIndices::Eta as usize])
-                    - (IP_next
+                    - (ip_next
                         .clone()
                         .scalar_mul(challenges[ChallengeIndices::A as usize])
-                        + CI_next
+                        + ci_next
                             .clone()
                             .scalar_mul(challenges[ChallengeIndices::B as usize])
-                        + NI_next
+                        + ni_next
                             .clone()
                             .scalar_mul(challenges[ChallengeIndices::C as usize])));
-        AIR.push(transitionAIR);
+        air.push(transitionair);
 
         //Terminal constraints:
-        //@todo Tppa = Tipa --> include a constraint for this?
+        //@todo Tppa = tipa --> include a constraint for this?
         //ppa - Tppa
-        //pea - Tpea
-        //@todo Tppa and Tipa given by prover, for now just taking it as empty polynomials to write constraint without error
-        //@todo Tpea is computed locally by verifier, taking empty polynomial for now
+        //pea - tpea
+        //@todo Tppa and tipa given by prover, for now just taking it as empty polynomials to write constraint without error
+        //@todo tpea is computed locally by verifier, taking empty polynomial for now
 
-        let Tppa = Polynomial::new_from_coefficients(vec![]);
-        let Tipa = Polynomial::new_from_coefficients(vec![]);
-        let Tpea = Polynomial::new_from_coefficients(vec![]);
-        let terminalAIR =
-            PPA.clone() - Tppa.clone() + PEA.clone() - Tpea.clone() + Tppa.clone() - Tipa.clone();
-        //@todo separate Tppa - Tipa term as it will cancel out
-        AIR.push(terminalAIR);
+        let tppa = Polynomial::new_from_coefficients(vec![]);
+        let tipa = Polynomial::new_from_coefficients(vec![]);
+        let tpea = Polynomial::new_from_coefficients(vec![]);
+        let terminalair =
+            ppa.clone() - tppa.clone() + pea.clone() - tpea.clone() + tppa.clone() - tipa.clone();
+        //@todo separate Tppa - tipa term as it will cancel out
+        air.push(terminalair);
 
-        AIR
+        air
     }
 
     pub fn generate_zerofier(&self) -> Vec<Polynomial> {
@@ -241,17 +241,17 @@ impl InstructionTable {
 
         let terminal_zerofier = x.clone()
             - Polynomial::new_from_coefficients(vec![omicron.clone().pow(self.table.length - 1)]);
-
+        zerofiers.push(terminal_zerofier);
         zerofiers
     }
 
     pub fn generate_quotients(&self, challenges: Vec<FieldElement>) -> Vec<Polynomial> {
         let mut quotients = vec![];
-        let AIR = self.generate_air(challenges);
+        let air = self.generate_air(challenges);
         let zerofiers = self.generate_zerofier();
 
-        for i in 0..AIR.len() {
-            quotients.push(AIR[i].clone().q_div(zerofiers[i].clone()).0);
+        for i in 0..air.len() {
+            quotients.push(air[i].clone().q_div(zerofiers[i].clone()).0);
         }
         quotients
     }
@@ -272,7 +272,7 @@ mod test_instruction {
         let vm = VirtualMachine::new(field);
         let code2 = ">>[++-]<".to_string();
         let program = vm.compile(code2);
-        let (runtime, _, _) = vm.run(&program, "".to_string());
+        // let (runtime, _, _) = vm.run(&program, "".to_string());
         let (processor_matrix, _memory_matrix, instruction_matrix, _input_matrix, _output_matrix) =
             vm.simulate(&program, "".to_string());
         assert_eq!(

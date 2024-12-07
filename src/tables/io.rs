@@ -1,3 +1,4 @@
+#![allow(unused_variables)]
 use crate::fields::{Field, FieldElement};
 use crate::tables::Table;
 use crate::tables::{derive_omicron, roundup_npow2};
@@ -37,8 +38,8 @@ impl IOTable {
 
     pub fn pad(&mut self) {}
 
-    pub fn extend_column_ea(&mut self, randFieldElem: u128, challenge: FieldElement) {
-        let mut ea = FieldElement::new(randFieldElem, self.table.field); // take randFieldElem as zero if no random secret implementation
+    pub fn extend_column_ea(&mut self, rand_field_elem: u128, challenge: FieldElement) {
+        let mut ea = FieldElement::new(rand_field_elem, self.table.field); // take rand_field_elem as zero if no random secret implementation
         self.table.matrix[0][1] = ea;
         for i in 0..self.table.length - 1 {
             ea = self.table.matrix[i as usize][1] * challenge

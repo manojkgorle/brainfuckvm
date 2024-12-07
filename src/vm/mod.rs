@@ -327,6 +327,7 @@ impl VirtualMachine {
 
 #[cfg(test)]
 mod tests {
+    #![allow(unused_variables)]
     use crate::tables::processor;
 
     use super::*;
