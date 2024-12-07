@@ -86,10 +86,10 @@ impl InstructionTable {
     pub fn extend_column(&mut self, randFieldElem: u128, challenges: Vec<FieldElement>) {
         let mut ppa = FieldElement::new(randFieldElem, self.table.field);
         //take randFieldElement = 1 when not implementing random secret diff constraint
-        let mut pea = FieldElement::zero(self.table.field);
+        let pea = FieldElement::zero(self.table.field);
 
-        self.table.matrix[0 as usize][Indices::PermutationArg as usize] = ppa;
-        self.table.matrix[0 as usize][Indices::EvaluationArg as usize] = pea;
+        self.table.matrix[0_usize][Indices::PermutationArg as usize] = ppa;
+        self.table.matrix[0_usize][Indices::EvaluationArg as usize] = pea;
         //@todo set initial value of first row of ppa and pea
 
         for i in 0..self.table.length - 1 {
@@ -102,7 +102,7 @@ impl InstructionTable {
             if self.table.matrix[(i + 1) as usize][Indices::Address as usize]
                 == self.table.matrix[i as usize][Indices::Address as usize]
             {
-                ppa *= (weighted_sum - challenges[ChallengeIndices::Alpha as usize]);
+                ppa *= weighted_sum - challenges[ChallengeIndices::Alpha as usize];
                 self.table.matrix[(i + 1) as usize][Indices::PermutationArg as usize] = ppa;
                 self.table.matrix[(i + 1) as usize][Indices::EvaluationArg as usize] = pea;
             } else {
