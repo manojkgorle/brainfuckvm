@@ -153,7 +153,7 @@ impl Polynomial {
         res
     }
     // new function added
-    fn scale(&self, factor: u128) -> Self {
+   pub fn scale(&self, factor: u128) -> Self {
         let mut result = Vec::new();
 
         for i in 0..self.coefficients.len() {
@@ -165,11 +165,14 @@ impl Polynomial {
         Polynomial::new_from_coefficients(result)
     }
     // new function added
-    fn collinearity(evaluation_form: Vec<(FieldElement, FieldElement)>) -> bool {
+  pub  fn collinearity(evaluation_form: Vec<(FieldElement, FieldElement)>) -> bool {
         let input: Vec<FieldElement> = evaluation_form.iter().map(|(x, _)| *x).collect();
         let output: Vec<FieldElement> = evaluation_form.iter().map(|(_, y)| *y).collect();
         let poly = interpolate_lagrange_polynomials(input.clone(), output.clone());
         poly.degree() == 1
+    }
+    pub fn constant(constant: FieldElement)->Self{
+        Polynomial::new_from_coefficients(vec![constant])
     }
 }
 
