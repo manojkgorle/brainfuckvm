@@ -69,7 +69,6 @@ pub fn next_fri_polynomial(old_polynomial: &Polynomial, beta: FieldElement) -> P
             odd_poly.push(old_polynomial.coefficients[i]);
         }
     }
-
     // g(y) + beta * h(y)
     Polynomial::new_from_coefficients(even_poly)
         + Polynomial::new_from_coefficients(odd_poly).scalar_mul(beta)
@@ -238,18 +237,20 @@ pub struct Fri{
     initial_domain_length: u128,
     domain: FriDomain,
     num_colinearity_tests: usize,
+    expansion_f: usize
+    
 }
 
 impl Fri{
-    pub fn new(offset: FieldElement, omega: FieldElement, initial_domain_length: u128, num_colinearity_tests: usize)-> Self{
-        let result = Fri{ offset: (offset), omega: (omega), initial_domain_length: (initial_domain_length), domain: (FriDomain::new(offset, omega, initial_domain_length)), num_colinearity_tests: (num_colinearity_tests) };
+    pub fn new(offset: FieldElement, omega: FieldElement, initial_domain_length: u128, num_colinearity_tests: usize,  expansion_f: usize)-> Self{
+        let result = Fri{ offset: (offset), omega: (omega), initial_domain_length: (initial_domain_length), domain: (FriDomain::new(offset, omega, initial_domain_length)), num_colinearity_tests: (num_colinearity_tests),expansion_f:(expansion_f) };
         assert!(result.num_rounds()>=1, "cannot do FRI with less than one round");
         result
     }
     pub fn num_rounds(&self)-> usize{
         let mut codeword_len = self.initial_domain_length;
         let mut num =0;
-        while codeword_len>1_u128{
+        while codeword_len>self.expansion_f as u128{
             codeword_len /= 2;
             num+=1;
         } 
@@ -283,7 +284,7 @@ impl FriDomain{
     }
 
     pub fn evaluate(&self, polynomial: Polynomial)-> Vec<FieldElement>{
-        let polynomial = polynomial.scalar_mul(self.offset);
+        let polynomial = polynomial.scale(self.offset.0);
         let mut result: Vec<FieldElement> = vec![];
         // let mut  domain_gen:Vec<FieldElement>=Vec::new();
         for i in 0..self.length{
@@ -304,6 +305,7 @@ impl FriDomain{
         }
         result
     }
+    // interpolate with the given offset
     pub fn interpolate(&self, values: Vec<FieldElement>)->Polynomial{
         let mut list:Vec<FieldElement> =vec![];
         for i in 0..values.len(){
@@ -366,9 +368,7 @@ mod test_fri_domain{
         let domain = FriDomain::new(offset, omega, length);
         let polynomial = Polynomial::new_from_coefficients(vec![FieldElement::new(1, field), FieldElement::new(2, field)]);
         let values = domain.evaluate(polynomial.clone());
-        let finded=vec![FieldElement::new(6, field), FieldElement::new(3, field), FieldElement::new(15, field), FieldElement::new(1, field)];
-
-        println!("values ={:?}", values);
+        let finded=vec![FieldElement::new(5, field), FieldElement::new(2, field), FieldElement::new(14, field), FieldElement::new(0, field)];
         assert_eq!(values, finded);
     }
     #[test]
@@ -386,5 +386,16 @@ mod test_fri_domain{
         println!("interpolated ={:?}", interpolated);
         assert_eq!(interpolated.coefficients, polynomial.coefficients);
     }
+    #[test]
+    fn test_evaluate2(){
+        let field = Field::new(17);
+        let   offset = FieldElement::new(2, field);
+        let length = 4_u128;
+        let omega = FieldElement::new(13, field);
+        let domain = FriDomain::new(offset, omega, length);
+        let polynomial = Polynomial::new_from_coefficients(vec![FieldElement::new(1, field), FieldElement::new(2, field),FieldElement::new(3,field)]);
+        let values = domain.evaluate(polynomial.clone());
+        let finded=vec![FieldElement::new(0, field), FieldElement::new(7, field), FieldElement::new(9, field), FieldElement::new(5, field)];
+         assert_eq!(values, finded) }
 
 }
