@@ -298,9 +298,6 @@ impl ProcessorTable {
 //             } acc
 //     }
 
-
-
-
     //boundary constraints for the base coloumns
     // the values of instructionpermutaion ipa and mpa I am taking as 1
     pub fn generate_AIR(&self,challenges:Vec<FieldElement>)->Vec<Polynomial>{
