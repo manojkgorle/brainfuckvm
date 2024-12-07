@@ -4,9 +4,10 @@ use memory::MemoryTable;
 use processor::ProcessorTable;
 use instruction::InstructionTable;
 
+use crate::merkle::*;
+use crate::channel::*;
 use crate::fri::*;
 use crate::fields::Field;
-use crate::fri::FriDomain;
 use crate::{fields::FieldElement, tables::Table};
 use crate::tables::*;
 use crate::univariate_polynomial::*;
@@ -27,8 +28,8 @@ pub struct Stark<'a> {
 
 // prove:
 // prove parameter - matrices, inputs
-// matrices -> processor, memory, instruction, io -> in this order
-pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, field: Field, offset: FieldElement){
+// matrices -> processor, memory, instruction, i, o -> in this order
+pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, field: Field, offset: FieldElement, expansion_f: usize){
     let generator = field.generator().pow((1<<32)-1);
     let order = 1<<32;
 
@@ -44,35 +45,54 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, f
     input_table.pad();
     output_table.pad();
 
-    let processor_interpol_columns = processor_table.table.interpolate_columns(vec![0,1,2,3,4,5,6]);
-    let memory_interpol_columns = memory_table.table.interpolate_columns(vec![0,1,2]);
-    let instruction_interpol_columns = instruction_table.table.interpolate_columns(vec![0,1,2]);
-    let input_interpol_columns = input_table.table.interpolate_columns(vec![0]);
-    let output_interpol_columns = output_table.table.interpolate_columns(vec![0]);
+    let processor_interpol_columns = processor_table.table.clone().interpolate_columns(vec![0,1,2,3,4,5,6]);
+    let memory_interpol_columns = memory_table.table.clone().interpolate_columns(vec![0,1,2]);
+    let instruction_interpol_columns = instruction_table.table.clone().interpolate_columns(vec![0,1,2]);
 
-    // let domain = FriDomain::new(offset, omega, length)
-    // let mut basecodewords = Vec<Vec<FieldElement>>;
+    let initial_length = instruction_table.table.clone().height;
+    //all codewords are evaluated on this expanded domain that has length expanded_length
+    let expanded_length = initial_length*(expansion_f as u128);
 
-    for i in 0..processor_interpol_columns.len(){
-        //processor_interpol_columns[i].evaluate_domain(x)
-    }
-
-    for i in 0..processor_interpol_columns.len(){
-
-    }
-
-    for i in 0..processor_interpol_columns.len(){
-
-    }
-
-    for i in 0..processor_interpol_columns.len(){
-
-    }
-
+    let domain = FriDomain::new(offset, derive_omicron(generator, order, expanded_length), expanded_length);
     
+    let mut basecodewords: Vec<Vec<FieldElement>> = Vec::new();
+
+    // basecodewords vector order:
+    // processor: clk, ip, ci, ni, mp, mv, inv
+    // memory: clk, mp, mv
+    // instruction: ip, ci, ni
+    // input and output tables are public, we dont commit to those, we only check their termnal extensions after extending
+
+    for i in 0..processor_interpol_columns.clone().len(){
+        basecodewords.push(domain.evaluate(processor_interpol_columns[i].clone()));
+    }
+
+    for i in 0..memory_interpol_columns.clone().len(){
+        basecodewords.push(domain.evaluate(memory_interpol_columns[i].clone()));
+    }
+
+    for i in 0..instruction_interpol_columns.clone().len(){
+        basecodewords.push(domain.evaluate(instruction_interpol_columns[i].clone()));
+    }
+
+    //we are zipping all the base codewords using concatenation
+
+    // let mut basecodeword = String::new();
+
+    // for i in 0..basecodewords.len(){
+    //     let mut str = String::new();
+    //     for j in 0..basecodewords[i].len(){
+    //         str += &basecodewords[i][j].0.to_string();
+    //     }
+    //     basecodeword += &str;
+    // }
+
+    //@todo could not find a function in channel for fiat shamir, ie 
+
+    //@todo make extend columns function return Terminal value , eg. Tipa, for every table and store it, use it to compare
+
 }
-// evaluate these polynomials on expanded evaluation domains to give base codewords
-// zip/concatenate the base codewords to give one base codeword
+
 // commit this codeword in merkle tree -> send to verifier, and use the merkle root in fiat shamir
 // get 11 challenges array from fiat shamir
 // use extend column function on tables -> extends the base columns to extension columns

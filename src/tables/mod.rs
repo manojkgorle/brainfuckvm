@@ -15,7 +15,7 @@ pub struct Table {
     base_width: u128,        //number of base columns in the table.
     full_width: u128,        //total no. of coloumn using extension and all
     length: u128,            //Number of rows in the table.
-    height: u128,            //Represents the rounded-up next power of two of the table length
+    pub height: u128,            //Represents the rounded-up next power of two of the table length
     omicron: FieldElement, //represent the generator eval_domain depends on the generator and the order of the subgroup
     generator: FieldElement, // A generator for the multiplicative group of the field
     order: u128,           //order of the generator.
