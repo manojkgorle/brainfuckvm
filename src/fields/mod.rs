@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 use core::hash::{Hash, Hasher};
-use std::fmt::write;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use std::cmp::{Ord, PartialOrd};
+use std::fmt::write;
 use std::fmt::{Debug, Display};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 // Define a field
 // Define a field element
 // Define arithmetic operations on field elements
