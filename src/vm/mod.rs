@@ -1,7 +1,7 @@
 use core::panic;
 use std::{collections::HashMap, mem};
 
-use crate::tables::memory::Memory;
+use crate::tables::memory::MemoryTable;
 use crate::{
     fields::{Field, FieldElement},
     tables::memory,
@@ -310,7 +310,7 @@ impl VirtualMachine {
         // sort instruction matrix
         instruction_matrix.sort();
         // build memory matrix
-        let memory_matrix = Memory::derive_matrix(&processor_materix);
+        let memory_matrix = MemoryTable::derive_matrix(&processor_materix);
         (
             processor_materix,
             memory_matrix,
