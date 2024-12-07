@@ -19,7 +19,7 @@ pub struct Table {
     omicron: FieldElement, //represent the generator eval_domain depends on the generator and the order of the subgroup
     generator: FieldElement, // A generator for the multiplicative group of the field
     order: u128,           //order of the generator.
-    matrix: Vec<Vec<FieldElement>>,
+    pub matrix: Vec<Vec<FieldElement>>,
 }
 
 impl Table {
@@ -48,7 +48,7 @@ impl Table {
             matrix,
         }
     }
-    fn new_2(
+    pub fn new_2(
         field: Field,
         base_width: u128,
         full_width: u128,
@@ -68,6 +68,30 @@ impl Table {
             generator,
             order,
             matrix: Vec::new(), // Initialize as empty
+        }
+    }
+
+    pub fn new_3(
+        field: Field,
+        base_width: u128,
+        full_width: u128,
+        length: u128,
+        generator: FieldElement,
+        order: u128,
+        matrix: Vec<Vec<FieldElement>>
+    ) -> Self {
+        let height = roundup_npow2(length);
+        let omicron = derive_omicron(generator, order, height);
+        Table {
+            field,
+            base_width,
+            full_width,
+            length,
+            height,
+            omicron,
+            generator,
+            order,
+            matrix: matrix,
         }
     }
     // dont know how to implement this method
@@ -187,6 +211,7 @@ pub fn derive_omicron(
     generator_order: u128,
     target_order: u128,
 ) -> FieldElement {
+
     let mut t_generator = generator;
     let mut t_order = generator_order;
     while t_order != target_order {
