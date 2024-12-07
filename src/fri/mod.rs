@@ -173,7 +173,7 @@ pub fn decommit_fri_layers(
 /// sends
 pub fn decommit_on_query(
     idx: usize,
-    blow_up_factor: usize,
+    blow_up_factor: usize,//expansion_f
     f_eval: Vec<&[FieldElement]>, //this contains basecodewords zipped, and extension codewords zipped
     f_merkle: Vec<&MerkleTree>, //this contains MerkleTree of base codewords zipped, and extension codewords zipped
     fri_layers: &[Vec<FieldElement>],
