@@ -365,31 +365,38 @@ impl FriDomain {
 #[cfg(test)]
 //@todo write test for fri layer, in stark 101, eval domain was a vector, here it is FriDomain struct, thus some code and values will change accordingly
 
-// mod test_fri_layer{
-//     use super::*;
-//     //use crate::{field::Field, utils::*};
-//     #[test]
-//     fn test_fri() {
-//         let field = Field::new(1<<64-1<<32+1);
-//         let poly = Polynomial::new_from_coefficients(vec![
-//             FieldElement(2, field),
-//             FieldElement(3, field),
-//             FieldElement(0, field),
-//             FieldElement(1, field),
-//         ]);
-//         let domain = FriDomain { offset: (FieldElement::one(field)), omega: (field.primitive_nth_root(4)), length: (4) };
-//         let beta = FieldElement(3, field);
+mod test_fri_layer {
+    use super::*;
+    //use crate::{field::Field, utils::*};
+    #[test]
+    fn test_fri() {
+        let field = Field::new(17);
+        let poly = Polynomial::new_from_coefficients(vec![
+            FieldElement(2, field),
+            FieldElement(3, field),
+            FieldElement(0, field),
+            FieldElement(1, field),
+        ]);
+        let domain = FriDomain {
+            offset: (FieldElement::one(field)),
+            omega: (FieldElement(4, field)),
+            length: (4),
+        };
 
-//         let (next_poly, next_eval_domain, next_evaluations) = next_fri_layer(poly, beta, domain);
-//         assert_eq!(next_poly.coefficients.len(), 2);
-//         assert_eq!(next_poly.coefficients[0].0, 4);
-//         assert_eq!(next_poly.coefficients[1].0, 3);
-//         assert_eq!(next_eval_domain.length, 1);
-//         assert_eq!(next_eval_domain[0].0, 4);
-//         assert_eq!(next_evaluations.len(), 1);
-//         assert_eq!(next_evaluations[0].0, 2);
-//     }
-// }
+        let beta = FieldElement(3, field);
+
+        let (next_poly, next_eval_domain, next_evaluations) = next_fri_layer(poly, beta, domain);
+
+        assert_eq!(next_poly.coefficients.len(), 2);
+        assert_eq!(next_poly.coefficients[0].0, 11);
+         assert_eq!(next_poly.coefficients[1].0, 3);
+         assert_eq!(next_eval_domain.length, 2);
+         assert_eq!(next_eval_domain.omega, FieldElement::new(16, field));
+         assert_eq!(next_evaluations.len(), 2);
+        assert_eq!(next_evaluations[0].0, 14);
+        assert_eq!(next_evaluations[1].0, 8);
+    }
+}
 mod test_fri_domain {
     #![allow(unused_variables)]
     use super::*;
