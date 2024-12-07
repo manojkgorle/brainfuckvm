@@ -49,9 +49,10 @@ impl InstructionTable {
     // Add padding rows to convert the matrix derived from trace to a matrix of length of a power of 2
     pub fn pad(&mut self) {
         let zero = FieldElement::new(0, self.table.field);
-        for _ in 0..(self.table.height - self.table.length)  {
-            let new_row = vec![self.table.matrix.last().unwrap()[Indices::Address as usize],zero, zero, zero, zero];
-            self.table.matrix.push(new_row);
+        let length = self.table.length as usize;
+        for i in 0..(self.table.height - self.table.length)as usize {
+            let new_row = vec![self.table.matrix[length-1][Indices::Address as usize],zero, zero, zero, zero];
+            self.table.matrix[self.table.length as usize + i] = new_row;
         }
     }
     
@@ -180,3 +181,29 @@ impl InstructionTable {
 }
 
 // @todo test instruction table padding.
+#[cfg(test)]
+mod test_instruction {
+    use super::Indices;
+    use crate::vm::VirtualMachine;
+    use crate::fields::Field;
+    use crate::fields::FieldElement;
+    #[test]
+    fn test_padding() {
+        let field = Field(18446744069414584321);
+        let generator = field.generator();
+        let order = 1<<32;
+        let vm = VirtualMachine::new(field);
+        let code2 = ">>[++-]<".to_string();
+        let program = vm.compile(code2);
+        let (runtime, _, _ ) = vm.run(&program, "".to_string());
+        let (processor_matrix, _memory_matrix, instruction_matrix, _input_matrix, _output_matrix) = vm.simulate(&program, "".to_string());
+        assert_eq!(instruction_matrix.len(), processor_matrix.len() + program.len());
+        let ilen = instruction_matrix.len();
+        let mut instruction_table = super::InstructionTable::new(field, instruction_matrix.len() as u128, generator, order, instruction_matrix.clone());
+        instruction_table.pad();
+        assert!(instruction_table.table.matrix.len().is_power_of_two());
+        assert_eq!(instruction_matrix[ilen - 1][Indices::Address as usize], instruction_table.table.matrix.last().unwrap()[Indices::Address as usize]);
+        assert_eq!(instruction_table.table.matrix.last().unwrap()[Indices::CurrentInstruction as usize], FieldElement::zero(field));
+        assert_eq!(instruction_table.table.matrix.last().unwrap()[Indices::NextInstruction as usize], FieldElement::zero(field));
+    }
+}
