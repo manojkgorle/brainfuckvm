@@ -408,16 +408,12 @@ pub fn gen_lagrange_polynomials_parallel(x: Vec<FieldElement>) -> Vec<Polynomial
 }
 
 pub fn interpolate_lagrange_polynomials(x: Vec<FieldElement>, y: Vec<FieldElement>) -> Polynomial {
-    println!("x ={:?}", x);
-    println!("y ={:?}", y);
+    // println!("x ={:?}", x);
+    // println!("y ={:?}", y);
     let n = x.len();
     log::debug!("generating lagrange polynomials");
     let start_time = Local::now();
     let lagrange_polynomials = gen_lagrange_polynomials(x.clone());
-    println!(
-        "lagrange polynomials generated in {:?}",
-        lagrange_polynomials
-    );
     let field = Field::new(x[0].modulus());
     let mut result = Polynomial::new_from_coefficients(vec![FieldElement::new(0, field); n]);
 
