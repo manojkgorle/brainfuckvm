@@ -1,17 +1,28 @@
 use crate::fields::{Field, FieldElement};
 use super::{Table, roundup_npow2, derive_omicron};
+use crate::univariate_polynomial::*;
 pub struct InstructionTable {
     pub table: Table,
 }
 
 pub enum Indices {
     // Named indices for base columns
-    Address,
-    CurrentInstruction,
-    NextInstruction,
+    Address, //ip
+    CurrentInstruction, //ci
+    NextInstruction, //ni
     // Named indices for extension columns
     PermutationArg,
     EvaluationArg,
+}
+
+pub enum IndicesPoly{
+    Boundary,
+    Transition,
+    Terminal,
+    Difference,
+}
+pub enum ChallengeIndices{
+    A, B, C, D, E, F, Alpha, Beta, Delta, Gamma, Eta
 }
 
 impl InstructionTable {
@@ -43,8 +54,129 @@ impl InstructionTable {
             self.table.matrix.push(new_row);
         }
     }
+    
+    pub fn extend_column(&mut self, randFieldElem: u128, challenges: Vec<FieldElement>){
+        let mut ppa = FieldElement::new(randFieldElem,self.table.field); 
+        //take randFieldElement = 1 when not implementing random secret diff constraint 
+        let mut pea = FieldElement::zero(self.table.field);
 
-    // @todo add extension @soumyathakur44
+        self.table.matrix[0 as usize][Indices::PermutationArg as usize] = ppa; 
+        self.table.matrix[0 as usize][Indices::EvaluationArg as usize] = pea;
+        //@todo set initial value of first row of ppa and pea
+
+        for i in 0..self.table.length-1 {
+            let weighted_sum = self.table.matrix[(i+1) as usize][Indices::Address as usize] * challenges[ChallengeIndices::A as usize]
+                + self.table.matrix[(i+1) as usize][Indices::CurrentInstruction as usize] * challenges[ChallengeIndices::B as usize]
+                + self.table.matrix[(i+1) as usize][Indices::NextInstruction as usize] * challenges[ChallengeIndices::C as usize];
+            if self.table.matrix[(i+1) as usize][Indices::Address as usize]==self.table.matrix[i as usize][Indices::Address as usize]{
+                ppa *= (weighted_sum - challenges[ChallengeIndices::Alpha as usize]);
+                self.table.matrix[(i+1) as usize][Indices::PermutationArg as usize] = ppa; 
+                self.table.matrix[(i+1) as usize][Indices::EvaluationArg as usize] = pea;
+            }
+            else{
+                self.table.matrix[(i+1) as usize][Indices::PermutationArg as usize] = ppa; 
+                self.table.matrix[(i+1) as usize][Indices::EvaluationArg as usize] = pea*challenges[ChallengeIndices::Eta as usize] + weighted_sum;
+            }
+        }
+    }
+
+    pub fn generate_air(&self, challenges: Vec<FieldElement>)-> Vec<Polynomial>{
+        let interpolated = self.table.clone().interpolate_columns(vec![Indices::Address as u128, Indices::CurrentInstruction as u128, Indices::NextInstruction as u128, Indices::PermutationArg as u128, Indices::EvaluationArg as u128]);
+        let IP = interpolated[Indices::Address as usize].clone();
+        let CI = interpolated[Indices::CurrentInstruction as usize].clone();
+        let NI = interpolated[Indices::NextInstruction as usize].clone();
+        let PPA = interpolated[Indices::PermutationArg as usize].clone();
+        let PEA = interpolated[Indices::EvaluationArg as usize].clone();
+
+        let next_interpolated = self.table.clone().next_interpolate_columns(vec![Indices::Address as u128, Indices::CurrentInstruction as u128, Indices::NextInstruction as u128, Indices::PermutationArg as u128, Indices::EvaluationArg as u128]);
+
+        let IP_next = next_interpolated[Indices::Address as usize].clone();
+        let CI_next = next_interpolated[Indices::CurrentInstruction as usize].clone();
+        let NI_next = next_interpolated[Indices::NextInstruction as usize].clone();
+        let PPA_next = next_interpolated[Indices::PermutationArg as usize].clone();
+        let PEA_next = next_interpolated[Indices::EvaluationArg as usize].clone();
+
+        let one = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
+        let mut AIR = vec![];
+
+        //Boundary constraint: ip=0
+        //@todo ppa and pea initial value from extended fn, see once
+
+        let boundaryAIR = IP.clone()
+        +PPA.clone()-Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)])
+        +PEA.clone()-Polynomial::new_from_coefficients(vec![FieldElement::zero(self.table.field)]);;
+        //@todo check this once!! initial value is not zero and one, set it to req value
+        AIR.push(boundaryAIR);
+
+        //Transition constraints: * == next
+        //1. (ip-ip*).(ip*-ip-1)
+        //2. (ip-ip*).(ni-ci*)
+        //3. (ip*-ip-1).(ci*-ci)
+        //4. (ip*-ip-1).(ni*-ni)
+        //5. (ip+1-ip*).(ppa* - ppa.(a.ip*+b.ci*+c.ni*-alpha))
+        //6. (ip-ip*).(ppa*-ppa)
+        //7. (ip*-ip-1).(pea*-pea)
+        //8. (ip*-ip).(pea* - pea.eta - (a.ip*+b.ci*+c.ni*))
+
+        let transitionAIR= (IP.clone()-IP_next.clone())*(IP_next.clone()-IP.clone()-one.clone()) 
+        + (IP.clone()-IP_next.clone())*(NI.clone()-CI_next.clone()) 
+        + (IP_next.clone()-IP.clone()-one.clone())*(CI_next.clone()-CI.clone())
+        + (IP_next.clone()-IP.clone()-one.clone())*(NI_next.clone()-NI.clone())
+        + (IP.clone()+one.clone()-IP_next.clone())*(PPA_next.clone() - PPA.clone()*(IP_next.clone().scalar_mul(challenges[ChallengeIndices::A as usize])+CI_next.clone().scalar_mul(challenges[ChallengeIndices::B as usize])+NI_next.clone().scalar_mul(challenges[ChallengeIndices::C as usize])- Polynomial::new_from_coefficients(vec![challenges[ChallengeIndices::A as usize]])))
+        + (IP.clone()-IP_next.clone())*(PPA_next.clone()-PPA.clone())
+        + (IP_next.clone()-IP.clone()-one)*(PEA_next.clone()-PEA.clone())
+        + (IP.clone()-IP_next.clone())*(PEA_next.clone() - PEA.clone().scalar_mul(challenges[ChallengeIndices::Eta as usize])-(IP_next.clone().scalar_mul(challenges[ChallengeIndices::A as usize])+CI_next.clone().scalar_mul(challenges[ChallengeIndices::B as usize])+NI_next.clone().scalar_mul(challenges[ChallengeIndices::C as usize])));
+        AIR.push(transitionAIR);
+
+        //Terminal constraints:
+        //@todo Tppa = Tipa --> include a constraint for this?
+        //ppa - Tppa
+        //pea - Tpea
+        //@todo Tppa and Tipa given by prover, for now just taking it as empty polynomials to write constraint without error
+        //@todo Tpea is computed locally by verifier, taking empty polynomial for now
+        
+        let Tppa = Polynomial::new_from_coefficients(vec![]);
+        let Tipa = Polynomial::new_from_coefficients(vec![]);
+        let Tpea = Polynomial::new_from_coefficients(vec![]);
+        let terminalAIR = PPA.clone() - Tppa.clone()
+        + PEA.clone() - Tpea.clone()
+        + Tppa.clone() - Tipa.clone();
+        //@todo separate Tppa - Tipa term as it will cancel out 
+        AIR.push(terminalAIR);
+
+        AIR
+    }
+
+    pub fn generate_zerofier(&self)-> Vec<Polynomial>{  
+        let mut zerofiers = vec![];
+        let omicron = self.table.omicron;
+        let x = Polynomial::new_from_coefficients(vec![FieldElement::zero(self.table.field), FieldElement::one(self.table.field)]);
+
+        let boundary_zerofier = x.clone() - Polynomial::new_from_coefficients(vec![omicron.clone().pow(0)]);
+        zerofiers.push(boundary_zerofier);
+
+        let mut transition_zerofier = Polynomial::new_from_coefficients(vec![]);
+        for i in 0..self.table.length-1{
+            transition_zerofier*=x.clone()-Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]);
+        }
+        zerofiers.push(transition_zerofier);
+
+        let terminal_zerofier = x.clone() - Polynomial::new_from_coefficients(vec![omicron.clone().pow(self.table.length-1)]);
+
+        zerofiers
+    }
+
+    pub fn generate_quotients(&self, challenges: Vec<FieldElement>)->Vec<Polynomial>{
+        let mut quotients = vec![];
+        let AIR = self.generate_air(challenges);
+        let zerofiers = self.generate_zerofier();
+
+        for i in 0..AIR.len(){
+            quotients.push(AIR[i].clone().q_div(zerofiers[i].clone()).0);
+        }
+        quotients
+    }
+    
 }
 
 // @todo test instruction table padding.
