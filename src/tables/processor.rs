@@ -426,12 +426,19 @@ let Tipa = Polynomial::new_from_coefficients(vec![]);
 let Tmpa = Polynomial::new_from_coefficients(vec![]);
 let Tiea = Polynomial::new_from_coefficients(vec![]);
 let Toea = Polynomial::new_from_coefficients(vec![]);
-let TerminalAIR=ipa.clone()*(ip.clone().scalar_mul(challenges[ChallengeIndices::A as usize])+ci.clone().scalar_mul(challenges[ChallengeIndices::B as usize])+ni.clone().scalar_mul(challenges[ChallengeIndices::C as usize])-Polynomial::constant(challenges[ChallengeIndices::Beta as usize]))-Tipa.clone()+
-mpa.clone()*(clk.scalar_mul(challenges[ChallengeIndices::D as usize])+mp.clone().scalar_mul(challenges[ChallengeIndices::E as usize])+mv.clone().scalar_mul(challenges[ChallengeIndices::F as usize])-Polynomial::constant(challenges[ChallengeIndices::Beta as usize]))-Tmpa+
-iea-Tiea+
-oea-Toea;
-AIR.push(TerminalAIR);
-AIR    }}
+let TerminalAIR=ipa.clone()*(
+    ip.clone().scalar_mul(challenges[ChallengeIndices::A as usize])
+    +ci.clone().scalar_mul(challenges[ChallengeIndices::B as usize])
+    +ni.clone().scalar_mul(challenges[ChallengeIndices::C as usize])
+    -Polynomial::constant(challenges[ChallengeIndices::Beta as usize]))
+    -Tipa.clone()+mpa.clone()*(clk.scalar_mul(challenges[ChallengeIndices::D as usize])
+    +mp.clone().scalar_mul(challenges[ChallengeIndices::E as usize])
+    +mv.clone().scalar_mul(challenges[ChallengeIndices::F as usize])
+    -Polynomial::constant(challenges[ChallengeIndices::Beta as usize]))
+    -Tmpa+iea-Tiea+oea-Toea;
+    AIR.push(TerminalAIR);
+    AIR    
+}}
          #[cfg(test)]
 mod tests_processor_operations {
 use super::*;
