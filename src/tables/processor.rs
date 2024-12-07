@@ -5,7 +5,7 @@ use crate::fri::*;
 use crate::univariate_polynomial::*;
 
 pub struct ProcessorTable {
-    table: Table,
+    pub table: Table,
 }
 
 pub enum Indices {

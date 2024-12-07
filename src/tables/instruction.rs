@@ -84,14 +84,24 @@ impl InstructionTable {
     }
 
     pub fn extend_column(&mut self, rand_field_elem: u128, challenges: Vec<FieldElement>) {
-        let mut ppa = FieldElement::new(rand_field_elem, self.table.field);
-        //take randFieldElement = 1 when not implementing random secret diff constraint
-        let pea = FieldElement::zero(self.table.field);
+        let mut ppa = self.table.matrix[0 as usize][Indices::Address as usize]
+        * challenges[ChallengeIndices::A as usize]
+        + self.table.matrix[0 as usize][Indices::CurrentInstruction as usize]
+        * challenges[ChallengeIndices::B as usize]
+        + self.table.matrix[0 as usize][Indices::NextInstruction as usize]
+        * challenges[ChallengeIndices::C as usize]
+        - challenges[ChallengeIndices::Alpha as usize];
+
+        let pea = self.table.matrix[0 as usize][Indices::Address as usize]
+            * challenges[ChallengeIndices::A as usize]
+        + self.table.matrix[0 as usize][Indices::CurrentInstruction as usize]
+            * challenges[ChallengeIndices::B as usize]
+        + self.table.matrix[0 as usize][Indices::NextInstruction as usize]
+            * challenges[ChallengeIndices::C as usize];
 
         self.table.matrix[0_usize][Indices::PermutationArg as usize] = ppa;
         self.table.matrix[0_usize][Indices::EvaluationArg as usize] = pea;
-        //@todo set initial value of first row of ppa and pea
-
+        
         for i in 0..self.table.length - 1 {
             let weighted_sum = self.table.matrix[(i + 1) as usize][Indices::Address as usize]
                 * challenges[ChallengeIndices::A as usize]
@@ -144,8 +154,9 @@ impl InstructionTable {
         let one = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         let mut air = vec![];
 
-        //Boundary constraint: ip=0
-        //@todo ppa and pea initial value from extended fn, see once
+        //Boundary constraint: 
+        //ip=0
+        //@todo ci  ni, ppa, pea ka bhi boundary constraint dalna hai?
 
         let boundaryair = ip.clone() + ppa.clone()
             - Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)])
