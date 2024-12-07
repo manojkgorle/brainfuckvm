@@ -8,7 +8,7 @@ use crate::merkle::*;
 use crate::channel::*;
 use crate::fri::*;
 use crate::fields::Field;
-use crate::{fields::FieldElement, tables::Table};
+use crate::fields::FieldElement;
 use crate::tables::*;
 use crate::univariate_polynomial::*;
 
@@ -75,20 +75,19 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, f
         basecodewords.push(domain.evaluate(instruction_interpol_columns[i].clone()));
     }
 
-    //we are zipping all the base codewords using concatenation
+    //we are zipping all the base codewords (for each index in order) using concatenation
+    //@todo to_bytes function of field element is not working properly? check once
 
-    // let mut basecodeword = String::new();
+    let mut basecodeword: Vec<Vec<u8>> = Vec::new();
 
-    // for i in 0..basecodewords.len(){
-    //     let mut str = String::new();
-    //     for j in 0..basecodewords[i].len(){
-    //         str += &basecodewords[i][j].0.to_string();
+    // for i in 0..expanded_length as usize{
+    //     let mut x: Vec<Vec<u8>> = vec![];
+    //     for j in 0..basecodewords.len(){
+    //         x.push(basecodewords[j][i].to_bytes().iter().map(y:));
     //     }
-    //     basecodeword += &str;
     // }
 
-    //@todo could not find a function in channel for fiat shamir, ie 
-
+    //@todo could not find a function in channel for fiat shamir, ie sending data as string and then getting random element
     //@todo make extend columns function return Terminal value , eg. Tipa, for every table and store it, use it to compare
 
 }
@@ -130,7 +129,7 @@ impl Stark<'_> {}
 
 #[cfg(test)]
 mod stark_test {
-    use crate::fields::Field;
+    use crate::fields::{Field, FieldElement};
     use crate::vm::VirtualMachine;
     #[test]
     fn test_proving() {
@@ -142,6 +141,15 @@ mod stark_test {
         let (processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix) =
             vm.simulate(&program, "".to_string());
         assert_eq!(running_time as usize, processor_matrix.len());
+    }
+    #[test]
+    fn helper_tests() {
+        let x = FieldElement::new(318, Field::new(421));
+        println!("{}", x);
+        let y = x.to_bytes();
+        for i in 0..y.len(){
+            print!("{}, ", y[i]);
+        }
     }
 }
 
