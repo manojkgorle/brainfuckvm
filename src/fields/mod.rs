@@ -22,6 +22,7 @@ impl Field {
                 "Field does not have nth root of unity where n > 2^32 or not power of two."
             );
             let mut root = FieldElement::new(1753635133440165772, self);
+          
             let mut order = 1 << 32;
 
             while order != n {
