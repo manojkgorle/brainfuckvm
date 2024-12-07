@@ -83,7 +83,8 @@ impl InstructionTable {
         }
     }
 
-    pub fn extend_column(&mut self, rand_field_elem: u128, challenges: Vec<FieldElement>) {
+    pub fn extend_column(&mut self, rand_field_elem: u128, challenges: Vec<FieldElement>) ->Vec<FieldElement>{
+        let mut terminal:Vec<FieldElement>=Vec::new();
         let mut ppa = self.table.matrix[0 as usize][Indices::Address as usize]
         * challenges[ChallengeIndices::A as usize]
         + self.table.matrix[0 as usize][Indices::CurrentInstruction as usize]
@@ -120,7 +121,11 @@ impl InstructionTable {
                 self.table.matrix[(i + 1) as usize][Indices::EvaluationArg as usize] =
                     pea * challenges[ChallengeIndices::Eta as usize] + weighted_sum;
             }
+           
         }
+        terminal.push(ppa);
+        terminal.push(pea);
+        terminal
     }
 
     pub fn generate_air(&self, challenges: Vec<FieldElement>,tppa:FieldElement,tpea:FieldElement) -> Vec<Polynomial> {

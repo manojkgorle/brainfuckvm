@@ -129,7 +129,7 @@ impl ProcessorTable {
     }
 
     //the matrix taken here is padded
-    pub fn extend_columns(&mut self, challenges: Vec<FieldElement>) {
+    pub fn extend_columns(&mut self, challenges: Vec<FieldElement>)->Vec<FieldElement> {
         //@todo Note: Taking init 1 for now, change to random secret initial value which we check by difference constraint of tmpa = Tppa
         let mut ipa = FieldElement::one(self.table.field);
         let mut mpa = FieldElement::one(self.table.field);
@@ -153,6 +153,13 @@ impl ProcessorTable {
             ipa *= weighted_sum;
             self.table.matrix[(i + 1) as usize][Indices::InstructionPermutaion as usize] = ipa;
         }
+        let mut tipa=ipa*(self.table.matrix[self.table.length as usize][Indices::InstructionPointer as usize]
+            * challenges[ChallengeIndices::A as usize]
+            + self.table.matrix[self.table.length as usize][Indices::CurrentInstruction as usize]
+                * challenges[ChallengeIndices::B as usize]
+            + self.table.matrix[self.table.length as usize][Indices::NextInstruction as usize]
+                * challenges[ChallengeIndices::C as usize]
+            - challenges[ChallengeIndices::Alpha as usize]);
 
         for i in 0..self.table.length - 1 {
             let weighted_sum = self.table.matrix[i as usize][Indices::Cycle as usize]
@@ -165,6 +172,13 @@ impl ProcessorTable {
             mpa *= weighted_sum;
             self.table.matrix[(i + 1) as usize][Indices::MemoryPermuation as usize] = mpa;
         }
+        let mut tmpa=mpa*(self.table.matrix[self.table.length as usize][Indices::Cycle as usize]
+            * challenges[ChallengeIndices::D as usize]
+            + self.table.matrix[self.table.length as usize][Indices::MemoryPointer as usize]
+                * challenges[ChallengeIndices::E as usize]
+            + self.table.matrix[self.table.length as usize][Indices::MemoryValue as usize]
+                * challenges[ChallengeIndices::F as usize]
+            - challenges[ChallengeIndices::Beta as usize]);
 
         let f =
             |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, self.table.field) };
@@ -189,6 +203,14 @@ impl ProcessorTable {
                 self.table.matrix[(i + 1) as usize][Indices::OutputEvaluation as usize] = oea;
             }
         }
+        let mut tiea=iea;
+        let mut toea =oea;
+        let mut terminal:Vec<FieldElement>=Vec::new();
+        terminal.push(tipa);
+        terminal.push(tmpa);
+        terminal.push(tiea);
+        terminal.push(toea);
+        terminal
     }
 
     pub fn generate_zerofier(&self) -> Vec<Polynomial> {
