@@ -260,9 +260,9 @@ impl Fri{
 
 #[derive(Debug, Clone)]
 pub struct FriDomain{
-      pub  offset: FieldElement,
-       pub  omega: FieldElement,
-       pub length: u128,
+    pub  offset: FieldElement,
+    pub  omega: FieldElement,
+    pub length: u128,
 }
 
 impl FriDomain{
