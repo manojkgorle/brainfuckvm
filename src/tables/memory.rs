@@ -122,7 +122,7 @@ impl Memory {
     }
 
     //this is after padding and extension
-    pub fn generate_air(&self, challenges: Vec<FieldElement>) -> Vec<Polynomial> {
+    pub fn generate_air(&self, challenges: Vec<FieldElement>,tppa:FieldElement) -> Vec<Polynomial> {
         let interpolated = self.table.clone().interpolate_columns(vec![
             Indices::Cycle as u128,
             Indices::MemoryPointer as u128,
@@ -175,22 +175,18 @@ impl Memory {
         air.push(transitionair);
 
         //Terminal constraints:
-        //@todo Tppa = tmpa --> include a constraint for this?
+
         //ppa.(d.clk+e.mp+f.mv-beta)-Tppa
-        //@todo Tppa and tmpa given by prover, for now just taking it as empty polynomials to write constraint without error
-        let tppa = Polynomial::new_from_coefficients(vec![]);
-        let tmpa = Polynomial::new_from_coefficients(vec![]);
-        let terminalair = ppa
+        // Tppa  given by prover, for now just taking it as empty polynomials to write constraint without error
+         let terminalair = ppa
             * (clk.scalar_mul(challenges[ChallengeIndices::D as usize])
                 + mp.scalar_mul(challenges[ChallengeIndices::E as usize])
                 + mv.scalar_mul(challenges[ChallengeIndices::F as usize])
                 - Polynomial::new_from_coefficients(vec![
                     challenges[ChallengeIndices::Beta as usize],
                 ]))
-            - tppa.clone()
-            + tppa // @todo check this out, this is looking weird.
-            - tmpa;
-        //@todo check if Tppa -tmpa needs to be written separately```````````
+            - Polynomial::constant(tppa);
+        
         air.push(terminalair);
 
         air
@@ -222,9 +218,9 @@ impl Memory {
         zerofiers
     }
 
-    pub fn generate_quotients(&self, challenges: Vec<FieldElement>) -> Vec<Polynomial> {
+    pub fn generate_quotients(&self, challenges: Vec<FieldElement>,tppa:FieldElement) -> Vec<Polynomial> {
         let mut quotients = vec![];
-        let air = self.generate_air(challenges);
+        let air = self.generate_air(challenges,tppa);
         let zerofiers = self.generate_zerofier();
 
         for i in 0..air.len() {

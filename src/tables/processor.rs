@@ -310,9 +310,9 @@ impl ProcessorTable {
         zerofiers
     }
 
-    pub fn generate_quotients(&self, challenges: Vec<FieldElement>) -> Vec<Polynomial> {
+    pub fn generate_quotients(&self, challenges: Vec<FieldElement>,tipa:FieldElement,tmpa:FieldElement,tiea:FieldElement,toea:FieldElement) -> Vec<Polynomial> {
         let mut quotients = vec![];
-        let air = self.generate_air(challenges);
+        let air = self.generate_air(challenges,tipa,tmpa,tiea,toea);
         let zerofiers = self.generate_zerofier();
 
         for i in 0..air.len() {
@@ -333,10 +333,26 @@ impl ProcessorTable {
         }
         acc
     }
+    //@ I am not using this function because it because universal selector is redundant
+    // define a selector polynomial for a valid set if instruction from this set then it should be zero
+       pub fn universal_selector(ci: Polynomial, field: Field) ->Polynomial{
+            let f = |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, field) };
+            // let mut deselectors = Vec::new();
+            let mut acc = Polynomial::constant(FieldElement::new(1, field));
 
-    // boundary constraints for the base coloumns
+            // for target_char in "[]<>,.+-".chars() {
+            let target_char = ['[',']','<','>',',','.','+','-'];
+
+                for c in target_char.iter() {
+                    
+                        acc *= ci.clone() - Polynomial::constant(FieldElement::new(f(*c).0, field));
+                    
+                } acc
+       }
+
+    //boundary constraints for the base coloumns
     // the values of instructionpermutaion ipa and mpa I am taking as 1
-    pub fn generate_air(&self, challenges: Vec<FieldElement>) -> Vec<Polynomial> {
+    pub fn generate_air(&self, challenges: Vec<FieldElement>,tipa:FieldElement,tmpa:FieldElement,tiea:FieldElement,toea:FieldElement) -> Vec<Polynomial> {
         let f =
             |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, self.table.field) };
         let interpolated = self.table.clone().interpolate_columns(vec![
@@ -378,16 +394,13 @@ impl ProcessorTable {
         ]);
         let clk_next = next_interpolated[Indices::Cycle as usize].clone();
         let ip_next = next_interpolated[Indices::InstructionPointer as usize].clone();
-        let ci_next = next_interpolated[Indices::CurrentInstruction as usize].clone();
-        let ni_next = next_interpolated[Indices::NextInstruction as usize].clone();
         let mp_next = next_interpolated[Indices::MemoryPointer as usize].clone();
         let mv_next = next_interpolated[Indices::MemoryValue as usize].clone();
-        let inv_mv_next = next_interpolated[Indices::MemoryValueInverse as usize].clone();
         let ipa_next = next_interpolated[Indices::InstructionPermutaion as usize].clone();
         let mpa_next = next_interpolated[Indices::MemoryPermuation as usize].clone();
         let iea_next = next_interpolated[Indices::InputEvaluation as usize].clone();
         let oea_next = next_interpolated[Indices::OutputEvaluation as usize].clone();
-        let one = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
+     
         let mut air = vec![];
         //Boundary contsraints :clk=mp=mv=inv=ip=0
         //iea=oea=1 (we are using 1 instead of any random number)
@@ -517,16 +530,17 @@ impl ProcessorTable {
                     - oea_next.clone())
             + (ci.clone() - Polynomial::constant(f('.'))) * (oea.clone() - oea_next.clone());
         air.push(trasition_all);
+        //@todo have to seperate the terminal 
         //  Terminal constraints
         // tipa, tmpa- last row not accumulated so:
         //1.ipa.(a.ip+ b.ci+c.ni-alpha)-tipa
         //2.mpa.(d.clk+e.mp+f.mv-beta)-tmpa
         // tiea, toea- last element identical to terminal
         //3.iea-tiea   4. oea-toea
-        let tipa = Polynomial::new_from_coefficients(vec![]);
-        let tmpa = Polynomial::new_from_coefficients(vec![]);
-        let tiea = Polynomial::new_from_coefficients(vec![]);
-        let toea = Polynomial::new_from_coefficients(vec![]);
+        // let tipa = Polynomial::new_from_coefficients(vec![]);
+        // let tmpa = Polynomial::new_from_coefficients(vec![]);
+        // let tiea = Polynomial::new_from_coefficients(vec![]);
+        // let toea = Polynomial::new_from_coefficients(vec![]);
         let terminal_air = ipa.clone()
             * (ip
                 .clone()
@@ -536,7 +550,7 @@ impl ProcessorTable {
                 + ni.clone()
                     .scalar_mul(challenges[ChallengeIndices::C as usize])
                 - Polynomial::constant(challenges[ChallengeIndices::Beta as usize]))
-            - tipa.clone()
+            - Polynomial::constant(tipa)
             + mpa.clone()
                 * (clk.scalar_mul(challenges[ChallengeIndices::D as usize])
                     + mp.clone()
@@ -544,11 +558,11 @@ impl ProcessorTable {
                     + mv.clone()
                         .scalar_mul(challenges[ChallengeIndices::F as usize])
                     - Polynomial::constant(challenges[ChallengeIndices::Beta as usize]))
-            - tmpa
+            - Polynomial::constant(tmpa)
             + iea
-            - tiea
+            - Polynomial::constant(tiea)
             + oea
-            - toea;
+            - Polynomial::constant(toea);
         air.push(terminal_air);
         air
     }
@@ -583,6 +597,31 @@ mod tests_processor_operations {
                 ci_array[i as usize]
             );
         }
+    }
+    #[test]
+    fn test_universal_selector(){
+        let field = Field::new((1 << 64) - (1 << 32) + 1);
+        let f = |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, field) };
+        let ci_array = vec!['[', ']', '<', '>', '-', '.', '+', ','];
+        let mut values_array: Vec<FieldElement> = Vec::new();
+        for c in ci_array.clone() {
+            println!("{:?}", f(c));
+            values_array.push(f(c));
+        }
+        let generator = FieldElement::new(1753635133440165772, field);
+        let order = 1 << 32;
+        let target_order = 8;
+        //println!("generator ={:?}", generator);
+        let omicron = derive_omicron(generator, order, target_order);
+        //println!("omicron ={:?}", omicron);
+        let domain = FriDomain::new(FieldElement::new(1, field), omicron, target_order);
+        let ci = domain.interpolate(values_array);
+        let poly = ProcessorTable::universal_selector(ci, field);
+        let values=poly.evaluate(omicron.pow(1));
+        assert_eq!(values,FieldElement::zero(field));
+      
+
+
     }
 }
 
@@ -695,10 +734,10 @@ mod test_processor {
         for row in processor_table.table.matrix.clone() {
             println!("{:?}", row);
         }
-        let air = processor_table.generate_air(challenges);
-        println!("air");
-        for row in air {
-            println!("{:?}", row);
-        }
+        // let air = processor_table.generate_air(challenges);
+        // println!("air");
+        // for row in air {
+        //     println!("{:?}", row);
+        // }
     }
 }
