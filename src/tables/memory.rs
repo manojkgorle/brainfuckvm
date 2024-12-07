@@ -105,7 +105,8 @@ impl MemoryTable {
     }
 
     //the matrix taken here is padded
-    pub fn extend_column_ppa(&mut self, rand_field_elem: u128, challenges: Vec<FieldElement>) {
+    pub fn extend_column_ppa(&mut self, rand_field_elem: u128, challenges: Vec<FieldElement>)->Vec<FieldElement> {
+        let mut terminal:Vec<FieldElement>= Vec::new();
         let mut ppa = FieldElement::new(rand_field_elem, self.table.field);
         self.table.matrix[0][Indices::PermutationArg as usize] = ppa;
         for i in 0..self.table.length - 1 {
@@ -118,7 +119,18 @@ impl MemoryTable {
                 - challenges[ChallengeIndices::Beta as usize];
             ppa *= weighted_sum;
             self.table.matrix[(i + 1) as usize][Indices::PermutationArg as usize] = ppa;
+
         }
+        let mut tppa=ppa*(self.table.matrix[self.table.length as usize][Indices::Cycle as usize]
+            * challenges[ChallengeIndices::D as usize]
+            + self.table.matrix[self.table.length as usize][Indices::MemoryPointer as usize]
+                * challenges[ChallengeIndices::E as usize]
+            + self.table.matrix[self.table.length as usize][Indices::MemoryValue as usize]
+                * challenges[ChallengeIndices::F as usize]
+            - challenges[ChallengeIndices::Beta as usize]);
+            let mut Tppa:Vec<FieldElement>=Vec::new();
+            Tppa.push(tppa);
+            Tppa
     }
 
     //this is after padding and extension
