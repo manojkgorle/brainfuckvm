@@ -392,16 +392,13 @@ impl ProcessorTable {
         ]);
         let clk_next = next_interpolated[Indices::Cycle as usize].clone();
         let ip_next = next_interpolated[Indices::InstructionPointer as usize].clone();
-        let ci_next = next_interpolated[Indices::CurrentInstruction as usize].clone();
-        let ni_next = next_interpolated[Indices::NextInstruction as usize].clone();
         let mp_next = next_interpolated[Indices::MemoryPointer as usize].clone();
         let mv_next = next_interpolated[Indices::MemoryValue as usize].clone();
-        let inv_mv_next = next_interpolated[Indices::MemoryValueInverse as usize].clone();
         let ipa_next = next_interpolated[Indices::InstructionPermutaion as usize].clone();
         let mpa_next = next_interpolated[Indices::MemoryPermuation as usize].clone();
         let iea_next = next_interpolated[Indices::InputEvaluation as usize].clone();
         let oea_next = next_interpolated[Indices::OutputEvaluation as usize].clone();
-        let one = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
+     
         let mut air = vec![];
         //Boundary contsraints :clk=mp=mv=inv=ip=0
         //iea=oea=1 (we are using 1 instead of any random number)
