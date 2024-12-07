@@ -115,7 +115,7 @@ impl Table {
                 panic!("length of domain and values are unequal");
             };
             let poly = interpolate_lagrange_polynomials(omicron_domain.clone(), values);
-            println!("poly ={:?}", poly);
+            // println!("poly ={:?}", poly);
             polynomial.push(poly);
         }
         polynomial
@@ -147,11 +147,11 @@ impl Table {
             if values.len() != omicron_domain.len() {
                 panic!("length of domain and values are unequal");
             };
-            println!("domain ={:?}", omicron_domain);
-            println!("values ={:?}", values);
+            // println!("domain ={:?}", omicron_domain);
+            // println!("values ={:?}", values);
 
             let poly = interpolate_lagrange_polynomials(omicron_domain.clone(), values);
-            println!("poly ={:?}", poly);
+            // println!("poly ={:?}", poly);
             next_interpolated.push(poly);
         }
         next_interpolated

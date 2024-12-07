@@ -130,7 +130,7 @@ impl ProcessorTable {
 
     //the matrix taken here is padded
     pub fn extend_columns(&mut self, challenges: Vec<FieldElement>) {
-        //@todo taking init 1 for now, change to random secret initial value which we check by difference constraint of tmpa = Tppa
+        //@todo Note: Taking init 1 for now, change to random secret initial value which we check by difference constraint of tmpa = Tppa
         let mut ipa = FieldElement::one(self.table.field);
         let mut mpa = FieldElement::one(self.table.field);
         let mut iea = FieldElement::zero(self.table.field);
@@ -140,7 +140,9 @@ impl ProcessorTable {
         self.table.matrix[0][Indices::MemoryPermuation as usize] = mpa;
         self.table.matrix[0][Indices::InputEvaluation as usize] = iea;
         self.table.matrix[0][Indices::OutputEvaluation as usize] = oea;
+        // instruction permutation argument
         for i in 0..self.table.length - 1 {
+            //ip * a + ci * b + ni * c
             let weighted_sum = self.table.matrix[i as usize][Indices::InstructionPointer as usize]
                 * challenges[ChallengeIndices::A as usize]
                 + self.table.matrix[i as usize][Indices::CurrentInstruction as usize]
@@ -300,7 +302,7 @@ impl ProcessorTable {
         }
         zerofiers.push(transition_all_zerofier);
 
-        //terminal-
+        //terminal
         let terminal_zerofier = x.clone()
             - Polynomial::new_from_coefficients(vec![omicron.clone().pow(self.table.length - 1)]);
 
@@ -331,24 +333,8 @@ impl ProcessorTable {
         }
         acc
     }
-    //@ I am not using this function because it because universal selector is redundant
-    // define a selector polynomial for a valid set if instruction from this set then it should be zero
-    //    pub fn universal_selector(ci: Polynomial, field: Field,char:Vec<char>) ->Polynomial{
-    //         let f = |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, field) };
-    //         // let mut deselectors = Vec::new();
-    //         let mut acc = Polynomial::constant(FieldElement::new(1, field));
 
-    //         // for target_char in "[]<>,.+-".chars() {
-    //         let target_char = "[]<>,.+-".chars();
-
-    //             for c in char.iter() {
-    //                 if !target_char.clone().any(|tc| tc == *c) {
-    //                     acc *= ci.clone() - Polynomial::constant(FieldElement::new(f(*c).0, field));
-    //                 }
-    //             } acc
-    //     }
-
-    //boundary constraints for the base coloumns
+    // boundary constraints for the base coloumns
     // the values of instructionpermutaion ipa and mpa I am taking as 1
     pub fn generate_air(&self, challenges: Vec<FieldElement>) -> Vec<Polynomial> {
         let f =
@@ -459,7 +445,7 @@ impl ProcessorTable {
             + (mp_next.clone() - mp.clone() + poly_one.clone());
         air.push(trasition_i3);
 
-        //ip⋆−ip−1
+        // ip⋆−ip−1
         // mp⋆−mp
         // mv⋆−mv−1
         let trasition_i4 = (ip_next.clone() - ip.clone() - poly_one.clone())
@@ -603,10 +589,16 @@ mod tests_processor_operations {
 // @todo test processor table padding
 #[cfg(test)]
 mod test_processor {
+    use std::time::Instant;
+
     use super::ProcessorTable;
-    use crate::fields::Field;
+    use crate::fields::{Field, FieldElement};
+    use crate::tables::instruction::InstructionTable;
+    use crate::tables::io::IOTable;
+    use crate::tables::memory::Memory;
     use crate::tables::processor::Indices;
     use crate::vm::VirtualMachine;
+
     #[test]
     fn test_padding() {
         let field = Field(18446744069414584321);
@@ -634,5 +626,79 @@ mod test_processor {
                 .0,
             processor_table.table.matrix.len() as u128 - 1
         );
+    }
+
+    #[test]
+    fn test_air() {
+        let field = Field::new(18446744069414584321);
+        let zero = FieldElement::zero(field);
+        let one = FieldElement::one(field);
+        let vm = VirtualMachine::new(field);
+        let generator = field.generator();
+        let order = 1 << 32;
+        // let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
+        let code2 = ">>[++-]<".to_string();
+        let program = vm.compile(code2);
+        vm.run(&program, "".to_string());
+        // assert_eq!(program.len(), 2);
+        let (processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix) =
+            vm.simulate(&program, "".to_string());
+        let challenges = vec![one; 11];
+        let mut processor_table = ProcessorTable::new(
+            field,
+            processor_matrix.len() as u128,
+            generator,
+            order,
+            processor_matrix,
+        );
+        let mut memory_table = Memory::new(
+            field,
+            memory_matrix.len() as u128,
+            generator,
+            order,
+            memory_matrix,
+        );
+        let mut instruction_table = InstructionTable::new(
+            field,
+            instruction_matrix.len() as u128,
+            generator,
+            order,
+            instruction_matrix,
+        );
+        let mut input_table = IOTable::new(
+            field,
+            input_matrix.len() as u128,
+            generator,
+            order,
+            input_matrix,
+        );
+        let mut output_table = IOTable::new(
+            field,
+            output_matrix.len() as u128,
+            generator,
+            order,
+            output_matrix,
+        );
+
+        processor_table.pad();
+        memory_table.pad();
+        instruction_table.pad();
+        input_table.pad();
+        output_table.pad();
+
+        println!("processor table before extending columns");
+        for row in processor_table.table.matrix.clone() {
+            println!("{:?}", row);
+        }
+        processor_table.extend_columns(challenges.clone());
+        println!("processor table after extending columns");
+        for row in processor_table.table.matrix.clone() {
+            println!("{:?}", row);
+        }
+        let air = processor_table.generate_air(challenges);
+        println!("air");
+        for row in air {
+            println!("{:?}", row);
+        }
     }
 }
