@@ -175,45 +175,36 @@ pub fn decommit_fri_layers(
 pub fn decommit_on_query(
     idx: usize,
     blow_up_factor: usize,
-    f_eval: &[FieldElement],
-    f_merkle: &MerkleTree,
+    f_eval: Vec<&[FieldElement]>, //this contains basecodewords zipped, and extension codewords zipped
+    f_merkle: Vec<&MerkleTree>, //this contains MerkleTree of base codewords zipped, and extension codewords zipped
     fri_layers: &[Vec<FieldElement>],
     fri_merkle: &[MerkleTree],
     channel: &mut Channel,
 ) {
     log::debug!("Decommitting on query {}", idx);
-    // trace domain is blew up 8 times to get the evaluation domain(i.e. the coset). so x, g*x, g^2 * x are seperated by 8 indices in between.
-    // get f(x), f(g*x), f(g^2 * x) and send them over the channel, along with the merkle proofs.
-    assert!(idx + 2 * blow_up_factor < f_eval.len());
-    channel.send(f_eval[idx].to_bytes()); // f(x)
-    channel.send(f_merkle.get_authentication_path(idx)); // merkle proof for f(x)
-    channel.send(f_eval[idx + blow_up_factor].to_bytes()); // f(g*x)
-    channel.send(f_merkle.get_authentication_path(idx + blow_up_factor)); // merkle proof for f(g*x)
-    channel.send(f_eval[idx + 2 * blow_up_factor].to_bytes()); // f(g^2 * x)
-    channel.send(f_merkle.get_authentication_path(idx + 2 * blow_up_factor)); // merkle proof for f(g^2 * x)
+    //we need basecodewords zipped and extension codewords zipped evaluations at x and gx, which will be separated by blowupfactor
+    // at x -> clk, ip, ci, ni, mp, mv, inv: (in zipped basecodeword); ipa, mpa, iea, oea: (in zipped extension codeword)
+    // at gx -> clk*, ip*, ci*, ni*, mp*, mv*, inv*: (""); ipa*, mpa*, iea*, oea*: ("")
+    // get basecodeword[idx], basecodewords[idx+blowupfactor] and extensioncodeword[idx], extensioncodeword[idx+blowupfactor] and send them over the channel, along with the merkle proofs.
+    assert!(idx + blow_up_factor < f_eval[0].len());
+    channel.send(f_eval[0][idx].to_bytes()); //basecodeword[idx] or f(x)
+    channel.send(f_merkle[0].get_authentication_path(idx)); // merkle proof for basecodeword[idx] or f(x)
+    channel.send(f_eval[0][idx + blow_up_factor].to_bytes()); //basecodeword[idx+blowupfactor] or f(g*x)
+    channel.send(f_merkle[0].get_authentication_path(idx + blow_up_factor)); // merkle proof for basecodeword[idx+blowupfactor] or f(g*x)
+    
+    channel.send(f_eval[1][idx].to_bytes()); //extensioncodeword[idx] or f(x)
+    channel.send(f_merkle[1].get_authentication_path(idx)); // merkle proof for extensioncodeword[idx] or f(x)
+    channel.send(f_eval[1][idx + blow_up_factor].to_bytes()); //extensioncodeword[idx+blowupfactor] or f(g*x)
+    channel.send(f_merkle[1].get_authentication_path(idx + blow_up_factor)); // merkle proof for extensioncodeword[idx+blowupfactor] or f(g*x)
     decommit_fri_layers(idx, fri_layers, fri_merkle, channel)
 }
 
-/// decommits for each query x and provides consistency proof for the fri layers.
-/// cp(x) = g(x^2) + x*h(x^2)
-/// cp(-x) = g(x^2) - x*h(x^2)
-/// g(x^2) = (cp(x) + cp(-x))/2
-/// h(x^2) = (cp(x) - cp(-x))/2x
-/// so cp_i(x^2) = g(x^2) + beta*h(x^2)
-/// we only need cp_i(x) and cp_i(-x) to compute cp_i+1(x^2)
-///
-/// for every query x: x belongs to evaluation domain.
-/// we send f_eval(x), f_eval(g*x), f_eval(g^2 * x) and their merkle proofs.
-/// using f_eval(x), f_eval(g*x), f_eval(g^2*x), we compute cp(x)
-/// and send cp(x) and cp(-x) to the verifier along with their merkle proofs.
-/// continue till the last layer has been reached.
-/// if prover is successful in convencing that, the fri_layer is consistent with the evaluations, then the verifier will accept the proof.
 pub fn decommit_fri(
     num_of_queries: usize,
     blow_up_factor: usize,
     maximum_random_int: u64,
-    f_eval: &[FieldElement],
-    f_merkle: &MerkleTree,
+    f_eval: Vec<&[FieldElement]>,
+    f_merkle: Vec<&MerkleTree>,
     fri_layers: &[Vec<FieldElement>],
     fri_merkle: &[MerkleTree],
     channel: &mut Channel,
@@ -223,8 +214,8 @@ pub fn decommit_fri(
         decommit_on_query(
             idx as usize,
             blow_up_factor,
-            f_eval,
-            f_merkle,
+            f_eval.clone(),
+            f_merkle.clone(),
             fri_layers,
             fri_merkle,
             channel,

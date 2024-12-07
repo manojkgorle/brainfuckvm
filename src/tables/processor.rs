@@ -334,9 +334,10 @@ impl ProcessorTable {
             //Boundary contsraints :clk=mp=mv=inv=ip=0
             //iea=oea=1 (we are using 1 instead of any random number)
             let poly_two=Polynomial::new_from_coefficients(vec![FieldElement::new(2,self.table.field)]);
+            //@todo should we separate out ipa and mpa -2 into ipa -1 and mpa -1 so that malicious prover cant set ppa=2 and mpa =0 or something like that?
             let boundaryAIR=clk.clone()+ip.clone()+mp.clone()+mv.clone()+inv_mv.clone()+ipa.clone()+mpa.clone()+iea.clone()+oea.clone()-poly_two.clone();
             AIR.push(boundaryAIR);
-    //         Transition_i0,
+    // Transition_i0,
     // Transition_i1,
     // Transition_i2,
     // Transition_i3,

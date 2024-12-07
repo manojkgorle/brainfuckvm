@@ -15,6 +15,7 @@ pub mod merkle;
 pub mod fri;
 pub mod channel;
 pub mod stark;
+
 fn main() {
     println!("Hello, world!");
 }
