@@ -113,7 +113,7 @@ impl InstructionTable {
         }
     }
 
-    pub fn generate_air(&self, challenges: Vec<FieldElement>) -> Vec<Polynomial> {
+    pub fn generate_air(&self, challenges: Vec<FieldElement>,tppa:FieldElement,tpea:FieldElement) -> Vec<Polynomial> {
         let interpolated = self.table.clone().interpolate_columns(vec![
             Indices::Address as u128,
             Indices::CurrentInstruction as u128,
@@ -203,17 +203,14 @@ impl InstructionTable {
         air.push(transitionair);
 
         //Terminal constraints:
-        //@todo Tppa = tipa --> include a constraint for this?
+        
         //ppa - Tppa
         //pea - tpea
         //@todo Tppa and tipa given by prover, for now just taking it as empty polynomials to write constraint without error
         //@todo tpea is computed locally by verifier, taking empty polynomial for now
 
-        let tppa = Polynomial::new_from_coefficients(vec![]);
-        let tipa = Polynomial::new_from_coefficients(vec![]);
-        let tpea = Polynomial::new_from_coefficients(vec![]);
         let terminalair =
-            ppa.clone() - tppa.clone() + pea.clone() - tpea.clone() + tppa.clone() - tipa.clone();
+            ppa.clone() -Polynomial::constant(tppa) + pea.clone() - Polynomial::constant(tpea) ;
         //@todo separate Tppa - tipa term as it will cancel out
         air.push(terminalair);
 
@@ -245,9 +242,9 @@ impl InstructionTable {
         zerofiers
     }
 
-    pub fn generate_quotients(&self, challenges: Vec<FieldElement>) -> Vec<Polynomial> {
+    pub fn generate_quotients(&self, challenges: Vec<FieldElement>,tppa:FieldElement,tpea:FieldElement) -> Vec<Polynomial> {
         let mut quotients = vec![];
-        let air = self.generate_air(challenges);
+        let air = self.generate_air(challenges,tppa,tpea);
         let zerofiers = self.generate_zerofier();
 
         for i in 0..air.len() {
