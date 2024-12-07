@@ -137,9 +137,9 @@ impl Memory {
         //@todo Tppa and Tmpa given by prover, for now just taking it as empty polynomials to write constraint without error
         let Tppa = Polynomial::new_from_coefficients(vec![]);
         let Tmpa = Polynomial::new_from_coefficients(vec![]);
-        let terminalAIR = PPA*(
-            CLK.scalar_mul(challenges[ChallengeIndices::D as usize]) + MP.scalar_mul(challenges[ChallengeIndices::E as usize]) + MV.scalar_mul(challenges[ChallengeIndices::F as usize]) - Polynomial::new_from_coefficients(vec![challenges[ChallengeIndices::Beta as usize]])
-        ) - Tppa.clone()+ Tppa - Tmpa;
+        let terminalAIR = PPA*(CLK.scalar_mul(challenges[ChallengeIndices::D as usize]) + MP.scalar_mul(challenges[ChallengeIndices::E as usize]) + MV.scalar_mul(challenges[ChallengeIndices::F as usize]) - Polynomial::new_from_coefficients(vec![challenges[ChallengeIndices::Beta as usize]])) - Tppa.clone()
+        + Tppa - Tmpa;
+        //@todo check if Tppa -Tmpa needs to be written separately```````````
         AIR.push(terminalAIR);
 
         AIR
