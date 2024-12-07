@@ -1,6 +1,6 @@
+use crate::channel::*;
 use crate::fields::*;
 use crate::merkle::*;
-use crate::channel::*;
 use crate::univariate_polynomial::*;
 //we can use ntt fast fns for optimization, but rn we just implement using direct evaluate and multiply functions of polynomials
 //some fns, structs and parameters are changed accordingly compared to fri.py and ntt.py, because we are not using extension fields
@@ -10,44 +10,72 @@ use crate::univariate_polynomial::*;
 
 //@todo this has to be inside prover/main?, check once
 //boundary_q includes boundary constraints for all tables together, similarly for others
-pub fn combination_polynomial(boundary_q:Vec<Polynomial>, transition_q:Vec<Polynomial>, terminal_q:Vec<Polynomial>, challenges: Vec<FieldElement>, height: usize, field: Field) -> Polynomial{
+pub fn combination_polynomial(
+    boundary_q: Vec<Polynomial>,
+    transition_q: Vec<Polynomial>,
+    terminal_q: Vec<Polynomial>,
+    challenges: Vec<FieldElement>,
+    height: usize,
+    field: Field,
+) -> Polynomial {
     let mut combination = Polynomial::new_from_coefficients(vec![]);
     let alpha = challenges[0];
     let beta = challenges[1];
-    let x = Polynomial::new_from_coefficients(vec![FieldElement::zero(field), FieldElement::one(field)]);
+    let x = Polynomial::new_from_coefficients(vec![
+        FieldElement::zero(field),
+        FieldElement::one(field),
+    ]);
     let degree = height;
 
-    for i in 0..boundary_q.clone().len(){
-        let d= degree - boundary_q[i].clone().degree();
-        combination += Polynomial::new_from_coefficients(vec![alpha])*boundary_q[i].clone() + Polynomial::new_from_coefficients(vec![beta])*x.clone().pow(d as u128)*boundary_q[i].clone();
-        }
+    for i in 0..boundary_q.clone().len() {
+        let d = degree - boundary_q[i].clone().degree();
+        combination += Polynomial::new_from_coefficients(vec![alpha]) * boundary_q[i].clone()
+            + Polynomial::new_from_coefficients(vec![beta])
+                * x.clone().pow(d as u128)
+                * boundary_q[i].clone();
+    }
 
-    for i in 0..transition_q.clone().len(){
-        let d= degree - transition_q[i].clone().degree();
-        combination += Polynomial::new_from_coefficients(vec![alpha])*transition_q[i].clone() + Polynomial::new_from_coefficients(vec![beta])*x.clone().pow(d as u128)*transition_q[i].clone();
-        }
+    for i in 0..transition_q.clone().len() {
+        let d = degree - transition_q[i].clone().degree();
+        combination += Polynomial::new_from_coefficients(vec![alpha]) * transition_q[i].clone()
+            + Polynomial::new_from_coefficients(vec![beta])
+                * x.clone().pow(d as u128)
+                * transition_q[i].clone();
+    }
 
-    for i in 0..terminal_q.clone().len(){
-        let d= degree - terminal_q[i].clone().degree();
-        combination += Polynomial::new_from_coefficients(vec![alpha])*terminal_q[i].clone() + Polynomial::new_from_coefficients(vec![beta])*x.clone().pow(d as u128)*terminal_q[i].clone();
-        }
+    for i in 0..terminal_q.clone().len() {
+        let d = degree - terminal_q[i].clone().degree();
+        combination += Polynomial::new_from_coefficients(vec![alpha]) * terminal_q[i].clone()
+            + Polynomial::new_from_coefficients(vec![beta])
+                * x.clone().pow(d as u128)
+                * terminal_q[i].clone();
+    }
 
-        combination
+    combination
 }
 
 /// Generates the evaluation domain given offset, height and expansion factor of lde
-pub fn generate_eval_domain(height: usize, expansion_f: usize, offset: FieldElement, field: Field)-> FriDomain {
-    let n = height*expansion_f;
+pub fn generate_eval_domain(
+    height: usize,
+    expansion_f: usize,
+    offset: FieldElement,
+    field: Field,
+) -> FriDomain {
+    let n = height * expansion_f;
     let omicron = field.primitive_nth_root(n as u128);
-    let domain = FriDomain::new(offset, omicron, n as u128);
-    domain
+    
+    FriDomain::new(offset, omicron, n as u128)
 }
 
 /// Generates a new evaluation domain used after applying the fri operator.
 /// Eval domain len is a power of 2.
 pub fn next_eval_domain(eval_domain: FriDomain) -> FriDomain {
-    let next_domain = FriDomain::new(eval_domain.offset, eval_domain.omega.pow(2), eval_domain.length/2);
-    next_domain
+    
+    FriDomain::new(
+        eval_domain.offset,
+        eval_domain.omega.pow(2),
+        eval_domain.length / 2,
+    )
 }
 
 /// Applies fri operator.
@@ -83,7 +111,7 @@ pub fn next_fri_layer(
     let new_eval_domain = next_eval_domain(domain);
     let new_polynomial = next_fri_polynomial(&old_polynomial, beta);
     let mut new_evaluations = vec![];
-    for i in 0..new_eval_domain.length{
+    for i in 0..new_eval_domain.length {
         new_evaluations.push(new_polynomial.evaluate(new_eval_domain.omega.pow(i)));
     }
     (new_polynomial, new_eval_domain, new_evaluations)
@@ -174,45 +202,36 @@ pub fn decommit_fri_layers(
 pub fn decommit_on_query(
     idx: usize,
     blow_up_factor: usize,
-    f_eval: &[FieldElement],
-    f_merkle: &MerkleTree,
+    f_eval: Vec<&[FieldElement]>, //this contains basecodewords zipped, and extension codewords zipped
+    f_merkle: Vec<&MerkleTree>, //this contains MerkleTree of base codewords zipped, and extension codewords zipped
     fri_layers: &[Vec<FieldElement>],
     fri_merkle: &[MerkleTree],
     channel: &mut Channel,
 ) {
     log::debug!("Decommitting on query {}", idx);
-    // trace domain is blew up 8 times to get the evaluation domain(i.e. the coset). so x, g*x, g^2 * x are seperated by 8 indices in between.
-    // get f(x), f(g*x), f(g^2 * x) and send them over the channel, along with the merkle proofs.
-    assert!(idx + 2 * blow_up_factor < f_eval.len());
-    channel.send(f_eval[idx].to_bytes()); // f(x)
-    channel.send(f_merkle.get_authentication_path(idx)); // merkle proof for f(x)
-    channel.send(f_eval[idx + blow_up_factor].to_bytes()); // f(g*x)
-    channel.send(f_merkle.get_authentication_path(idx + blow_up_factor)); // merkle proof for f(g*x)
-    channel.send(f_eval[idx + 2 * blow_up_factor].to_bytes()); // f(g^2 * x)
-    channel.send(f_merkle.get_authentication_path(idx + 2 * blow_up_factor)); // merkle proof for f(g^2 * x)
+    //we need basecodewords zipped and extension codewords zipped evaluations at x and gx, which will be separated by blowupfactor
+    // at x -> clk, ip, ci, ni, mp, mv, inv: (in zipped basecodeword); ipa, mpa, iea, oea: (in zipped extension codeword)
+    // at gx -> clk*, ip*, ci*, ni*, mp*, mv*, inv*: (""); ipa*, mpa*, iea*, oea*: ("")
+    // get basecodeword[idx], basecodewords[idx+blowupfactor] and extensioncodeword[idx], extensioncodeword[idx+blowupfactor] and send them over the channel, along with the merkle proofs.
+    assert!(idx + blow_up_factor < f_eval[0].len());
+    channel.send(f_eval[0][idx].to_bytes()); //basecodeword[idx] or f(x)
+    channel.send(f_merkle[0].get_authentication_path(idx)); // merkle proof for basecodeword[idx] or f(x)
+    channel.send(f_eval[0][idx + blow_up_factor].to_bytes()); //basecodeword[idx+blowupfactor] or f(g*x)
+    channel.send(f_merkle[0].get_authentication_path(idx + blow_up_factor)); // merkle proof for basecodeword[idx+blowupfactor] or f(g*x)
+
+    channel.send(f_eval[1][idx].to_bytes()); //extensioncodeword[idx] or f(x)
+    channel.send(f_merkle[1].get_authentication_path(idx)); // merkle proof for extensioncodeword[idx] or f(x)
+    channel.send(f_eval[1][idx + blow_up_factor].to_bytes()); //extensioncodeword[idx+blowupfactor] or f(g*x)
+    channel.send(f_merkle[1].get_authentication_path(idx + blow_up_factor)); // merkle proof for extensioncodeword[idx+blowupfactor] or f(g*x)
     decommit_fri_layers(idx, fri_layers, fri_merkle, channel)
 }
 
-/// decommits for each query x and provides consistency proof for the fri layers.
-/// cp(x) = g(x^2) + x*h(x^2)
-/// cp(-x) = g(x^2) - x*h(x^2)
-/// g(x^2) = (cp(x) + cp(-x))/2
-/// h(x^2) = (cp(x) - cp(-x))/2x
-/// so cp_i(x^2) = g(x^2) + beta*h(x^2)
-/// we only need cp_i(x) and cp_i(-x) to compute cp_i+1(x^2)
-///
-/// for every query x: x belongs to evaluation domain.
-/// we send f_eval(x), f_eval(g*x), f_eval(g^2 * x) and their merkle proofs.
-/// using f_eval(x), f_eval(g*x), f_eval(g^2*x), we compute cp(x)
-/// and send cp(x) and cp(-x) to the verifier along with their merkle proofs.
-/// continue till the last layer has been reached.
-/// if prover is successful in convencing that, the fri_layer is consistent with the evaluations, then the verifier will accept the proof.
 pub fn decommit_fri(
     num_of_queries: usize,
     blow_up_factor: usize,
     maximum_random_int: u64,
-    f_eval: &[FieldElement],
-    f_merkle: &MerkleTree,
+    f_eval: Vec<&[FieldElement]>,
+    f_merkle: Vec<&MerkleTree>,
     fri_layers: &[Vec<FieldElement>],
     fri_merkle: &[MerkleTree],
     channel: &mut Channel,
@@ -222,8 +241,8 @@ pub fn decommit_fri(
         decommit_on_query(
             idx as usize,
             blow_up_factor,
-            f_eval,
-            f_merkle,
+            f_eval.clone(),
+            f_merkle.clone(),
             fri_layers,
             fri_merkle,
             channel,
@@ -231,63 +250,81 @@ pub fn decommit_fri(
     }
 }
 
-pub struct Fri{
+pub struct Fri {
     offset: FieldElement,
     omega: FieldElement,
     initial_domain_length: u128,
     domain: FriDomain,
     num_colinearity_tests: usize,
-    expansion_f: usize
-    
+    expansion_f: usize,
 }
 
-impl Fri{
-    pub fn new(offset: FieldElement, omega: FieldElement, initial_domain_length: u128, num_colinearity_tests: usize,  expansion_f: usize)-> Self{
-        let result = Fri{ offset: (offset), omega: (omega), initial_domain_length: (initial_domain_length), domain: (FriDomain::new(offset, omega, initial_domain_length)), num_colinearity_tests: (num_colinearity_tests),expansion_f:(expansion_f) };
-        assert!(result.num_rounds()>=1, "cannot do FRI with less than one round");
+impl Fri {
+    pub fn new(
+        offset: FieldElement,
+        omega: FieldElement,
+        initial_domain_length: u128,
+        num_colinearity_tests: usize,
+        expansion_f: usize,
+    ) -> Self {
+        let result = Fri {
+            offset: (offset),
+            omega: (omega),
+            initial_domain_length: (initial_domain_length),
+            domain: (FriDomain::new(offset, omega, initial_domain_length)),
+            num_colinearity_tests: (num_colinearity_tests),
+            expansion_f: (expansion_f),
+        };
+        assert!(
+            result.num_rounds() >= 1,
+            "cannot do FRI with less than one round"
+        );
         result
     }
-    pub fn num_rounds(&self)-> usize{
+    pub fn num_rounds(&self) -> usize {
         let mut codeword_len = self.initial_domain_length;
-        let mut num =0;
-        while codeword_len>self.expansion_f as u128{
+        let mut num = 0;
+        while codeword_len > self.expansion_f as u128 {
             codeword_len /= 2;
-            num+=1;
-        } 
+            num += 1;
+        }
         num
     }
-
 }
 
 #[derive(Debug, Clone)]
-pub struct FriDomain{
-    pub  offset: FieldElement,
-    pub  omega: FieldElement,
+pub struct FriDomain {
+    pub offset: FieldElement,
+    pub omega: FieldElement,
     pub length: u128,
 }
 
-impl FriDomain{
-    pub fn new(offset: FieldElement,omega: FieldElement, length: u128)->Self{
-        Self { offset, omega, length }
+impl FriDomain {
+    pub fn new(offset: FieldElement, omega: FieldElement, length: u128) -> Self {
+        Self {
+            offset,
+            omega,
+            length,
+        }
     }
 
-    pub fn call(&self, index: usize)->FieldElement{
-        self.omega.pow(index as u128)*self.offset
+    pub fn call(&self, index: usize) -> FieldElement {
+        self.omega.pow(index as u128) * self.offset
     }
-     
-    pub fn list(&self)->Vec<FieldElement>{
-        let mut list: Vec<FieldElement>= vec![];
-        for i in 0..self.length{
-        list.push(self.omega.pow(i)*self.offset);
+
+    pub fn list(&self) -> Vec<FieldElement> {
+        let mut list: Vec<FieldElement> = vec![];
+        for i in 0..self.length {
+            list.push(self.omega.pow(i) * self.offset);
         }
         list
     }
 
-    pub fn evaluate(&self, polynomial: Polynomial)-> Vec<FieldElement>{
+    pub fn evaluate(&self, polynomial: Polynomial) -> Vec<FieldElement> {
         let polynomial = polynomial.scale(self.offset.0);
         let mut result: Vec<FieldElement> = vec![];
         // let mut  domain_gen:Vec<FieldElement>=Vec::new();
-        for i in 0..self.length{
+        for i in 0..self.length {
             // let x=self.omega.pow(i);
             result.push(polynomial.evaluate(self.omega.pow(i)));
             // domain_gen.push(x);
@@ -296,33 +333,32 @@ impl FriDomain{
         result
     }
     //needed if we use extension field
-    pub fn xevaluate(&self, polynomial: Polynomial)-> Vec<FieldElement>{
+    pub fn xevaluate(&self, polynomial: Polynomial) -> Vec<FieldElement> {
         let polynomial = polynomial.scalar_mul(self.offset);
         let mut result: Vec<FieldElement> = vec![];
-        for i in 0..polynomial.coefficients.len(){
+        for i in 0..polynomial.coefficients.len() {
             result.push(polynomial.evaluate(self.omega.pow(i as u128)));
         }
         result
     }
     // interpolate with the given offset
-    pub fn interpolate(&self, values: Vec<FieldElement>)->Polynomial{
-        let mut list:Vec<FieldElement> =vec![];
-        for i in 0..values.len(){
+    pub fn interpolate(&self, values: Vec<FieldElement>) -> Polynomial {
+        let mut list: Vec<FieldElement> = vec![];
+        for i in 0..values.len() {
             list.push(self.omega.pow(i as u128));
         }
-        
+
         interpolate_lagrange_polynomials(list, values).scalar_mul(self.offset.inverse())
     }
     //interpolate without offset
-    pub fn real_interpolate(&self, values: Vec<FieldElement>)->Polynomial{
-        let mut list:Vec<FieldElement> =vec![];
-        for i in 0..values.len(){
+    pub fn real_interpolate(&self, values: Vec<FieldElement>) -> Polynomial {
+        let mut list: Vec<FieldElement> = vec![];
+        for i in 0..values.len() {
             list.push(self.omega.pow(i as u128));
         }
-        
+
         interpolate_lagrange_polynomials(list, values)
     }
-    
 
     //not written xinterpolate, as it is used for extension field
 }
@@ -355,46 +391,66 @@ impl FriDomain{
 //         assert_eq!(next_evaluations[0].0, 2);
 //     }
 // }
-mod test_fri_domain{
+mod test_fri_domain {
     use super::*;
     #[test]
-    fn test_evaluate(){
+    fn test_evaluate() {
         let field = Field::new(17);
-        let   offset = FieldElement::new(2, field);
+        let offset = FieldElement::new(2, field);
         let length = 4_u128;
         let omega = FieldElement::new(13, field);
         println!("omega ={:?}", omega);
         let domain = FriDomain::new(offset, omega, length);
-        let polynomial = Polynomial::new_from_coefficients(vec![FieldElement::new(1, field), FieldElement::new(2, field)]);
+        let polynomial = Polynomial::new_from_coefficients(vec![
+            FieldElement::new(1, field),
+            FieldElement::new(2, field),
+        ]);
         let values = domain.evaluate(polynomial.clone());
-        let finded=vec![FieldElement::new(5, field), FieldElement::new(2, field), FieldElement::new(14, field), FieldElement::new(0, field)];
+        let finded = vec![
+            FieldElement::new(5, field),
+            FieldElement::new(2, field),
+            FieldElement::new(14, field),
+            FieldElement::new(0, field),
+        ];
         assert_eq!(values, finded);
     }
     #[test]
-    fn test_interpolate(){
+    fn test_interpolate() {
         let field = Field::new(17);
-        let   offset = FieldElement::new(2, field);
+        let offset = FieldElement::new(2, field);
         let length = 4_u128;
         let omega = FieldElement::new(13, field);
         println!("omega ={:?}", omega);
         let domain = FriDomain::new(offset, omega, length);
-        let polynomial = Polynomial::new_from_coefficients(vec![FieldElement::new(1, field), FieldElement::new(2, field)]);
+        let polynomial = Polynomial::new_from_coefficients(vec![
+            FieldElement::new(1, field),
+            FieldElement::new(2, field),
+        ]);
         let values = domain.evaluate(polynomial.clone());
-        let finded=vec![FieldElement::new(6, field), FieldElement::new(3, field)];
+        let finded = vec![FieldElement::new(6, field), FieldElement::new(3, field)];
         let interpolated = domain.interpolate(finded);
         println!("interpolated ={:?}", interpolated);
         assert_eq!(interpolated.coefficients, polynomial.coefficients);
     }
     #[test]
-    fn test_evaluate2(){
+    fn test_evaluate2() {
         let field = Field::new(17);
-        let   offset = FieldElement::new(2, field);
+        let offset = FieldElement::new(2, field);
         let length = 4_u128;
         let omega = FieldElement::new(13, field);
         let domain = FriDomain::new(offset, omega, length);
-        let polynomial = Polynomial::new_from_coefficients(vec![FieldElement::new(1, field), FieldElement::new(2, field),FieldElement::new(3,field)]);
+        let polynomial = Polynomial::new_from_coefficients(vec![
+            FieldElement::new(1, field),
+            FieldElement::new(2, field),
+            FieldElement::new(3, field),
+        ]);
         let values = domain.evaluate(polynomial.clone());
-        let finded=vec![FieldElement::new(0, field), FieldElement::new(7, field), FieldElement::new(9, field), FieldElement::new(5, field)];
-         assert_eq!(values, finded) }
-
+        let finded = vec![
+            FieldElement::new(0, field),
+            FieldElement::new(7, field),
+            FieldElement::new(9, field),
+            FieldElement::new(5, field),
+        ];
+        assert_eq!(values, finded)
+    }
 }

@@ -44,7 +44,7 @@ impl Polynomial {
     pub fn evaluate_domain(&self, x: Vec<FieldElement>) -> Vec<FieldElement> {
         let mut result = Vec::new();
         for i in 0..x.len() {
-        result.push(self.evaluate(x[i]));
+            result.push(self.evaluate(x[i]));
         }
         result
     }
@@ -81,8 +81,7 @@ impl Polynomial {
         // self.coefficients = result.clone();
         Polynomial::new_from_coefficients(result)
     }
-    pub fn zero(field:Field)->Self{
-        
+    pub fn zero(field: Field) -> Self {
         Polynomial::new_from_coefficients(vec![FieldElement::zero(Field::new(field.0))])
     }
 
@@ -153,7 +152,7 @@ impl Polynomial {
         res
     }
     // new function added
-   pub fn scale(&self, factor: u128) -> Self {
+    pub fn scale(&self, factor: u128) -> Self {
         let mut result = Vec::new();
 
         for i in 0..self.coefficients.len() {
@@ -165,13 +164,13 @@ impl Polynomial {
         Polynomial::new_from_coefficients(result)
     }
     // new function added
-  pub  fn collinearity(evaluation_form: Vec<(FieldElement, FieldElement)>) -> bool {
+    pub fn collinearity(evaluation_form: Vec<(FieldElement, FieldElement)>) -> bool {
         let input: Vec<FieldElement> = evaluation_form.iter().map(|(x, _)| *x).collect();
         let output: Vec<FieldElement> = evaluation_form.iter().map(|(_, y)| *y).collect();
         let poly = interpolate_lagrange_polynomials(input.clone(), output.clone());
         poly.degree() == 1
     }
-    pub fn constant(constant: FieldElement)->Self{
+    pub fn constant(constant: FieldElement) -> Self {
         Polynomial::new_from_coefficients(vec![constant])
     }
 }
@@ -401,7 +400,6 @@ pub fn gen_lagrange_polynomials_parallel(x: Vec<FieldElement>) -> Vec<Polynomial
                 |acc, x| acc * *x,
             );
 
-            
             numerator.scalar_div(den_sum)
         })
         .collect();
@@ -416,7 +414,10 @@ pub fn interpolate_lagrange_polynomials(x: Vec<FieldElement>, y: Vec<FieldElemen
     log::debug!("generating lagrange polynomials");
     let start_time = Local::now();
     let lagrange_polynomials = gen_lagrange_polynomials(x.clone());
-    println!("lagrange polynomials generated in {:?}",lagrange_polynomials);
+    println!(
+        "lagrange polynomials generated in {:?}",
+        lagrange_polynomials
+    );
     let field = Field::new(x[0].modulus());
     let mut result = Polynomial::new_from_coefficients(vec![FieldElement::new(0, field); n]);
 
