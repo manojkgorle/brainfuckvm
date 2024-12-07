@@ -324,22 +324,22 @@ mod test_operations {
         // @todo change the expected codewords @m-pandey5
         let expected_codewords = vec![
             vec![
-                FieldElement::new(2, field),
-                FieldElement::new(12, field),
-                FieldElement::new(5, field),
-                FieldElement::new(15, field),
-            ],
-            vec![
-                FieldElement::new(4, field),
-                FieldElement::new(14, field),
-                FieldElement::new(7, field),
-                FieldElement::new(0, field),
-            ],
-            vec![
+                FieldElement::new(8, field),
+                FieldElement::new(10, field),
                 FieldElement::new(6, field),
-                FieldElement::new(16, field),
+                FieldElement::new(10, field),
+            ],
+            vec![
                 FieldElement::new(9, field),
-                FieldElement::new(2, field),
+                FieldElement::new(11, field),
+                FieldElement::new(7, field),
+                FieldElement::new(11, field),
+            ],
+            vec![
+                FieldElement::new(10, field),
+                FieldElement::new(12, field),
+                FieldElement::new(8, field),
+                FieldElement::new(12, field),
             ],
         ];
         assert_eq!(codewords, expected_codewords);
