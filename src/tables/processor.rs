@@ -258,16 +258,16 @@ impl ProcessorTable {
         zerofiers
     }
 
-    // pub fn generate_quotients(&self, challenges: Vec<FieldElement>)->Vec<FieldElement>{
-    //     let mut quotients = vec![];
-    //     let AIR = self.generate_AIR(challenges);
-    //     let zerofiers = self.generate_zerofier();
+    pub fn generate_quotients(&self, challenges: Vec<FieldElement>)->Vec<Polynomial>{
+        let mut quotients = vec![];
+        let AIR = self.generate_air(challenges);
+        let zerofiers = self.generate_zerofier();
 
-    //     for i in 0..AIR.len(){
-    //         quotients.push(AIR[i].clone().q_div(zerofiers[i].clone()).0);
-    //     }
-    //     quotients
-    // }
+        for i in 0..AIR.len(){
+            quotients.push(AIR[i].clone().q_div(zerofiers[i].clone()).0);
+        }
+        quotients
+    }
 
     //define a selector polynomial for a specific instruction.
     //todo for a set of instructions.
