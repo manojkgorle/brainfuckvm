@@ -1,9 +1,9 @@
-use crate::ntt::*;
 use crate::fields::*;
+use crate::ntt::*;
 use crate::tables::*;
 use crate::univariate_polynomial::*;
 
-pub struct PermutationArgument{
+pub struct PermutationArgument {
     all_tables: Table,
     lhs: (usize, usize),
     rhs: (usize, usize),
