@@ -1,3 +1,4 @@
+#![allow(unused_variables)]
 use crate::fields::{Field, FieldElement};
 use crate::univariate_polynomial::*;
 use std::collections::HashMap;
@@ -121,10 +122,8 @@ impl MPolynomial {
         acc
     }
 
-
     pub fn symbolic_degree_bound(&self, max_degrees: Vec<u128>) -> i128 {
         // Check if the polynomial is empty
-        let field = self.field;
         if self.dictionary.is_empty() {
             return -1;
         }
@@ -161,7 +160,7 @@ impl MPolynomial {
         let field = self.field;
         let num_variables = self.dictionary.keys().len();
         let mut complete_assignment = MPolynomial::variables(num_variables, field);
-        
+
         for (index, value) in partial_assignment {
             complete_assignment[index] = MPolynomial::constant(FieldElement::new(value, field));
         }
@@ -177,26 +176,20 @@ impl MPolynomial {
         polynomial
     }
 
+    pub fn lift(polynomial: &Polynomial, variable_index: usize) -> MPolynomial {
+        let field = Field::new(polynomial.coefficients[0].modulus());
+        if polynomial.is_all_zeros() {
+            return MPolynomial::zero(field);
+        }
 
-    
-
-  pub fn lift(polynomial:&Polynomial, variable_index:usize)->MPolynomial{
-    let field = Field::new(polynomial.coefficients[0].modulus());
-    if polynomial.is_all_zeros(){
-      return MPolynomial::zero(field);
+        let variables = MPolynomial::variables(variable_index + 1, field);
+        let x = variables[variable_index].clone();
+        let mut acc = MPolynomial::zero(field);
+        for i in 0..polynomial.coefficients.len() {
+            acc += MPolynomial::constant(polynomial.coefficients[i]) * x.pow(i as u128);
+        }
+        acc
     }
-    
-    let variables = MPolynomial::variables(variable_index+1, field);
-    let x = variables[variable_index].clone();
-    let mut acc = MPolynomial::zero(field);
-    for i in 0..polynomial.coefficients.len(){
-      acc += MPolynomial::constant(polynomial.coefficients[i]) * x.pow(i as u128);
-    }
-    acc
-
-    
-  }
-
 
     #[allow(dead_code)]
     pub fn neg(&self) -> Self {
@@ -236,7 +229,7 @@ impl MPolynomial {
     pub fn is_zero(&self) -> bool {
         self.dictionary.is_empty()
     }
-    pub fn str(&self)->String{
+    pub fn str(&self) -> String {
         let mut terms = Vec::new();
         for (k, v) in &self.dictionary {
             let mut term = String::new();
@@ -585,13 +578,13 @@ mod test_mpolynomial_operation {
         dictionary.insert(vec![0, 0, 3], FieldElement::new(3, field)); // term 3z^3
         let p = MPolynomial::new(field, dictionary);
 
-    // Test with max_degrees as [3, 3, 3] for each variable
-    let max_degrees = vec![4, 4, 4];
-    let degree_bound = p.symbolic_degree_bound(max_degrees);
-    assert_eq!(degree_bound, 12); 
-}
+        // Test with max_degrees as [3, 3, 3] for each variable
+        let max_degrees = vec![4, 4, 4];
+        let degree_bound = p.symbolic_degree_bound(max_degrees);
+        assert_eq!(degree_bound, 12);
+    }
 
-#[test]
+    #[test]
     fn test_partial_evaluate() {
         let field = Field::new(1000000007);
 
@@ -611,17 +604,15 @@ mod test_mpolynomial_operation {
         // Evaluate the polynomial
         let evaluated = polynomial.partial_evaluate(partial_assignment);
 
-
         // Define expected results as symbolic terms
         let mut expected_dict = HashMap::new();
-        expected_dict.insert(vec![1, 0,0], FieldElement::new(6, field)); // 12x
-        expected_dict.insert(vec![0, 0,0], FieldElement::new(80, field)); // 80
-        expected_dict.insert(vec![0, 0,0], FieldElement::new(7, field));  // 7 (constant)
+        expected_dict.insert(vec![1, 0, 0], FieldElement::new(6, field)); // 12x
+        expected_dict.insert(vec![0, 0, 0], FieldElement::new(80, field)); // 80
+        expected_dict.insert(vec![0, 0, 0], FieldElement::new(7, field)); // 7 (constant)
         let expected_polynomial = MPolynomial::new(field, expected_dict);
 
         println!("{}", evaluated.str());
         println!("{}", expected_polynomial.str());
         //assert_eq!(evaluated.dictionary, expected_polynomial.dictionary);
     }
-
 }

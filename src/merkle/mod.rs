@@ -17,10 +17,7 @@ pub struct MerkleTree {
 
 impl MerkleTree {
     pub fn new(data: &[FieldElement]) -> MerkleTree {
-        let leaves: Vec<[u8; 32]> = data
-            .iter()
-            .map(|x| Sha256::hash(&x.to_bytes()))
-            .collect();
+        let leaves: Vec<[u8; 32]> = data.iter().map(|x| Sha256::hash(&x.to_bytes())).collect();
         let merkle_tree = MerkleTreeTrait::<Sha256>::from_leaves(&leaves);
         MerkleTree {
             data: data.to_vec(),
@@ -29,7 +26,7 @@ impl MerkleTree {
         }
     }
 
-    pub fn root(&self)-> [u8;32] {
+    pub fn root(&self) -> [u8; 32] {
         let merkle_root = self.inner.root();
         merkle_root.expect("No value of root, None")
     }
@@ -74,15 +71,19 @@ mod test_merkle_implementation {
         let merkle_root = merkle_tree.inner.root().unwrap().to_vec();
         let proof = merkle_tree.get_authentication_path(0);
         let root = merkle_tree.clone().root().to_vec();
-        assert!(
-            MerkleTree::validate(merkle_root.clone(), proof, 0, data[0].to_bytes(), 6)
-        );
+        assert!(MerkleTree::validate(
+            merkle_root.clone(),
+            proof,
+            0,
+            data[0].to_bytes(),
+            6
+        ));
         assert_eq!(merkle_root, root);
-        for i in 0..root.len(){
+        for i in 0..root.len() {
             print!("{}", root[i]);
         }
         println!("{}", 0);
-        for i in 0..merkle_root.len(){
+        for i in 0..merkle_root.len() {
             print!("{}", merkle_root[i]);
         }
     }
