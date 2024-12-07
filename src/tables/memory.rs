@@ -49,14 +49,13 @@ impl Memory {
         let field = self.table.field;
         let zero = FieldElement::zero(field);
         let one = FieldElement::one(field);
-        // @todo scope to optimize.
-        while matrix.len() & (matrix.len() - 1) != 0 {
-            let last_row = matrix.last().unwrap();
-            let mut new_row = vec![zero; 3]; // 3 is number of columns.
-            new_row[Indices::Cycle as usize] = last_row[Indices::Cycle as usize] + one;
-            new_row[Indices::MemoryPointer as usize] = last_row[Indices::MemoryPointer as usize];
-            new_row[Indices::MemoryValue as usize] = last_row[Indices::MemoryValue as usize];
-            matrix.push(new_row);
+        let last_row = matrix[self.table.length as usize - 1].clone();
+        for i in 0..(self.table.height - self.table.length) as usize {
+            let mut curr_row = vec![zero; 3]; // 3 is number of columns.
+            curr_row[Indices::Cycle as usize] = last_row[Indices::Cycle as usize] + FieldElement((i + 1)as u128, field) *one;
+            curr_row[Indices::MemoryPointer as usize] = last_row[Indices::MemoryPointer as usize];
+            curr_row[Indices::MemoryValue as usize] = last_row[Indices::MemoryValue as usize];
+            matrix[self.table.length as usize + i] = curr_row;
         }
     }
 
@@ -187,10 +186,26 @@ impl Memory {
 #[cfg(test)]
 mod test_memory_table {
     use crate::fields::{Field, FieldElement};
-    use crate::tables::memory::ChallengeIndices;
+    use crate::tables::memory::{ChallengeIndices, Indices};
     use crate::tables::Table;
     use crate::vm::VirtualMachine;
     use super::Memory;
+
+    #[test]
+    fn test_padding() {
+        let field = Field(18446744069414584321);
+        let generator = field.generator();
+        let order = 1 << 32;
+        let vm = VirtualMachine::new(field);
+        let code = "++>,<[>+.<-]".to_string();
+        let program = vm.compile(code);
+        let (processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix) = vm.simulate(&program, "a".to_string());
+        let mlen = memory_matrix.len();
+        let mut memory_table = Memory::new(field, memory_matrix.len() as u128, generator, order, memory_matrix.clone());
+        memory_table.pad();
+        assert!(memory_table.table.matrix.len().is_power_of_two());
+        assert_eq!(memory_table.table.matrix.last().unwrap()[Indices::MemoryPointer as usize], memory_matrix.last().unwrap()[Indices::MemoryPointer as usize]);
+    }
     #[test]
     pub fn test_memory_table_permutation_argument() {
         let field = Field(18446744069414584321);
