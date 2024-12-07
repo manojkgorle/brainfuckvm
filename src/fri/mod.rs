@@ -261,9 +261,9 @@ impl Fri{
 
 #[derive(Debug, Clone)]
 pub struct FriDomain{
-      pub  offset: FieldElement,
-       pub  omega: FieldElement,
-       pub length: u128,
+    pub  offset: FieldElement,
+    pub  omega: FieldElement,
+    pub length: u128,
 }
 
 impl FriDomain{
@@ -293,7 +293,6 @@ impl FriDomain{
             // domain_gen.push(x);
         }
         // println!("domain_gen ={:?}", domain_gen);
-      
         result
     }
     //needed if we use extension field

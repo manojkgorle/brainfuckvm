@@ -27,14 +27,41 @@ impl IOTable {
         Self { table }
     }
 
-    pub fn pad(&mut self) {
-        let matrix = &mut self.table.matrix;
-        let field = self.table.field;
-        let zero = FieldElement::zero(field);
-        while matrix.len() & (matrix.len() - 1) != 0 {
-            matrix.push(vec![zero;1]);
+    pub fn pad(&mut self) {}
+
+    pub fn extend_column_ea(&mut self, randFieldElem: u128, challenge: FieldElement){
+        let mut ea = FieldElement::new(randFieldElem,self.table.field); // take randFieldElem as zero if no random secret implementation
+        self.table.matrix[0][1] = ea; 
+        for i in 0..self.table.length-1 {
+            ea = self.table.matrix[i as usize][1]*challenge + self.table.matrix[(i+1) as usize][0];
+            self.table.matrix[(i+1) as usize][1] = ea; 
+        //Tea = IOTable.matrix[length-1][1] 
         }
     }
 
-    // add extension columns. @soumyathakur44
+}
+
+#[cfg(test)]
+mod test_io {
+    use super::{IOTable, Indices};
+    use crate::fields::{Field,FieldElement};
+    use crate::tables::instruction;
+    use crate::vm::VirtualMachine;
+    #[test]
+    fn test_padding() {
+        let field = Field(18446744069414584321);
+        let generator = field.generator();
+        let order = 1<<32;
+        let vm = VirtualMachine::new(field);
+        let code2 = ">>[++-]<,.,.".to_string();
+        let program = vm.compile(code2);
+        let (runtime, _, _ ) = vm.run(&program, "ab".to_string());
+        let (processor_matrix, _memory_matrix, instruction_matrix, input_matrix, output_matrix) = vm.simulate(&program, "ab".to_string());
+        let mut input_table = IOTable::new(field, input_matrix.len() as u128, generator, order, input_matrix);
+        let mut output_table = IOTable::new(field, output_matrix.len() as u128, generator, order, output_matrix);
+        input_table.pad();
+        output_table.pad();
+        assert_eq!(input_table.table.matrix.len(), 2);
+        assert_eq!(output_table.table.matrix.len(), 2);
+    }
 }
