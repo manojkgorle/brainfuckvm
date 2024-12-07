@@ -63,19 +63,19 @@ pub fn generate_eval_domain(
 ) -> FriDomain {
     let n = height * expansion_f;
     let omicron = field.primitive_nth_root(n as u128);
-    let domain = FriDomain::new(offset, omicron, n as u128);
-    domain
+    
+    FriDomain::new(offset, omicron, n as u128)
 }
 
 /// Generates a new evaluation domain used after applying the fri operator.
 /// Eval domain len is a power of 2.
 pub fn next_eval_domain(eval_domain: FriDomain) -> FriDomain {
-    let next_domain = FriDomain::new(
+    
+    FriDomain::new(
         eval_domain.offset,
         eval_domain.omega.pow(2),
         eval_domain.length / 2,
-    );
-    next_domain
+    )
 }
 
 /// Applies fri operator.
