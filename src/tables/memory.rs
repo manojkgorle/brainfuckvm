@@ -82,9 +82,6 @@ impl Memory {
 
     // processor matrix that goes here is unpadded
     pub fn derive_matrix(processor_matrix: &[Vec<FieldElement>]) -> Vec<Vec<FieldElement>> {
-        let field = processor_matrix[0][0].1;
-        let zero = FieldElement::zero(field);
-        let one = FieldElement::one(field);
         let mut matrix: Vec<Vec<FieldElement>> = processor_matrix
             .iter()
             // .filter(|pt| pt[ProcessorIndices::CurrentInstruction as usize] != zero), we need the last processor row, right?
@@ -108,8 +105,8 @@ impl Memory {
     }
 
     //the matrix taken here is padded
-    pub fn extend_column_ppa(&mut self, randFieldElem: u128, challenges: Vec<FieldElement>) {
-        let mut ppa = FieldElement::new(randFieldElem, self.table.field);
+    pub fn extend_column_ppa(&mut self, rand_field_elem: u128, challenges: Vec<FieldElement>) {
+        let mut ppa = FieldElement::new(rand_field_elem, self.table.field);
         self.table.matrix[0][Indices::PermutationArg as usize] = ppa;
         for i in 0..self.table.length - 1 {
             let weighted_sum = self.table.matrix[i as usize][Indices::Cycle as usize]
@@ -132,10 +129,10 @@ impl Memory {
             Indices::MemoryValue as u128,
             Indices::PermutationArg as u128,
         ]);
-        let CLK = interpolated[Indices::Cycle as usize].clone();
-        let MP = interpolated[Indices::MemoryPointer as usize].clone();
-        let MV = interpolated[Indices::MemoryValue as usize].clone();
-        let PPA = interpolated[Indices::PermutationArg as usize].clone();
+        let clk = interpolated[Indices::Cycle as usize].clone();
+        let mp = interpolated[Indices::MemoryPointer as usize].clone();
+        let mv = interpolated[Indices::MemoryValue as usize].clone();
+        let ppa = interpolated[Indices::PermutationArg as usize].clone();
 
         let next_interpolated = self.table.clone().next_interpolate_columns(vec![
             Indices::Cycle as u128,
@@ -144,17 +141,17 @@ impl Memory {
             Indices::PermutationArg as u128,
         ]);
 
-        let CLK_next = next_interpolated[Indices::Cycle as usize].clone();
-        let MP_next = next_interpolated[Indices::MemoryPointer as usize].clone();
-        let MV_next = next_interpolated[Indices::MemoryValue as usize].clone();
-        let PPA_next = next_interpolated[Indices::PermutationArg as usize].clone();
+        let clk_next = next_interpolated[Indices::Cycle as usize].clone();
+        let mp_next = next_interpolated[Indices::MemoryPointer as usize].clone();
+        let mv_next = next_interpolated[Indices::MemoryValue as usize].clone();
+        let ppa_next = next_interpolated[Indices::PermutationArg as usize].clone();
         let one = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
-        let mut AIR = vec![];
+        let mut air = vec![];
 
         //Boundary constraint: clk = mp = mv = 0, ppa = 1 (random secret using diff constr if we use it, not needed rn)
-        let boundaryAIR = CLK.clone() + MP.clone() + MV.clone() + PPA.clone()
+        let boundaryair = clk.clone() + mp.clone() + mv.clone() + ppa.clone()
             - Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
-        AIR.push(boundaryAIR);
+        air.push(boundaryair);
 
         //Transition constraints: * == next
         //1. (mp+1-mp*).(mp-mp*)
@@ -162,41 +159,41 @@ impl Memory {
         //3. (mp-mp*).(mv-mv*)
         //4. (clk - 1 - clk*).(mv*-mv)
         //5. ppa.(d.clk + e.mp + f.mv - beta) - ppa*
-        let transitionAIR = (MP.clone() + one.clone() - MP_next.clone())
-            * (MP.clone() - MP_next.clone())
-            + (MP.clone() - MP_next.clone()) * MV_next.clone()
-            + (MP.clone() - MP_next.clone()) * (MV.clone() - MV_next.clone())
-            + (CLK.clone() - one.clone() - CLK_next) * (MV_next.clone() - MV.clone())
-            + PPA.clone()
-                * (CLK.scalar_mul(challenges[ChallengeIndices::D as usize])
-                    + MP.scalar_mul(challenges[ChallengeIndices::E as usize])
-                    + MV.scalar_mul(challenges[ChallengeIndices::F as usize])
+        let transitionair = (mp.clone() + one.clone() - mp_next.clone())
+            * (mp.clone() - mp_next.clone())
+            + (mp.clone() - mp_next.clone()) * mv_next.clone()
+            + (mp.clone() - mp_next.clone()) * (mv.clone() - mv_next.clone())
+            + (clk.clone() - one.clone() - clk_next) * (mv_next.clone() - mv.clone())
+            + ppa.clone()
+                * (clk.scalar_mul(challenges[ChallengeIndices::D as usize])
+                    + mp.scalar_mul(challenges[ChallengeIndices::E as usize])
+                    + mv.scalar_mul(challenges[ChallengeIndices::F as usize])
                     - Polynomial::new_from_coefficients(vec![
                         challenges[ChallengeIndices::Beta as usize],
                     ]))
-            - PPA_next;
-        AIR.push(transitionAIR);
+            - ppa_next;
+        air.push(transitionair);
 
         //Terminal constraints:
-        //@todo Tppa = Tmpa --> include a constraint for this?
+        //@todo Tppa = tmpa --> include a constraint for this?
         //ppa.(d.clk+e.mp+f.mv-beta)-Tppa
-        //@todo Tppa and Tmpa given by prover, for now just taking it as empty polynomials to write constraint without error
-        let Tppa = Polynomial::new_from_coefficients(vec![]);
-        let Tmpa = Polynomial::new_from_coefficients(vec![]);
-        let terminalAIR = PPA
-            * (CLK.scalar_mul(challenges[ChallengeIndices::D as usize])
-                + MP.scalar_mul(challenges[ChallengeIndices::E as usize])
-                + MV.scalar_mul(challenges[ChallengeIndices::F as usize])
+        //@todo Tppa and tmpa given by prover, for now just taking it as empty polynomials to write constraint without error
+        let tppa = Polynomial::new_from_coefficients(vec![]);
+        let tmpa = Polynomial::new_from_coefficients(vec![]);
+        let terminalair = ppa
+            * (clk.scalar_mul(challenges[ChallengeIndices::D as usize])
+                + mp.scalar_mul(challenges[ChallengeIndices::E as usize])
+                + mv.scalar_mul(challenges[ChallengeIndices::F as usize])
                 - Polynomial::new_from_coefficients(vec![
                     challenges[ChallengeIndices::Beta as usize],
                 ]))
-            - Tppa.clone()
-            + Tppa
-            - Tmpa;
-        //@todo check if Tppa -Tmpa needs to be written separately```````````
-        AIR.push(terminalAIR);
+            - tppa.clone()
+            + tppa // @todo check this out, this is looking weird.
+            - tmpa;
+        //@todo check if Tppa -tmpa needs to be written separately```````````
+        air.push(terminalair);
 
-        AIR
+        air
     }
 
     pub fn generate_zerofier(&self) -> Vec<Polynomial> {
@@ -221,29 +218,31 @@ impl Memory {
         let terminal_zerofier = x.clone()
             - Polynomial::new_from_coefficients(vec![omicron.clone().pow(self.table.length - 1)]);
 
+        zerofiers.push(terminal_zerofier);
         zerofiers
     }
 
     pub fn generate_quotients(&self, challenges: Vec<FieldElement>) -> Vec<Polynomial> {
         let mut quotients = vec![];
-        let AIR = self.generate_air(challenges);
+        let air = self.generate_air(challenges);
         let zerofiers = self.generate_zerofier();
 
-        for i in 0..AIR.len() {
-            quotients.push(AIR[i].clone().q_div(zerofiers[i].clone()).0);
+        for i in 0..air.len() {
+            quotients.push(air[i].clone().q_div(zerofiers[i].clone()).0);
         }
         quotients
     }
 }
 
 //@todo test extend column ppa
-//@todo test generate AIR
+//@todo test generate air
 //@todo test generate zerofier
 //@todo test generate quotient
 //@todo test memory table padding
 
 #[cfg(test)]
 mod test_memory_table {
+    #![allow(unused_variables)]
     use super::Memory;
     use crate::fields::{Field, FieldElement};
     use crate::tables::memory::{ChallengeIndices, Indices};

@@ -392,6 +392,7 @@ impl FriDomain {
 //     }
 // }
 mod test_fri_domain {
+    #![allow(unused_variables)]
     use super::*;
     #[test]
     fn test_evaluate() {

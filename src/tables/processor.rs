@@ -130,7 +130,7 @@ impl ProcessorTable {
 
     //the matrix taken here is padded
     pub fn extend_columns(&mut self, challenges: Vec<FieldElement>) {
-        //@todo taking init 1 for now, change to random secret initial value which we check by difference constraint of Tmpa = Tppa
+        //@todo taking init 1 for now, change to random secret initial value which we check by difference constraint of tmpa = Tppa
         let mut ipa = FieldElement::one(self.table.field);
         let mut mpa = FieldElement::one(self.table.field);
         let mut iea = FieldElement::zero(self.table.field);
@@ -304,16 +304,17 @@ impl ProcessorTable {
         let terminal_zerofier = x.clone()
             - Polynomial::new_from_coefficients(vec![omicron.clone().pow(self.table.length - 1)]);
 
+        zerofiers.push(terminal_zerofier);
         zerofiers
     }
 
     pub fn generate_quotients(&self, challenges: Vec<FieldElement>) -> Vec<Polynomial> {
         let mut quotients = vec![];
-        let AIR = self.generate_AIR(challenges);
+        let air = self.generate_air(challenges);
         let zerofiers = self.generate_zerofier();
 
-        for i in 0..AIR.len() {
-            quotients.push(AIR[i].clone().q_div(zerofiers[i].clone()).0);
+        for i in 0..air.len() {
+            quotients.push(air[i].clone().q_div(zerofiers[i].clone()).0);
         }
         quotients
     }
@@ -349,7 +350,7 @@ impl ProcessorTable {
 
     //boundary constraints for the base coloumns
     // the values of instructionpermutaion ipa and mpa I am taking as 1
-    pub fn generate_AIR(&self, challenges: Vec<FieldElement>) -> Vec<Polynomial> {
+    pub fn generate_air(&self, challenges: Vec<FieldElement>) -> Vec<Polynomial> {
         let f =
             |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, self.table.field) };
         let interpolated = self.table.clone().interpolate_columns(vec![
@@ -401,13 +402,13 @@ impl ProcessorTable {
         let iea_next = next_interpolated[Indices::InputEvaluation as usize].clone();
         let oea_next = next_interpolated[Indices::OutputEvaluation as usize].clone();
         let one = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
-        let mut AIR = vec![];
+        let mut air = vec![];
         //Boundary contsraints :clk=mp=mv=inv=ip=0
         //iea=oea=1 (we are using 1 instead of any random number)
         let poly_two =
             Polynomial::new_from_coefficients(vec![FieldElement::new(2, self.table.field)]);
         //@todo should we separate out ipa and mpa -2 into ipa -1 and mpa -1 so that malicious prover cant set ppa=2 and mpa =0 or something like that?
-        let boundaryAIR = clk.clone()
+        let boundary_air = clk.clone()
             + ip.clone()
             + mp.clone()
             + mv.clone()
@@ -417,7 +418,7 @@ impl ProcessorTable {
             + iea.clone()
             + oea.clone()
             - poly_two.clone();
-        AIR.push(boundaryAIR);
+        air.push(boundary_air);
         // Transition_i0,
         // Transition_i1,
         // Transition_i2,
@@ -436,7 +437,7 @@ impl ProcessorTable {
             + mv_is_zero.clone() * (ip_next.clone() - ni.clone()))
             + (mp_next.clone() - mp.clone())
             + (mv_next.clone() - mv.clone());
-        AIR.push(trasition_i0);
+        air.push(trasition_i0);
         // (ip⋆−ip−2)⋅iszero+(ip⋆−ni)⋅mv
         // mp⋆−mp
         // mv⋆−mv
@@ -445,18 +446,18 @@ impl ProcessorTable {
             + (ip_next.clone() - ni.clone()) * mv.clone()
             + (mv_next.clone() - mv.clone())
             + (mp_next.clone() - mp.clone());
-        AIR.push(trasition_i1);
+        air.push(trasition_i1);
 
         // ip⋆−ip−1
         // mp⋆−mp+1
         let trasition_i2 = (ip_next.clone() - ip.clone() - poly_one.clone())
             + (mp_next.clone() - mp.clone() + poly_one.clone());
-        AIR.push(trasition_i2);
+        air.push(trasition_i2);
         // ip⋆−ip−1
         // mp⋆−mp+1
         let trasition_i3 = (ip_next.clone() - ip.clone() - poly_one.clone())
             + (mp_next.clone() - mp.clone() + poly_one.clone());
-        AIR.push(trasition_i3);
+        air.push(trasition_i3);
 
         //ip⋆−ip−1
         // mp⋆−mp
@@ -464,27 +465,27 @@ impl ProcessorTable {
         let trasition_i4 = (ip_next.clone() - ip.clone() - poly_one.clone())
             + (mp_next.clone() - mp.clone())
             + (mv_next.clone() - mv.clone() - poly_one.clone());
-        AIR.push(trasition_i4);
+        air.push(trasition_i4);
         // ip⋆−ip−1
         // mp⋆−mp
         // mv⋆−mv+1
         let trasition_i5 = (ip_next.clone() - ip.clone() - poly_one.clone())
             + (mp_next.clone() - mp.clone())
             + (mv_next.clone() - mv.clone() - poly_one.clone());
-        AIR.push(trasition_i5);
+        air.push(trasition_i5);
         //  ip⋆−ip−1
         // mp⋆−mp
 
         let trasition_i6 =
             (ip_next.clone() - ip.clone() - poly_one.clone()) + (mp_next.clone() - mp.clone());
-        AIR.push(trasition_i6);
+        air.push(trasition_i6);
         //  ip⋆−ip−1
         // mp⋆−mp
         // mv⋆−mv
         let trasition_i7 = (ip_next.clone() - ip.clone() - poly_one.clone())
             + (mp_next.clone() - mp.clone())
             + (mv_next.clone() - mv.clone());
-        AIR.push(trasition_i7);
+        air.push(trasition_i7);
         //clk⋆−clk−1
         // inv⋅(1−inv⋅mv)
         //ci.(ipa.(a.ip+b.ci+c.ni-alpha)-ipa*) // this constrainst is become redundant becaue we are not using +(ipa*-ipa).deselector
@@ -529,18 +530,18 @@ impl ProcessorTable {
                     + mv.clone()
                     - oea_next.clone())
             + (ci.clone() - Polynomial::constant(f('.'))) * (oea.clone() - oea_next.clone());
-        AIR.push(trasition_all);
+        air.push(trasition_all);
         //  Terminal constraints
-        // Tipa, Tmpa- last row not accumulated so:
-        //1.ipa.(a.ip+ b.ci+c.ni-alpha)-Tipa
-        //2.mpa.(d.clk+e.mp+f.mv-beta)-Tmpa
-        // Tiea, Toea- last element identical to terminal
-        //3.iea-Tiea   4. oea-Toea
-        let Tipa = Polynomial::new_from_coefficients(vec![]);
-        let Tmpa = Polynomial::new_from_coefficients(vec![]);
-        let Tiea = Polynomial::new_from_coefficients(vec![]);
-        let Toea = Polynomial::new_from_coefficients(vec![]);
-        let TerminalAIR = ipa.clone()
+        // tipa, tmpa- last row not accumulated so:
+        //1.ipa.(a.ip+ b.ci+c.ni-alpha)-tipa
+        //2.mpa.(d.clk+e.mp+f.mv-beta)-tmpa
+        // tiea, toea- last element identical to terminal
+        //3.iea-tiea   4. oea-toea
+        let tipa = Polynomial::new_from_coefficients(vec![]);
+        let tmpa = Polynomial::new_from_coefficients(vec![]);
+        let tiea = Polynomial::new_from_coefficients(vec![]);
+        let toea = Polynomial::new_from_coefficients(vec![]);
+        let terminal_air = ipa.clone()
             * (ip
                 .clone()
                 .scalar_mul(challenges[ChallengeIndices::A as usize])
@@ -549,7 +550,7 @@ impl ProcessorTable {
                 + ni.clone()
                     .scalar_mul(challenges[ChallengeIndices::C as usize])
                 - Polynomial::constant(challenges[ChallengeIndices::Beta as usize]))
-            - Tipa.clone()
+            - tipa.clone()
             + mpa.clone()
                 * (clk.scalar_mul(challenges[ChallengeIndices::D as usize])
                     + mp.clone()
@@ -557,13 +558,13 @@ impl ProcessorTable {
                     + mv.clone()
                         .scalar_mul(challenges[ChallengeIndices::F as usize])
                     - Polynomial::constant(challenges[ChallengeIndices::Beta as usize]))
-            - Tmpa
+            - tmpa
             + iea
-            - Tiea
+            - tiea
             + oea
-            - Toea;
-        AIR.push(TerminalAIR);
-        AIR
+            - toea;
+        air.push(terminal_air);
+        air
     }
 }
 #[cfg(test)]

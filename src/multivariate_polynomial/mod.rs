@@ -1,3 +1,4 @@
+#![allow(unused_variables)]
 use crate::fields::{Field, FieldElement};
 use crate::univariate_polynomial::*;
 use std::collections::HashMap;
@@ -123,7 +124,6 @@ impl MPolynomial {
 
     pub fn symbolic_degree_bound(&self, max_degrees: Vec<u128>) -> i128 {
         // Check if the polynomial is empty
-        let field = self.field;
         if self.dictionary.is_empty() {
             return -1;
         }

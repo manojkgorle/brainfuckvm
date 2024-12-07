@@ -1,3 +1,4 @@
+#![allow(unused_variables)]
 use crate::fields::FieldElement;
 
 pub struct Stark<'a> {
