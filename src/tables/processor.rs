@@ -5,7 +5,7 @@ use crate::fri::*;
 use crate::univariate_polynomial::*;
 
 pub struct ProcessorTable {
-    table: Table,
+    pub table: Table,
 }
 
 pub enum Indices {
@@ -634,7 +634,7 @@ mod test_processor {
     use crate::fields::{Field, FieldElement};
     use crate::tables::instruction::InstructionTable;
     use crate::tables::io::IOTable;
-    use crate::tables::memory::Memory;
+    use crate::tables::memory::MemoryTable;
     use crate::tables::processor::Indices;
     use crate::vm::VirtualMachine;
 
@@ -690,7 +690,7 @@ mod test_processor {
             order,
             processor_matrix,
         );
-        let mut memory_table = Memory::new(
+        let mut memory_table = MemoryTable::new(
             field,
             memory_matrix.len() as u128,
             generator,
