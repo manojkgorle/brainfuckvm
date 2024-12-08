@@ -1,4 +1,7 @@
 #![allow(unused_variables)]
+use std::io::Read;
+
+use instruction::Indices;
 use io::IOTable;
 use memory::MemoryTable;
 use processor::ProcessorTable;
@@ -24,6 +27,20 @@ pub struct Stark<'a> {
     expansion_factor: u32,
     security_level: u32,
     num_collinearity_checks: u32,
+}
+
+pub enum ChallengeIndices {
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    Alpha,
+    Beta,
+    Delta,
+    Gamma,
+    Eta,
 }
 
 // prove:
@@ -76,30 +93,111 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, f
     }
 
     //we are zipping all the base codewords (for each index in order) using concatenation
-    //@todo to_bytes function of field element is not working properly? check once
 
     let mut basecodeword: Vec<Vec<u8>> = Vec::new();
 
-    // for i in 0..expanded_length as usize{
-    //     let mut x: Vec<Vec<u8>> = vec![];
-    //     for j in 0..basecodewords.len(){
-    //         x.push(basecodewords[j][i].to_bytes().iter().map(y:));
-    //     }
-    // }
+    for i in 0..expanded_length as usize{
+        let mut x: Vec<u8> = vec![];
+        for j in 0..basecodewords.len(){
+            x.extend(basecodewords[j][i].to_bytes().iter().map(|&x| x));
+        }
+        basecodeword.push(x);
+    }
 
-    //@todo could not find a function in channel for fiat shamir, ie sending data as string and then getting random element
     //@todo make extend columns function return Terminal value , eg. Tipa, for every table and store it, use it to compare
+    let mut data1 = vec![];
+
+    for i in 0..basecodeword.len(){ 
+        // difficulty in implementing -> let n = basecodewords[0].len(); 
+        // so hardcoded the value to 32*13 = 416 -> where 13 => clk, ip, ci, ni, mp, mv, inv, clk, mp, mv, ip, ci, ni
+        let array: &[u8] = &basecodeword[i].to_vec();
+
+        data1.push(FieldElement::from_bytes(array));
+    }
+    
+    // get 11 challenges array from fiat shamir
+    let mut channel = Channel::new();
+    let merkle1 = MerkleTree::new(&data1);
+    channel.send(merkle1.inner.root().unwrap().to_vec());
+
+    let mut challenges_extension = vec![];
+
+    for i in 0..10{
+        let x = channel.receive_random_field_element(field);
+        challenges_extension.push(x);
+        channel.send(x.to_bytes());
+    }
+    challenges_extension.push(channel.receive_random_field_element(field));
+
+    // use extend column function on tables -> extends the base columns to extension columns
+    let Terminal_processor = processor_table.extend_columns(challenges_extension.clone());
+    let Terminal_memory = memory_table.extend_column_ppa(1, challenges_extension.clone());
+    let Terminal_instruction = instruction_table.extend_column(1, challenges_extension.clone());
+    let Terminal_input = input_table.extend_column_ea(1, challenges_extension[ChallengeIndices::Gamma as usize]).clone();
+    let Terminal_output = output_table.extend_column_ea(1, challenges_extension[ChallengeIndices::Delta as usize]).clone();
+
+    //These contain polynomials for interpolation of extension columns 
+    let processor_interpol_columns_2 = processor_table.table.clone().interpolate_columns(vec![7, 8, 9, 10]);
+    let memory_interpol_columns_2 = memory_table.table.clone().interpolate_columns(vec![3]);
+    let instruction_interpol_columns_2 = instruction_table.table.clone().interpolate_columns(vec![3, 4]);
+
+    let mut extension_codewords: Vec<Vec<FieldElement>> = Vec::new();
+
+    // extensioncodewords vector order:
+    // processor: ipa, mpa, iea, oea
+    // memory: ppa
+    // instruction: ppa, pea
+    // input and output tables are public, we dont commit to those, we only check their termnal extensions after extending
+
+    for i in 0..processor_interpol_columns_2.clone().len(){
+        extension_codewords.push(domain.evaluate(processor_interpol_columns_2[i].clone()));
+    }
+
+    for i in 0..memory_interpol_columns_2.clone().len(){
+        extension_codewords.push(domain.evaluate(memory_interpol_columns_2[i].clone()));
+    }
+
+    for i in 0..instruction_interpol_columns_2.clone().len(){
+        extension_codewords.push(domain.evaluate(instruction_interpol_columns_2[i].clone()));
+    }
+
+    let mut extension_codeword: Vec<Vec<u8>> = Vec::new();
+
+    for i in 0..expanded_length as usize{
+        let mut x: Vec<u8> = vec![];
+        for j in 0..extension_codewords.len(){
+            x.extend(extension_codewords[j][i].to_bytes().iter().map(|&x| x));
+        }
+        extension_codeword.push(x);
+    }
+
+    let mut data2 = vec![];
+
+    for i in 0..extension_codeword.len(){ 
+        let array: &[u8] = &extension_codeword[i].to_vec();
+
+        data2.push(FieldElement::from_bytes(array));
+    }
+
+    let merkle2 = MerkleTree::new(&data2);
+    channel.send(merkle2.inner.root().unwrap().to_vec());
+
+    let mut challenges_combination = vec![];
+    let x = channel.receive_random_field_element(field);
+    challenges_combination.push(x);
+    channel.send(x.to_bytes());
+    challenges_combination.push(channel.receive_random_field_element(field));
+
+    // let processor_AIR = processor_table.generate_air(challenges_extension, Terminal_processor[0], Terminal_processor[1], Terminal_processor[2], Terminal_processor[3]);
+    // let memory_AIR= memory_table.generate_air(challenges_extension, Terminal_memory[0]);
+    // let instruction_AIR = instruction_table.generate_air(challenges_extension, Terminal_instruction[0], Terminal_instruction[1]);
+
+    let processor_zerofier = processor_table.generate_zerofier();
+    let memory_zerofier= memory_table.generate_zerofier();
+    let instruction_zerofier = instruction_table.generate_zerofier();
 
 }
 
-// commit this codeword in merkle tree -> send to verifier, and use the merkle root in fiat shamir
-// get 11 challenges array from fiat shamir
-// use extend column function on tables -> extends the base columns to extension columns
-// interpolate extension columns of all matrices
-// evaluate these polynomials on expanded evaluation domains to give extension codewords
-// zip/concatenate the extension codewords to give one extension codeword
-// commit this codeword in merkle tree -> send to verifier, and use the merkle root in fiat shamir
-// get 2 challenges array from fiat shamir
 // use generate AIR -> generate zerofier -> generate quotient: on all tables
 // form combination polynomial from quotient polynomials and challenges array
 // evaluate combination polynomials on expanded evaluation domains to get combination codeword

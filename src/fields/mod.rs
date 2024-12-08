@@ -11,6 +11,21 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssi
 #[derive(Debug, Clone, Copy, Hash)]
 pub struct Field(pub u128);
 
+pub enum ChallengeIndices {
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    Alpha,
+    Beta,
+    Delta,
+    Gamma,
+    Eta,
+}
+
+
 impl Field {
     pub fn new(x: u128) -> Field {
         Field(x)
