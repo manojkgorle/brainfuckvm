@@ -350,12 +350,13 @@ impl ProcessorTable {
                 } acc
        }
 
-    //boundary constraints for the base coloumns
+    // boundary constraints for the base coloumns
     // the values of instructionpermutaion ipa and mpa I am taking as 1
+    // @todo pa, ea are obtained when the table is extended.
     pub fn generate_air(&self, challenges: Vec<FieldElement>,tipa:FieldElement,tmpa:FieldElement,tiea:FieldElement,toea:FieldElement) -> Vec<Polynomial> {
         let f =
             |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, self.table.field) };
-        let interpolated = self.table.clone().interpolate_columns(vec![
+        let indices_vec = vec![
             Indices::Cycle as u128,
             Indices::InstructionPointer as u128,
             Indices::CurrentInstruction as u128,
@@ -367,7 +368,8 @@ impl ProcessorTable {
             Indices::MemoryPermuation as u128,
             Indices::InputEvaluation as u128,
             Indices::OutputEvaluation as u128,
-        ]);
+        ];
+        let interpolated = self.table.clone().interpolate_columns(indices_vec.clone());
         let clk = interpolated[Indices::Cycle as usize].clone();
         let ip = interpolated[Indices::InstructionPointer as usize].clone();
         let ci = interpolated[Indices::CurrentInstruction as usize].clone();
@@ -379,19 +381,8 @@ impl ProcessorTable {
         let mpa = interpolated[Indices::MemoryPermuation as usize].clone();
         let iea = interpolated[Indices::InputEvaluation as usize].clone();
         let oea = interpolated[Indices::OutputEvaluation as usize].clone();
-        let next_interpolated = self.table.clone().next_interpolate_columns(vec![
-            Indices::Cycle as u128,
-            Indices::InstructionPointer as u128,
-            Indices::CurrentInstruction as u128,
-            Indices::NextInstruction as u128,
-            Indices::MemoryPointer as u128,
-            Indices::MemoryValue as u128,
-            Indices::MemoryValueInverse as u128,
-            Indices::InstructionPermutaion as u128,
-            Indices::MemoryPermuation as u128,
-            Indices::InputEvaluation as u128,
-            Indices::OutputEvaluation as u128,
-        ]);
+       
+        let next_interpolated = self.table.clone().next_interpolate_columns(indices_vec);
         let clk_next = next_interpolated[Indices::Cycle as usize].clone();
         let ip_next = next_interpolated[Indices::InstructionPointer as usize].clone();
         let mp_next = next_interpolated[Indices::MemoryPointer as usize].clone();
@@ -429,6 +420,7 @@ impl ProcessorTable {
         // Transition_all,
         let poly_one = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         let mv_is_zero = poly_one.clone() - mv.clone() * inv_mv.clone();
+
         //(ip⋆−ip−2)⋅mv+(ip⋆−ni)⋅iszero
         // mp⋆−mp
         // mv⋆−mv
@@ -437,10 +429,10 @@ impl ProcessorTable {
             + (mp_next.clone() - mp.clone())
             + (mv_next.clone() - mv.clone());
         air.push(trasition_i0);
+
         // (ip⋆−ip−2)⋅iszero+(ip⋆−ni)⋅mv
         // mp⋆−mp
         // mv⋆−mv
-
         let trasition_i1 = mv_is_zero.clone() * (ip_next.clone() - ip.clone() - poly_two.clone())
             + (ip_next.clone() - ni.clone()) * mv.clone()
             + (mv_next.clone() - mv.clone())
@@ -452,6 +444,7 @@ impl ProcessorTable {
         let trasition_i2 = (ip_next.clone() - ip.clone() - poly_one.clone())
             + (mp_next.clone() - mp.clone() + poly_one.clone());
         air.push(trasition_i2);
+
         // ip⋆−ip−1
         // mp⋆−mp+1
         let trasition_i3 = (ip_next.clone() - ip.clone() - poly_one.clone())
@@ -465,6 +458,7 @@ impl ProcessorTable {
             + (mp_next.clone() - mp.clone())
             + (mv_next.clone() - mv.clone() - poly_one.clone());
         air.push(trasition_i4);
+
         // ip⋆−ip−1
         // mp⋆−mp
         // mv⋆−mv+1
@@ -472,9 +466,9 @@ impl ProcessorTable {
             + (mp_next.clone() - mp.clone())
             + (mv_next.clone() - mv.clone() - poly_one.clone());
         air.push(trasition_i5);
-        //  ip⋆−ip−1
-        // mp⋆−mp
 
+        // ip⋆−ip−1
+        // mp⋆−mp
         let trasition_i6 =
             (ip_next.clone() - ip.clone() - poly_one.clone()) + (mp_next.clone() - mp.clone());
         air.push(trasition_i6);
@@ -492,12 +486,12 @@ impl ProcessorTable {
         //selector(,)(ci) . (iea.gamma + mv - iea*) + (ci -  “,”) . (iea - iea*)
         //selector(.)(ci) . (oea.delta + mv - oea*) + (ci -  “.”) . (oea - oea*)
 
-        // /clk⋆−clk−1+inv⋅(1−inv⋅mv)
-        //ci.(ipa.(a.ip+b.ci+c.ni-alpha)-ipa*)
-        //mpa.(d.clk+e.mp+f.mv-beta)-mpa*
+        // clk⋆−clk−1+inv⋅(1−inv⋅mv)
+        // ci.(ipa.(a.ip+b.ci+c.ni-alpha)-ipa*)
+        // mpa.(d.clk+e.mp+f.mv-beta)-mpa*
         // we are changing mv to mv*
-        //selector(,)(ci) . (iea.gamma + mv* - iea*) + (ci -  “,”) . (iea - iea*)
-        //selector(.)(ci) . (oea.delta + mv - oea*) + (ci -  “.”) . (oea - oea*)
+        // selector(,)(ci) . (iea.gamma + mv* - iea*) + (ci -  “,”) . (iea - iea*)
+        // selector(.)(ci) . (oea.delta + mv - oea*) + (ci -  “.”) . (oea - oea*)
         let trasition_all = (clk_next.clone() - clk.clone() - poly_one.clone())
             + (inv_mv.clone() * (mv_is_zero.clone()))
             + ci.clone()
@@ -531,16 +525,12 @@ impl ProcessorTable {
             + (ci.clone() - Polynomial::constant(f('.'))) * (oea.clone() - oea_next.clone());
         air.push(trasition_all);
         //@todo have to seperate the terminal 
-        //  Terminal constraints
+        // Terminal constraints
         // tipa, tmpa- last row not accumulated so:
-        //1.ipa.(a.ip+ b.ci+c.ni-alpha)-tipa
-        //2.mpa.(d.clk+e.mp+f.mv-beta)-tmpa
+        // 1.ipa.(a.ip+ b.ci+c.ni-alpha)-tipa
+        // 2.mpa.(d.clk+e.mp+f.mv-beta)-tmpa
         // tiea, toea- last element identical to terminal
-        //3.iea-tiea   4. oea-toea
-        // let tipa = Polynomial::new_from_coefficients(vec![]);
-        // let tmpa = Polynomial::new_from_coefficients(vec![]);
-        // let tiea = Polynomial::new_from_coefficients(vec![]);
-        // let toea = Polynomial::new_from_coefficients(vec![]);
+        // 3.iea-tiea   4. oea-toea
         let terminal_air = ipa.clone()
             * (ip
                 .clone()
