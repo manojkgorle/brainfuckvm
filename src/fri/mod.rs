@@ -7,9 +7,9 @@ use crate::univariate_polynomial::*;
 
 //@todo pass difference quotient polynomial as a parameter too if using random secret initials
 //challenges = [alpha, beta], given by fiat shamir
-
 //@todo this has to be inside prover/main?, check once
 //boundary_q includes boundary constraints for all tables together, similarly for others
+
 pub fn combination_polynomial(
     boundary_q: Vec<Polynomial>,
     transition_q: Vec<Polynomial>,
@@ -25,7 +25,9 @@ pub fn combination_polynomial(
         FieldElement::zero(field),
         FieldElement::one(field),
     ]);
-    let degree = height;
+    let degree = height-1;
+    //@todo what should be degree here since processor and instruction table can have different heights
+    //@todo we can also pass a single vector of all quotient 
 
     for i in 0..boundary_q.clone().len() {
         let d = degree - boundary_q[i].clone().degree();
@@ -200,7 +202,7 @@ pub fn decommit_fri_layers(
 /// sends
 pub fn decommit_on_query(
     idx: usize,
-    blow_up_factor: usize,
+    blow_up_factor: usize,//expansion_f
     f_eval: Vec<&[FieldElement]>, //this contains basecodewords zipped, and extension codewords zipped
     f_merkle: Vec<&MerkleTree>, //this contains MerkleTree of base codewords zipped, and extension codewords zipped
     fri_layers: &[Vec<FieldElement>],
