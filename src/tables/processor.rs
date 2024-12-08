@@ -153,11 +153,11 @@ impl ProcessorTable {
             ipa *= weighted_sum;
             self.table.matrix[(i + 1) as usize][Indices::InstructionPermutaion as usize] = ipa;
         }
-        let mut tipa=ipa*(self.table.matrix[self.table.length as usize][Indices::InstructionPointer as usize]
+        let mut tipa=ipa*(self.table.matrix[(self.table.length-1) as usize][Indices::InstructionPointer as usize]
             * challenges[ChallengeIndices::A as usize]
-            + self.table.matrix[self.table.length as usize][Indices::CurrentInstruction as usize]
+            + self.table.matrix[(self.table.length-1) as usize][Indices::CurrentInstruction as usize]
                 * challenges[ChallengeIndices::B as usize]
-            + self.table.matrix[self.table.length as usize][Indices::NextInstruction as usize]
+            + self.table.matrix[(self.table.length-1) as usize][Indices::NextInstruction as usize]
                 * challenges[ChallengeIndices::C as usize]
             - challenges[ChallengeIndices::Alpha as usize]);
 
