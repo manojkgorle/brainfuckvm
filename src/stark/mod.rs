@@ -4,6 +4,7 @@ use memory::MemoryTable;
 use processor::ProcessorTable;
 use instruction::InstructionTable;
 
+use crate::channel;
 use crate::merkle::*;
 use crate::channel::*;
 use crate::fri::*;
@@ -88,6 +89,7 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, f
     // }
 
     //@todo could not find a function in channel for fiat shamir, ie sending data as string and then getting random element
+    // @soumyathakur44, you can use channell.send with .into() to send string data.
     //@todo make extend columns function return Terminal value , eg. Tipa, for every table and store it, use it to compare
 
 }
