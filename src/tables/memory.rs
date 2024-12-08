@@ -4,7 +4,7 @@ use super::{derive_omicron, roundup_npow2};
 use crate::fields::{Field, FieldElement};
 use crate::univariate_polynomial::interpolate_lagrange_polynomials;
 use crate::univariate_polynomial::Polynomial;
-pub struct Memory {
+pub struct MemoryTable {
     pub table: Table,
 }
 
@@ -37,7 +37,7 @@ pub enum ChallengeIndices {
     Eta,
 }
 
-impl Memory {
+impl MemoryTable {
     pub fn new(
         field: Field,
         length: u128,
@@ -105,7 +105,8 @@ impl Memory {
     }
 
     //the matrix taken here is padded
-    pub fn extend_column_ppa(&mut self, rand_field_elem: u128, challenges: Vec<FieldElement>) {
+    pub fn extend_column_ppa(&mut self, rand_field_elem: u128, challenges: Vec<FieldElement>)->Vec<FieldElement> {
+        let mut terminal:Vec<FieldElement>= Vec::new();
         let mut ppa = FieldElement::new(rand_field_elem, self.table.field);
         self.table.matrix[0][Indices::PermutationArg as usize] = ppa;
         for i in 0..self.table.length - 1 {
@@ -118,7 +119,18 @@ impl Memory {
                 - challenges[ChallengeIndices::Beta as usize];
             ppa *= weighted_sum;
             self.table.matrix[(i + 1) as usize][Indices::PermutationArg as usize] = ppa;
+
         }
+        let mut tppa=ppa*(self.table.matrix[self.table.length as usize][Indices::Cycle as usize]
+            * challenges[ChallengeIndices::D as usize]
+            + self.table.matrix[self.table.length as usize][Indices::MemoryPointer as usize]
+                * challenges[ChallengeIndices::E as usize]
+            + self.table.matrix[self.table.length as usize][Indices::MemoryValue as usize]
+                * challenges[ChallengeIndices::F as usize]
+            - challenges[ChallengeIndices::Beta as usize]);
+            let mut Tppa:Vec<FieldElement>=Vec::new();
+            Tppa.push(tppa);
+            Tppa
     }
 
     //this is after padding and extension
@@ -239,7 +251,7 @@ impl Memory {
 #[cfg(test)]
 mod test_memory_table {
     #![allow(unused_variables)]
-    use super::Memory;
+    use super::MemoryTable;
     use crate::fields::{Field, FieldElement};
     use crate::tables::memory::{ChallengeIndices, Indices};
     use crate::tables::Table;
@@ -256,7 +268,7 @@ mod test_memory_table {
         let (processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix) =
             vm.simulate(&program, "a".to_string());
         let mlen = memory_matrix.len();
-        let mut memory_table = Memory::new(
+        let mut memory_table = MemoryTable::new(
             field,
             memory_matrix.len() as u128,
             generator,
@@ -283,7 +295,7 @@ mod test_memory_table {
         let generator = field.generator();
         let order = 1 << 32;
         let zero = FieldElement::zero(field);
-        let mut mem = Memory::new(
+        let mut mem = MemoryTable::new(
             field,
             memory_matrix.len() as u128,
             generator,
@@ -334,4 +346,6 @@ mod test_memory_table {
     //         println!("{}:{}", ppa.0, i+1);
     //     }
     // }
+ 
+
 }
