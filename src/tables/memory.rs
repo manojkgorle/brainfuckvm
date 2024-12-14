@@ -49,7 +49,7 @@ impl MemoryTable {
         let full_width = base_width + 1;
         let height = roundup_npow2(length);
         let omicron = derive_omicron(generator, order, height);
-        // let omicron = FieldElement::new(2, field); // @todo dummy omicron value, as omicron generation is not working as intended.
+       
         let mut gmatrix =
             vec![vec![FieldElement::zero(field); full_width as usize]; height as usize];
         for i in 0..matrix.len() {
@@ -71,7 +71,7 @@ impl MemoryTable {
         let one = FieldElement::one(field);
         let last_row = matrix[self.table.length as usize - 1].clone();
         for i in 0..(self.table.height - self.table.length) as usize {
-            let mut curr_row = vec![zero; 3]; // 3 is number of columns.
+            let mut curr_row = vec![zero; 4]; // 3 is number of columns.
             curr_row[Indices::Cycle as usize] =
                 last_row[Indices::Cycle as usize] + FieldElement((i + 1) as u128, field) * one;
             curr_row[Indices::MemoryPointer as usize] = last_row[Indices::MemoryPointer as usize];
@@ -103,10 +103,11 @@ impl MemoryTable {
 
         matrix
     }
+    #[warn(non_snake_case)]
 
     //the matrix taken here is padded
     pub fn extend_column_ppa(&mut self, rand_field_elem: u128, challenges: Vec<FieldElement>)->Vec<FieldElement> {
-        let mut terminal:Vec<FieldElement>= Vec::new();
+        
         let mut ppa = FieldElement::new(rand_field_elem, self.table.field);
         self.table.matrix[0][Indices::PermutationArg as usize] = ppa;
         for i in 0..self.table.length - 1 {
@@ -121,21 +122,21 @@ impl MemoryTable {
             self.table.matrix[(i + 1) as usize][Indices::PermutationArg as usize] = ppa;
 
         }
-        let mut tppa=ppa*(self.table.matrix[self.table.length as usize][Indices::Cycle as usize]
+        let  tppa=ppa*(self.table.matrix[(self.table.length-1 )as usize][Indices::Cycle as usize]
             * challenges[ChallengeIndices::D as usize]
-            + self.table.matrix[self.table.length as usize][Indices::MemoryPointer as usize]
+            + self.table.matrix[(self.table.length-1) as usize][Indices::MemoryPointer as usize]
                 * challenges[ChallengeIndices::E as usize]
-            + self.table.matrix[self.table.length as usize][Indices::MemoryValue as usize]
+            + self.table.matrix[(self.table.length-1)as usize][Indices::MemoryValue as usize]
                 * challenges[ChallengeIndices::F as usize]
             - challenges[ChallengeIndices::Beta as usize]);
-            let mut Tppa:Vec<FieldElement>=Vec::new();
+             let mut Tppa:Vec<FieldElement>=Vec::new();
             Tppa.push(tppa);
             Tppa
     }
 
     //this is after padding and extension
     pub fn generate_air(&self, challenges: Vec<FieldElement>,tppa:FieldElement) -> Vec<Polynomial> {
-        let interpolated = self.table.clone().interpolate_columns(vec![
+           let interpolated = self.table.clone().interpolate_columns(vec![
             Indices::Cycle as u128,
             Indices::MemoryPointer as u128,
             Indices::MemoryValue as u128,
@@ -145,7 +146,7 @@ impl MemoryTable {
         let mp = interpolated[Indices::MemoryPointer as usize].clone();
         let mv = interpolated[Indices::MemoryValue as usize].clone();
         let ppa = interpolated[Indices::PermutationArg as usize].clone();
-
+       
         let next_interpolated = self.table.clone().next_interpolate_columns(vec![
             Indices::Cycle as u128,
             Indices::MemoryPointer as u128,
@@ -164,6 +165,7 @@ impl MemoryTable {
         let boundaryair = clk.clone() + mp.clone() + mv.clone() + ppa.clone()
             - Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         air.push(boundaryair);
+        println!("{:?}",air);
 
         //Transition constraints: * == next
         //1. (mp+1-mp*).(mp-mp*)
@@ -200,8 +202,10 @@ impl MemoryTable {
             - Polynomial::constant(tppa);
         
         air.push(terminalair);
+      
 
-        air
+        air 
+        
     }
 
     pub fn generate_zerofier(&self) -> Vec<Polynomial> {
@@ -256,6 +260,11 @@ mod test_memory_table {
     use crate::tables::memory::{ChallengeIndices, Indices};
     use crate::tables::Table;
     use crate::vm::VirtualMachine;
+    use crate::tables::instruction::InstructionTable;
+    use crate::tables::io::IOTable;
+    use crate::tables::processor::ProcessorTable;
+    
+   
 
     #[test]
     fn test_padding() {
@@ -310,42 +319,225 @@ mod test_memory_table {
         mem.extend_column_ppa(7, challenges);
     }
 
-    //#[test]
-    // fn test_extend_column_ppa() {
-    //     // Mock field and FieldElement implementation (use actual implementation if available)
-    //     let field = Field::new(101);
-    //     let zero = FieldElement::zero(field);
-    //     let one= FieldElement::one(field);
+    #[test]
+    fn test_extend_column_ppa() {
+        // Mock field and FieldElement implementation (use actual implementation if available)
+        let field = Field::new(101);
+        let zero = FieldElement::zero(field);
+        let one= FieldElement::one(field);
 
-    //     // Create a mock table structure
-    //     let mut matrix = vec![
-    //         vec![FieldElement::new(1, field), FieldElement::new(2, field), FieldElement::new(3, field), zero.clone()],
-    //         vec![FieldElement::new(4, field), FieldElement::new(5, field), FieldElement::new(6, field), zero.clone()],
-    //         vec![FieldElement::new(7, field), FieldElement::new(8, field), FieldElement::new(9, field), zero.clone()],
-    //         vec![FieldElement::new(1, field), FieldElement::new(2, field), FieldElement::new(3, field), zero.clone()],
-    //         vec![FieldElement::new(10, field), FieldElement::new(12, field), FieldElement::new(13, field), zero.clone()],
-    //         vec![FieldElement::new(1, field), FieldElement::new(2, field), FieldElement::new(3, field), zero.clone()],
-    //     ];
-    //     // Create the challenges
-    //     let challenges = vec![
-    //         FieldElement::new(3, field),  // D
-    //         FieldElement::new(4, field),  // E
-    //         FieldElement::new(5, field),  // F
-    //         FieldElement::new(2, field),  // Beta
-    //     ];
-    //     let mut ppa = FieldElement::new(1, field);
-    //     println!("{}:0", ppa.0);
-    //     matrix[0].push(FieldElement::one(field));
-    //     for i in 0..matrix.len()-1 {
-    //         let weighted_sum = (matrix[i as usize][0] * challenges[0]
-    //             + matrix[i as usize][1] * challenges[1]
-    //             + matrix[i as usize][2] * challenges[2] - challenges[3]);
-    //         matrix[(i+1) as usize].push(ppa*weighted_sum);
-    //         ppa *= weighted_sum;
-    //         println!("{} + {} + {} - {}", (matrix[i as usize][0]*challenges[0]).0, (matrix[i as usize][1]*challenges[1]).0, (matrix[i as usize][2]*challenges[2]).0, challenges[3].0);
-    //         println!("{}:{}", ppa.0, i+1);
-    //     }
-    // }
+        // Create a mock table structure
+        let mut matrix = vec![
+            vec![FieldElement::new(1, field), FieldElement::new(2, field), FieldElement::new(3, field), zero.clone()],
+            vec![FieldElement::new(4, field), FieldElement::new(5, field), FieldElement::new(6, field), zero.clone()],
+            vec![FieldElement::new(7, field), FieldElement::new(8, field), FieldElement::new(9, field), zero.clone()],
+            vec![FieldElement::new(1, field), FieldElement::new(2, field), FieldElement::new(3, field), zero.clone()],
+            vec![FieldElement::new(10, field), FieldElement::new(12, field), FieldElement::new(13, field), zero.clone()],
+            vec![FieldElement::new(1, field), FieldElement::new(2, field), FieldElement::new(3, field), zero.clone()],
+        ];
+        // Create the challenges
+        let challenges = vec![
+            FieldElement::new(3, field),  // D
+            FieldElement::new(4, field),  // E
+            FieldElement::new(5, field),  // F
+            FieldElement::new(2, field),  // Beta
+        ];
+        let mut ppa = FieldElement::new(1, field);
+        println!("{}:0", ppa.0);
+        matrix[0].push(FieldElement::one(field));
+        for i in 0..matrix.len()-1 {
+            let weighted_sum = (matrix[i as usize][0] * challenges[0]
+                + matrix[i as usize][1] * challenges[1]
+                + matrix[i as usize][2] * challenges[2] - challenges[3]);
+            matrix[(i+1) as usize].push(ppa*weighted_sum);
+            ppa *= weighted_sum;
+            println!("{} + {} + {} - {}", (matrix[i as usize][0]*challenges[0]).0, (matrix[i as usize][1]*challenges[1]).0, (matrix[i as usize][2]*challenges[2]).0, challenges[3].0);
+            println!("{}:{}", ppa.0, i+1);
+        }
+    }
+    #[test]
+    fn test_generate_air(){
+        let field = Field::new((1<<64)-(1<<32)+1);
+        let zero = FieldElement::zero(field);
+        let one = FieldElement::one(field);
+        let two = one + one;
+        let vm = VirtualMachine::new(field);
+        let generator = FieldElement::new(1753635133440165772, field);
+        // let omicron = generator.clone();
+        let order = 1 << 32;
+        // let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
+        let code2 = ">>[++-]<".to_string();
+        let program = vm.compile(code2);
+        println!("{:?}", program.clone());
+        let (rt, _, _) = vm.run(&program, "".to_string());
+        println!("{:?}", rt);
+        // assert_eq!(program.len(), 2);
+        let (processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix) =
+            vm.simulate(&program, "".to_string());
+        let challenges = vec![two; 11];
+        let mut processor_table = ProcessorTable::new(
+            field,
+            processor_matrix.len() as u128,
+            generator,
+            order,
+            processor_matrix,
+        );
+        let mut memory_table = MemoryTable::new(
+            field,
+            memory_matrix.len() as u128,
+            generator,
+            order,
+            memory_matrix,
+        );
+        let mut instruction_table = InstructionTable::new(
+            field,
+            instruction_matrix.len() as u128,
+            generator,
+            order,
+            instruction_matrix,
+        );
+        let mut input_table = IOTable::new(
+            field,
+            input_matrix.len() as u128,
+            generator,
+            order,
+            input_matrix,
+        );
+        let mut output_table = IOTable::new(
+            field,
+            output_matrix.len() as u128,
+            generator,
+            order,
+            output_matrix,
+        );
+
+        processor_table.pad();
+        memory_table.pad();
+        instruction_table.pad();
+        input_table.pad();
+        output_table.pad();
+        let terminal = memory_table.extend_column_ppa(1,challenges.clone());
+        println!("memory_table after extending columns");
+        for row in memory_table.table.matrix.clone() {
+            println!("{:?}", row);
+        }
+         println!("tppa: {:?}", terminal[0]);
+          let mut omicron_domain: Vec<FieldElement> = Vec::new();
+        for i in 0..memory_table.table.height {
+            omicron_domain.push(memory_table.table.omicron.pow(i));
+            if i == 4 {
+                println!("omicron_domain: {:?}", omicron_domain); 
+            }
+        }
+        
+        let air = memory_table.generate_air(challenges, terminal[0]);
+      
+        let b = air[0].evaluate(omicron_domain[0]);
+       
+        assert_eq!(b, zero);
+         for v in 0..rt-1 {
+            let t_all = air[1].evaluate(omicron_domain[v as usize]);
+              assert_eq!(t_all, zero);
+        }
+        
+         let v =omicron_domain[4];
+
+            let t_air1 = air[2].evaluate(v);
+          
+            assert_eq!(t_air1, zero);  }
+
+        #[test]
+         fn test_not_generate_air(){
+                let field = Field::new((1<<64)-(1<<32)+1);
+                let zero = FieldElement::zero(field);
+                let one = FieldElement::one(field);
+                let two = one + one;
+                let vm = VirtualMachine::new(field);
+                let generator = FieldElement::new(1753635133440165772, field);
+                // let omicron = generator.clone();
+                let order = 1 << 32;
+                // let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
+                let code2 = ">>[++-]<".to_string();
+                let program = vm.compile(code2);
+                println!("{:?}", program.clone());
+                let (rt, _, _) = vm.run(&program, "".to_string());
+                println!("{:?}", rt);
+                // assert_eq!(program.len(), 2);
+                let (processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix) =
+                    vm.simulate(&program, "".to_string());
+                let challenges = vec![two; 11];
+                let mut processor_table = ProcessorTable::new(
+                    field,
+                    processor_matrix.len() as u128,
+                    generator,
+                    order,
+                    processor_matrix,
+                );
+                let mut memory_table = MemoryTable::new(
+                    field,
+                    memory_matrix.len() as u128,
+                    generator,
+                    order,
+                    memory_matrix,
+                );
+                let mut instruction_table = InstructionTable::new(
+                    field,
+                    instruction_matrix.len() as u128,
+                    generator,
+                    order,
+                    instruction_matrix,
+                );
+                let mut input_table = IOTable::new(
+                    field,
+                    input_matrix.len() as u128,
+                    generator,
+                    order,
+                    input_matrix,
+                );
+                let mut output_table = IOTable::new(
+                    field,
+                    output_matrix.len() as u128,
+                    generator,
+                    order,
+                    output_matrix,
+                );
+        
+                processor_table.pad();
+                memory_table.pad();
+                instruction_table.pad();
+                input_table.pad();
+                output_table.pad();
+                let terminal = memory_table.extend_column_ppa(1,challenges.clone());
+                println!("memory_table after extending columns");
+                for row in memory_table.table.matrix.clone() {
+                    println!("{:?}", row);
+                }
+                 println!("tppa: {:?}", terminal[0]);
+                  let mut omicron_domain: Vec<FieldElement> = Vec::new();
+                for i in 0..memory_table.table.height {
+                    omicron_domain.push(memory_table.table.omicron.pow(i));
+                    if i == 4 {
+                        println!("omicron_domain: {:?}", omicron_domain); 
+                    }
+                }
+                
+                let air = memory_table.generate_air(challenges, terminal[0]);
+              
+                let b = air[0].evaluate(omicron_domain[1]);
+               
+                assert_ne!(b, zero);
+                 for v in 0..rt-1 {
+                    let t_all = air[1].evaluate(omicron_domain[v as usize]);
+                    // println!("{:?}", t_all);
+                    assert_eq!(t_all, zero);
+                }
+                
+                 let v =omicron_domain[3];
+        
+                    let t_air1 = air[2].evaluate(v);
+                  
+                    assert_ne!(t_air1, zero);  }
+            
  
 
 }
