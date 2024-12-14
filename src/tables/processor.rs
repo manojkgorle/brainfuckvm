@@ -153,13 +153,14 @@ impl ProcessorTable {
             ipa *= weighted_sum;
             self.table.matrix[(i + 1) as usize][Indices::InstructionPermutaion as usize] = ipa;
         }
-        let  tipa=ipa*(self.table.matrix[(self.table.length-1) as usize][Indices::InstructionPointer as usize]
-            * challenges[ChallengeIndices::A as usize]
-            + self.table.matrix[(self.table.length-1) as usize][Indices::CurrentInstruction as usize]
-                * challenges[ChallengeIndices::B as usize]
-            + self.table.matrix[(self.table.length-1) as usize][Indices::NextInstruction as usize]
-                * challenges[ChallengeIndices::C as usize]
-            - challenges[ChallengeIndices::Alpha as usize]);
+        // let  tipa=ipa*(self.table.matrix[(self.table.length-1) as usize][Indices::InstructionPointer as usize]
+        //     * challenges[ChallengeIndices::A as usize]
+        //     + self.table.matrix[(self.table.length-1) as usize][Indices::CurrentInstruction as usize]
+        //         * challenges[ChallengeIndices::B as usize]
+        //     + self.table.matrix[(self.table.length-1) as usize][Indices::NextInstruction as usize]
+        //         * challenges[ChallengeIndices::C as usize]
+        //     - challenges[ChallengeIndices::Alpha as usize]);
+        let tipa = ipa;
 
         for i in 0..self.table.length - 1 {
             let weighted_sum = self.table.matrix[i as usize][Indices::Cycle as usize]
@@ -173,7 +174,7 @@ impl ProcessorTable {
             self.table.matrix[(i + 1) as usize][Indices::MemoryPermuation as usize] = mpa;
         }
 
-         let tmpa=mpa*(self.table.matrix[(self.table.length-1) as usize][Indices::Cycle as usize]
+        let tmpa=mpa*(self.table.matrix[(self.table.length-1) as usize][Indices::Cycle as usize]
             * challenges[ChallengeIndices::D as usize]
             + self.table.matrix[(self.table.length-1) as usize][Indices::MemoryPointer as usize]
                 * challenges[ChallengeIndices::E as usize]
@@ -646,7 +647,7 @@ mod tests_processor_operations {
 
 #[cfg(test)]
 mod test_processor {
-    use std::time::Instant;
+    use std::time::Instant; 
 
     use super::ProcessorTable;
     use crate::fields::{Field, FieldElement};

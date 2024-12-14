@@ -73,7 +73,6 @@ impl VirtualMachine {
                 stack.pop();
             }
         }
-
         program
     }
 
