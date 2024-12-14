@@ -295,6 +295,7 @@ mod test_instruction {
     use crate::tables::memory::MemoryTable;
     use crate::tables::processor::ProcessorTable;
     use crate::vm::VirtualMachine;
+    use crate::tables::roundup_npow2;
 
     #[test]
     fn test_padding() {
@@ -346,7 +347,7 @@ mod test_instruction {
         let omicron = generator.clone();
         let order = 1 << 32;
         // let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
-        let code2 = ">>+.[++-]+.".to_string();
+        let code2 = ">>[++-]+-".to_string();
         let program = vm.compile(code2);
         println!("{:?}", program.clone());
         let (rt, _, _) = vm.run(&program, "".to_string());
@@ -358,6 +359,7 @@ mod test_instruction {
         let mut processor_table = ProcessorTable::new(
             field,
             processor_matrix.len() as u128,
+            roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
             processor_matrix,
@@ -365,6 +367,7 @@ mod test_instruction {
         let mut memory_table = MemoryTable::new(
             field,
             memory_matrix.len() as u128,
+            roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
             memory_matrix,

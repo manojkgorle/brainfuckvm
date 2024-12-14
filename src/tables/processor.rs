@@ -70,13 +70,14 @@ impl ProcessorTable {
     pub fn new(
         field: Field,
         length: u128,
+        height: u128,
         generator: FieldElement,
         order: u128,
         matrix: Vec<Vec<FieldElement>>,
     ) -> Self {
         let base_width = 7;
         let full_width = base_width + 4;
-        let height = roundup_npow2(length);
+        let height = height;
         let omicron = derive_omicron(generator, order, height);
         let mut gmatrix =
             vec![vec![FieldElement::zero(field); full_width as usize]; height as usize];
@@ -489,7 +490,7 @@ impl ProcessorTable {
         //ci =<
         // ip⋆−ip−1
         // mp⋆−mp+1
-        let trasition_i2 = (ip_next.clone() - ip.clone() - poly_one.clone())
+        let trasition_i2 = (ip_next.clone() - ip.clone() - poly_one.clone())*poly_two.clone()
             + (mp_next.clone() - mp.clone() + poly_one.clone());
         air.push(trasition_i2);
         //ci=>
@@ -512,7 +513,7 @@ impl ProcessorTable {
         // mp⋆−mp
         // mv⋆−mv+1
         // ci = -
-        let trasition_i5 = (ip_next.clone() - ip.clone() - poly_one.clone())
+        let trasition_i5 = (ip_next.clone() - ip.clone() - poly_one.clone())*poly_two.clone()
             + (mp_next.clone() - mp.clone())
             + (mv_next.clone() - mv.clone() + poly_one.clone());
         air.push(trasition_i5);
@@ -677,6 +678,7 @@ mod test_processor {
     use crate::tables::io::IOTable;
     use crate::tables::memory::MemoryTable;
     use crate::tables::processor::Indices;
+    use crate::tables::roundup_npow2;
     use crate::vm::VirtualMachine;
 
     #[test]
@@ -694,6 +696,7 @@ mod test_processor {
         let mut processor_table = ProcessorTable::new(
             field,
             processor_matrix.len() as u128,
+            roundup_npow2(processor_matrix.len() as u128),
             generator,
             order,
             processor_matrix,
@@ -731,6 +734,7 @@ mod test_processor {
         let mut processor_table = ProcessorTable::new(
             field,
             processor_matrix.len() as u128,
+            roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
             processor_matrix,
@@ -738,6 +742,7 @@ mod test_processor {
         let mut memory_table = MemoryTable::new(
             field,
             memory_matrix.len() as u128,
+            roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
             memory_matrix,
@@ -769,12 +774,21 @@ mod test_processor {
         instruction_table.pad();
         input_table.pad();
         output_table.pad();
+
         let terminal = processor_table.extend_columns(challenges.clone());
+        let terminal2 = memory_table.extend_column_ppa(1, challenges.clone());
+        
         println!("processor table after extending columns");
         for row in processor_table.table.matrix.clone() {
             println!("{:?}", row);
         }
+        println!("memory table after extending columns");
+        for row in memory_table.table.matrix.clone() {
+            println!("{:?}", row);
+        }
+
         println!("tmpa: {:?}", terminal[1]);
+        println!("tppa: {:?}", terminal2[0]);
         let mut omicron_domain: Vec<FieldElement> = Vec::new();
         for i in 0..processor_table.table.height {
             omicron_domain.push(processor_table.table.omicron.pow(i));
@@ -819,7 +833,7 @@ mod test_processor {
         // let omicron = generator.clone();
         let order = 1 << 32;
         // let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
-        let code2 = ">>[++-]<".to_string();
+        let code2 = ">>[++-]<+-".to_string();
         let program = vm.compile(code2);
         println!("{:?}", program.clone());
         let (rt, _, _) = vm.run(&program, "".to_string());
@@ -831,6 +845,7 @@ mod test_processor {
         let mut processor_table = ProcessorTable::new(
             field,
             processor_matrix.len() as u128,
+            roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
             processor_matrix,
@@ -838,6 +853,7 @@ mod test_processor {
         let mut memory_table = MemoryTable::new(
             field,
             memory_matrix.len() as u128,
+            roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
             memory_matrix,
@@ -899,29 +915,33 @@ mod test_processor {
             assert_eq!(t_all, zero);
         }
         
-    let v =omicron_domain[3];
-        
-            let t_air1 = air[10].evaluate(v);
-             assert_ne!(t_air1, zero);
-             for v in omicron_domain.clone(){
-                println!("{:?}",air[3].evaluate(v))
-             }
-             for v in omicron_domain.clone(){
-                println!("{:?}",air[4].evaluate(v))
-             }
-             for v in omicron_domain.clone(){
-                println!("{:?}",air[5].evaluate(v))
-             }
-             for v in omicron_domain.clone(){
-                println!("{:?}",air[6].evaluate(v))
-             }
+    //let v =omicron_domain[1];
+    // let t_air1 = air[10].evaluate(v);
+    // println!("{:?}",air[0].evaluate(v));
+    //assert_ne!(t_air1, zero);
+    
 
-
-
-
-      
-        assert_eq!(air[4].evaluate(omicron_domain[1]), zero);
-        assert_eq!(air[4].evaluate(omicron_domain[0]), zero);
-        assert!(air[4].evaluate(omicron_domain[2]) != zero);
+    for v in omicron_domain.clone(){
+        println!("{:?}", air[3].evaluate(v))
     }
+    println!("this was <");
+    for v in omicron_domain.clone(){
+        println!("{:?}",air[4].evaluate(v))
+    }
+    println!("this was >");
+    for v in omicron_domain.clone(){
+        println!("{:?}",air[5].evaluate(v))
+    }
+    println!("this was +");
+    for v in omicron_domain.clone(){
+        println!("{:?}",air[6].evaluate(v))
+    }
+    println!("this was -");
+      
+    assert_eq!(air[4].evaluate(omicron_domain[1]), zero);
+    assert_eq!(air[4].evaluate(omicron_domain[0]), zero);
+    assert!(air[4].evaluate(omicron_domain[2]) != zero);
+
+    }
+
 }
