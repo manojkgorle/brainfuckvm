@@ -41,13 +41,14 @@ impl MemoryTable {
     pub fn new(
         field: Field,
         length: u128,
+        height: u128,
         generator: FieldElement,
         order: u128,
         matrix: Vec<Vec<FieldElement>>,
     ) -> Self {
         let base_width = 3;
         let full_width = base_width + 1;
-        let height = roundup_npow2(length);
+        let height = height;
         let omicron = derive_omicron(generator, order, height);
 
         let mut gmatrix =
@@ -274,6 +275,7 @@ mod test_memory_table {
     use crate::tables::processor::ProcessorTable;
     use crate::tables::Table;
     use crate::vm::VirtualMachine;
+    use crate::tables::roundup_npow2;
 
     #[test]
     fn test_padding() {
@@ -289,6 +291,7 @@ mod test_memory_table {
         let mut memory_table = MemoryTable::new(
             field,
             memory_matrix.len() as u128,
+            roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
             memory_matrix.clone(),
@@ -316,6 +319,7 @@ mod test_memory_table {
         let mut mem = MemoryTable::new(
             field,
             memory_matrix.len() as u128,
+            roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
             memory_matrix,
@@ -424,6 +428,7 @@ mod test_memory_table {
         let mut processor_table = ProcessorTable::new(
             field,
             processor_matrix.len() as u128,
+            roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
             processor_matrix,
@@ -431,6 +436,7 @@ mod test_memory_table {
         let mut memory_table = MemoryTable::new(
             field,
             memory_matrix.len() as u128,
+            roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
             memory_matrix,
@@ -518,6 +524,7 @@ mod test_memory_table {
         let mut processor_table = ProcessorTable::new(
             field,
             processor_matrix.len() as u128,
+            roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
             processor_matrix,
@@ -525,6 +532,7 @@ mod test_memory_table {
         let mut memory_table = MemoryTable::new(
             field,
             memory_matrix.len() as u128,
+            roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
             memory_matrix,

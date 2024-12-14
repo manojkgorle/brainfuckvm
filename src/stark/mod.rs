@@ -87,6 +87,7 @@ pub fn prove(
     let mut processor_table = ProcessorTable::new(
         field,
         matrices[0].clone().len() as u128,
+        roundup_npow2(matrices[2].len() as u128),
         generator,
         order,
         matrices[0].clone(),
@@ -94,6 +95,7 @@ pub fn prove(
     let mut memory_table = MemoryTable::new(
         field,
         matrices[1].len() as u128,
+        roundup_npow2(matrices[2].len() as u128),
         generator,
         order,
         matrices[1].clone(),
