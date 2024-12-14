@@ -82,7 +82,7 @@ impl InstructionTable {
             self.table.matrix[self.table.length as usize + i] = new_row;
         }
     }
-
+    #[warn(unused_variables)]
     pub fn extend_column(&mut self, rand_field_elem: u128, challenges: Vec<FieldElement>) ->Vec<FieldElement>{
         let mut terminal:Vec<FieldElement>=Vec::new();
         let mut ppa = self.table.matrix[0 as usize][Indices::Address as usize]
