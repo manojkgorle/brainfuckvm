@@ -652,7 +652,7 @@ mod tests_processor_operations {
 
 #[cfg(test)]
 mod test_processor {
-    use std::time::Instant;
+    use std::time::Instant; 
 
     use super::ProcessorTable;
     use crate::fields::{Field, FieldElement};
