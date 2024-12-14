@@ -468,7 +468,7 @@ impl ProcessorTable {
         // Transition_all,
         let poly_one = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         let mv_is_zero = poly_one.clone() - mv.clone() * inv_mv.clone();
-
+        //ci=[
         //(ip⋆−ip−2)⋅mv+(ip⋆−ni)⋅iszero
         // mp⋆−mp
         // mv⋆−mv
@@ -477,7 +477,7 @@ impl ProcessorTable {
             + (mp_next.clone() - mp.clone())
             + (mv_next.clone() - mv.clone());
         air.push(trasition_i0);
-
+        //ci=]
         // (ip⋆−ip−2)⋅iszero+(ip⋆−ni)⋅mv
         // mp⋆−mp
         // mv⋆−mv
@@ -486,15 +486,15 @@ impl ProcessorTable {
             + (mv_next.clone() - mv.clone())
             + (mp_next.clone() - mp.clone());
         air.push(trasition_i1);
-
+        //ci =<
         // ip⋆−ip−1
         // mp⋆−mp+1
         let trasition_i2 = (ip_next.clone() - ip.clone() - poly_one.clone())
             + (mp_next.clone() - mp.clone() + poly_one.clone());
         air.push(trasition_i2);
-
+        //ci=>
         // ip⋆−ip−1
-        // mp⋆−mp+1
+        // mp⋆−mp-1
         let trasition_i3 = (ip_next.clone() - ip.clone() - poly_one.clone())
             + (mp_next.clone() - mp.clone() - poly_one.clone());
         air.push(trasition_i3);
@@ -502,7 +502,7 @@ impl ProcessorTable {
         // ip⋆−ip−1
         // mp⋆−mp
         // mv⋆−mv−1
-        // ci = >
+        // ci = +
         let trasition_i4 = (ip_next.clone() - ip.clone() - poly_one.clone())
             + (mp_next.clone() - mp.clone())
             + (mv_next.clone() - mv.clone() - poly_one.clone());
@@ -511,7 +511,7 @@ impl ProcessorTable {
         // ip⋆−ip−1
         // mp⋆−mp
         // mv⋆−mv+1
-        // ci = <
+        // ci = -
         let trasition_i5 = (ip_next.clone() - ip.clone() - poly_one.clone())
             + (mp_next.clone() - mp.clone())
             + (mv_next.clone() - mv.clone() + poly_one.clone());
@@ -519,12 +519,14 @@ impl ProcessorTable {
 
         // ip⋆−ip−1
         // mp⋆−mp
+        //ci=,
         let trasition_i6 =
             (ip_next.clone() - ip.clone() - poly_one.clone()) + (mp_next.clone() - mp.clone());
         air.push(trasition_i6);
         //  ip⋆−ip−1
         // mp⋆−mp
         // mv⋆−mv
+        //ci=.
         let trasition_i7 = (ip_next.clone() - ip.clone() - poly_one.clone())
             + (mp_next.clone() - mp.clone())
             + (mv_next.clone() - mv.clone());
@@ -896,14 +898,30 @@ mod test_processor {
             let t_all = air[9].evaluate(omicron_domain[v as usize]);
             assert_eq!(t_all, zero);
         }
+        
+    let v =omicron_domain[3];
+        
+            let t_air1 = air[10].evaluate(v);
+             assert_ne!(t_air1, zero);
+             for v in omicron_domain.clone(){
+                println!("{:?}",air[3].evaluate(v))
+             }
+             for v in omicron_domain.clone(){
+                println!("{:?}",air[4].evaluate(v))
+             }
+             for v in omicron_domain.clone(){
+                println!("{:?}",air[5].evaluate(v))
+             }
+             for v in omicron_domain.clone(){
+                println!("{:?}",air[6].evaluate(v))
+             }
 
-        let v = omicron_domain[3];
 
-        let t_air1 = air[10].evaluate(v);
-        assert_ne!(t_air1, zero);
 
-        assert_eq!(air[5].evaluate(omicron_domain[1]), zero);
-        assert_eq!(air[5].evaluate(omicron_domain[0]), zero);
-        assert!(air[5].evaluate(omicron_domain[2]) != zero);
+
+      
+        assert_eq!(air[4].evaluate(omicron_domain[1]), zero);
+        assert_eq!(air[4].evaluate(omicron_domain[0]), zero);
+        assert!(air[4].evaluate(omicron_domain[2]) != zero);
     }
 }
