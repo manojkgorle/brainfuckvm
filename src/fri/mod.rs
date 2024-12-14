@@ -11,9 +11,9 @@ use crate::univariate_polynomial::*;
 //boundary_q includes boundary constraints for all tables together, similarly for others
 
 pub fn combination_polynomial(
-    boundary_q: Vec<Polynomial>,
-    transition_q: Vec<Polynomial>,
-    terminal_q: Vec<Polynomial>,
+    processor_q: Vec<Polynomial>,
+    memory_q: Vec<Polynomial>,
+    instruction_q: Vec<Polynomial>,
     challenges: Vec<FieldElement>,
     height: usize,
     field: Field,
@@ -29,28 +29,28 @@ pub fn combination_polynomial(
     //@todo what should be degree here since processor and instruction table can have different heights
     //@todo we can also pass a single vector of all quotient 
 
-    for i in 0..boundary_q.clone().len() {
-        let d = degree - boundary_q[i].clone().degree();
-        combination += Polynomial::new_from_coefficients(vec![alpha]) * boundary_q[i].clone()
+    for i in 0..processor_q.clone().len() {
+        let d = degree - processor_q[i].clone().degree();
+        combination += Polynomial::new_from_coefficients(vec![alpha]) * processor_q[i].clone()
             + Polynomial::new_from_coefficients(vec![beta])
                 * x.clone().pow(d as u128)
-                * boundary_q[i].clone();
+                * processor_q[i].clone();
     }
 
-    for i in 0..transition_q.clone().len() {
-        let d = degree - transition_q[i].clone().degree();
-        combination += Polynomial::new_from_coefficients(vec![alpha]) * transition_q[i].clone()
+    for i in 0..memory_q.clone().len() {
+        let d = degree - memory_q[i].clone().degree();
+        combination += Polynomial::new_from_coefficients(vec![alpha]) * memory_q[i].clone()
             + Polynomial::new_from_coefficients(vec![beta])
                 * x.clone().pow(d as u128)
-                * transition_q[i].clone();
+                * memory_q[i].clone();
     }
 
-    for i in 0..terminal_q.clone().len() {
-        let d = degree - terminal_q[i].clone().degree();
-        combination += Polynomial::new_from_coefficients(vec![alpha]) * terminal_q[i].clone()
+    for i in 0..instruction_q.clone().len() {
+        let d = degree - instruction_q[i].clone().degree();
+        combination += Polynomial::new_from_coefficients(vec![alpha]) * instruction_q[i].clone()
             + Polynomial::new_from_coefficients(vec![beta])
                 * x.clone().pow(d as u128)
-                * terminal_q[i].clone();
+                * instruction_q[i].clone();
     }
 
     combination

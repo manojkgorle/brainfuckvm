@@ -192,9 +192,31 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, f
 
     let eval = FieldElement::zero(field);
 
+
     let processor_quotients = processor_table.generate_quotients(challenges_extension.clone(), Terminal_processor[0], Terminal_processor[1], Terminal_processor[2], Terminal_processor[3]);
     let memory_quotients = memory_table.generate_quotients(challenges_extension.clone(), Terminal_memory[0]);
-    //let instruction_quotients = 
+    let instruction_quotients = instruction_table.generate_quotients(challenges_extension, Terminal_instruction[0], Terminal_instruction[1]);
+
+    //for inter table arguments constraints
+    assert_eq!(Terminal_processor[0], Terminal_instruction[0]); //Tipa = Tppa
+    assert_eq!(Terminal_processor[1], Terminal_memory[0]); //Tmpa = Tppa
+    assert_eq!(Terminal_processor[2], Terminal_input[0]); //Tipa = Tea input
+    assert_eq!(Terminal_processor[3], Terminal_output[0]); //Tipa = Tea output
+    //let this be for now:- assert_eq!(Terminal_instruction[1], Tpea); //Tpea = program evaluation
+
+    //form combination polynomial
+    let combination= combination_polynomial(processor_quotients, memory_quotients, instruction_quotients, challenges_combination, instruction_table.table.height as usize, field);
+    let combination_codeword = domain.evaluate(combination.clone());
+    
+    let merkle_combination = MerkleTree::new(&combination_codeword);
+    channel.send(merkle_combination.inner.root().unwrap().to_vec());
+
+    let (fri_polys, fri_domains, fri_layers, fri_merkles) =  fri_commit(combination.clone(), domain, combination_codeword, merkle_combination, &mut channel);
+
+    let no_of_queries = 5;
+    decommit_fri(no_of_queries, expansion_f, 1<<64-1<<32+1, vec![&data1, &data2], vec![&merkle1, &merkle2], &fri_layers, &fri_merkles, &mut channel);
+
+    //print channel proof, proofsize, time taken for running prover, space taken etc etc.
 
 }
 

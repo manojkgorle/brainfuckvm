@@ -85,32 +85,26 @@ impl InstructionTable {
     #[warn(unused_variables)]
     pub fn extend_column(&mut self, rand_field_elem: u128, challenges: Vec<FieldElement>) ->Vec<FieldElement>{
         let mut terminal:Vec<FieldElement>=Vec::new();
-        let mut ppa = self.table.matrix[0 as usize][Indices::Address as usize]
+        let field = self.table.field;
+        let mut ppa = FieldElement::one(field);
+        let mut pea = self.table.matrix[(0) as usize][Indices::Address as usize]
         * challenges[ChallengeIndices::A as usize]
-        + self.table.matrix[0 as usize][Indices::CurrentInstruction as usize]
-        * challenges[ChallengeIndices::B as usize]
-        + self.table.matrix[0 as usize][Indices::NextInstruction as usize]
-        * challenges[ChallengeIndices::C as usize]
-        - challenges[ChallengeIndices::Alpha as usize];
-
-        let pea = self.table.matrix[0 as usize][Indices::Address as usize]
-            * challenges[ChallengeIndices::A as usize]
-        + self.table.matrix[0 as usize][Indices::CurrentInstruction as usize]
+        + self.table.matrix[(0) as usize][Indices::CurrentInstruction as usize]
             * challenges[ChallengeIndices::B as usize]
-        + self.table.matrix[0 as usize][Indices::NextInstruction as usize]
+        + self.table.matrix[(0) as usize][Indices::NextInstruction as usize]
             * challenges[ChallengeIndices::C as usize];
 
-        self.table.matrix[0_usize][Indices::PermutationArg as usize] = ppa;
-        self.table.matrix[0_usize][Indices::EvaluationArg as usize] = pea;
+        self.table.matrix[(0) as usize][Indices::PermutationArg as usize] = ppa;
+        self.table.matrix[(0) as usize][Indices::EvaluationArg as usize] = pea;
         
-        for i in 0..self.table.length - 1 {
-            let weighted_sum = self.table.matrix[(i + 1) as usize][Indices::Address as usize]
+        for i in 0..self.table.length-1 {
+            let weighted_sum = self.table.matrix[(i+1) as usize][Indices::Address as usize]
                 * challenges[ChallengeIndices::A as usize]
-                + self.table.matrix[(i + 1) as usize][Indices::CurrentInstruction as usize]
+                + self.table.matrix[(i+1) as usize][Indices::CurrentInstruction as usize]
                     * challenges[ChallengeIndices::B as usize]
-                + self.table.matrix[(i + 1) as usize][Indices::NextInstruction as usize]
+                + self.table.matrix[(i+1) as usize][Indices::NextInstruction as usize]
                     * challenges[ChallengeIndices::C as usize];
-            if self.table.matrix[(i + 1) as usize][Indices::Address as usize]
+            if self.table.matrix[(i+1) as usize][Indices::Address as usize]
                 == self.table.matrix[i as usize][Indices::Address as usize]
             {
                 ppa *= weighted_sum - challenges[ChallengeIndices::Alpha as usize];
@@ -118,8 +112,8 @@ impl InstructionTable {
                 self.table.matrix[(i + 1) as usize][Indices::EvaluationArg as usize] = pea;
             } else {
                 self.table.matrix[(i + 1) as usize][Indices::PermutationArg as usize] = ppa;
-                self.table.matrix[(i + 1) as usize][Indices::EvaluationArg as usize] =
-                    pea * challenges[ChallengeIndices::Eta as usize] + weighted_sum;
+                pea = pea * challenges[ChallengeIndices::Eta as usize] + weighted_sum;
+                self.table.matrix[(i + 1) as usize][Indices::EvaluationArg as usize] = pea;
             }
            
         }
@@ -166,7 +160,12 @@ impl InstructionTable {
         let boundaryair = ip.clone() + ppa.clone()
             - Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)])
             + pea.clone()
-            - Polynomial::new_from_coefficients(vec![FieldElement::zero(self.table.field)]);
+            - Polynomial::constant((self.table.matrix[(0) as usize][Indices::Address as usize]
+            * challenges[ChallengeIndices::A as usize]
+            + self.table.matrix[(0) as usize][Indices::CurrentInstruction as usize]
+                * challenges[ChallengeIndices::B as usize]
+            + self.table.matrix[(0) as usize][Indices::NextInstruction as usize]
+                * challenges[ChallengeIndices::C as usize]));
         //@todo check this once!! initial value is not zero and one, set it to req value
         air.push(boundaryair);
 
@@ -333,7 +332,7 @@ mod test_instruction {
         let omicron = generator.clone();
         let order = 1 << 32;
         // let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
-        let code2 = ">>[++-]<".to_string();
+        let code2 = ">>[++-]+".to_string();
         let program = vm.compile(code2);
         println!("{:?}", program.clone());
         let (rt, _, _) = vm.run(&program, "".to_string());
@@ -341,7 +340,7 @@ mod test_instruction {
         // assert_eq!(program.len(), 2);
         let (processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix) =
             vm.simulate(&program, "".to_string());
-        let challenges = vec![one; 11];
+        let challenges = vec![two; 11];
         let mut processor_table = ProcessorTable::new(
             field,
             processor_matrix.len() as u128,
@@ -394,10 +393,10 @@ mod test_instruction {
         for row in instruction_table.table.matrix.clone() {
             println!("{:?}", row);
         }
-        println!("processor table after extending columns");
-        for row in processor_table.table.matrix.clone() {
-            println!("{:?}", row);
-        }
+        // println!("processor table after extending columns");
+        // for row in processor_table.table.matrix.clone() {
+        //     println!("{:?}", row);
+        // }
         println!("tppa: {:?}", terminal[0]);
         println!("tpea: {:?}", terminal[1]);
         println!("tipa: {:?}", terminal2[0]);
@@ -418,13 +417,14 @@ mod test_instruction {
         let b = air[0].evaluate(omicron_domain[0]);
         assert_eq!(b, zero);
 
-        // for v in 0..rt-1 {
-        //     let transition = air[1].evaluate(omicron_domain[v as usize]);
-        //     // println!("{:?}", t_all);
-        //     assert_eq!(transition, zero);
-        // }
+        for v in 0..instruction_table.table.length-1 {
+            let transition = air[1].evaluate(omicron_domain[v as usize]);
+            //println!("{:?}: {}", transition, v);
+            assert_eq!(transition, zero);
+        }
 
-        // let terminal = air[2].evaluate(omicron_domain[(instruction_table.table.length-1) as usize]);
+        let terminal = air[2].evaluate(omicron_domain[(instruction_table.table.length-1) as usize]);
+        assert_eq!(terminal, zero);
 
     }
 

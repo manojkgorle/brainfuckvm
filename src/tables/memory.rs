@@ -417,12 +417,14 @@ mod test_memory_table {
         input_table.pad();
         output_table.pad();
         let terminal = memory_table.extend_column_ppa(1,challenges.clone());
+        let terminal2 = processor_table.extend_columns(challenges.clone());
         println!("memory_table after extending columns");
         for row in memory_table.table.matrix.clone() {
             println!("{:?}", row);
         }
-         println!("tppa: {:?}", terminal[0]);
-          let mut omicron_domain: Vec<FieldElement> = Vec::new();
+        println!("tppa: {:?}", terminal[0]);
+        println!("tmpa: {:?}", terminal2[1]);
+        let mut omicron_domain: Vec<FieldElement> = Vec::new();
         for i in 0..memory_table.table.height {
             omicron_domain.push(memory_table.table.omicron.pow(i));
             if i == 4 {
