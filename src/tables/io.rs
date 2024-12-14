@@ -88,6 +88,9 @@ mod test_io {
         );
         input_table.pad();
         output_table.pad();
+        
+        for row in input_table.table.matrix.clone(){ println!("{:?}",row)}
+        for row in output_table.table.matrix.clone(){println!("{:?}",row)}
         assert_eq!(input_table.table.matrix.len(), 2);
         assert_eq!(output_table.table.matrix.len(), 2);
     }
