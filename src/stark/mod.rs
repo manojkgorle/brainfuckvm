@@ -15,6 +15,32 @@ use crate::fri::*;
 use crate::merkle::*;
 use crate::tables::*;
 use crate::univariate_polynomial::*;
+static CONSOLE_LOGGER: ConsoleLogger = ConsoleLogger;
+use log::{Level, LevelFilter, Metadata, Record};
+use chrono::Local;
+struct ConsoleLogger;
+
+impl log::Log for ConsoleLogger {
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        metadata.level() <= Level::Debug
+    }
+
+    fn log(&self, record: &Record) {
+        if self.enabled(record.metadata()) {
+            println!(
+                "{} [{}] {}:{} - {}",
+                Local::now().format("%Y-%m-%dT%H:%M:%S"),
+                record.level(),
+                record.module_path().unwrap(),
+                record.line().unwrap(),
+                record.args()
+            );
+        }
+    }
+    fn flush(&self) {}
+}
+
+
 
 //@todo boundary, transition and terminal constraints: in all tables: should we be adding them? does that ensure they are individually zero if the sum is zero? check once
 //@todo Tipa, Tmpa, Tiea, Toea, Tpea, Tppai, Tppam, Tea, Tea' -> have to write equality amongst them, not written in terminal constraints
@@ -53,8 +79,10 @@ pub fn prove(
     offset: FieldElement,
     expansion_f: usize,
 ) {
+ 
     let generator = field.generator().pow((1 << 32) - 1);
     let order = 1 << 32;
+    log::info!("Generating tables");
 
     let mut processor_table = ProcessorTable::new(
         field,
@@ -91,13 +119,13 @@ pub fn prove(
         order,
         matrices[4].clone(),
     );
-
-    //@todo instruction table height passed as parameter
+    log::info!("padding all tables");
     processor_table.pad();
     memory_table.pad();
     instruction_table.pad();
     input_table.pad();
     output_table.pad();
+    log::info!("Interpolating all tables");
 
     let processor_interpol_columns = processor_table
         .table
@@ -115,6 +143,7 @@ pub fn prove(
     let initial_length = instruction_table.table.clone().height;
     //all codewords are evaluated on this expanded domain that has length expanded_length
     let expanded_length = initial_length * (expansion_f as u128);
+    log::info!("Extending the domain");
 
     let domain = FriDomain::new(
         offset,
@@ -128,7 +157,8 @@ pub fn prove(
     // processor: clk, ip, ci, ni, mp, mv, inv
     // memory: clk, mp, mv
     // instruction: ip, ci, ni
-    // input and output tables are public, we dont commit to those, we only check their termnal extensions after extending
+    // input and output tables are public, we dont commit to those, we only check their terminal extensions after extending
+    log::info!("evaluating on the extended domain");
 
     for i in 0..processor_interpol_columns.clone().len() {
         basecodewords.push(domain.evaluate(processor_interpol_columns[i].clone()));
@@ -145,7 +175,7 @@ pub fn prove(
     //we are zipping all the base codewords (for each index in order) using concatenation
 
     let mut basecodeword: Vec<Vec<u8>> = Vec::new();
-
+    log::info!("zipping all the codewords on the extended domain");
     for i in 0..expanded_length as usize {
         let mut x: Vec<u8> = vec![];
         for j in 0..basecodewords.len() {
@@ -167,6 +197,7 @@ pub fn prove(
 
     // get 11 challenges array from fiat shamir
     let mut channel = Channel::new();
+    log::info!("commiting the base codewords");
     let merkle1 = MerkleTree::new(&data1);
     channel.send(merkle1.inner.root().unwrap().to_vec());
 
@@ -180,6 +211,7 @@ pub fn prove(
     challenges_extension.push(channel.receive_random_field_element(field));
 
     // use extend column function on tables -> extends the base columns to extension columns
+    log::info!("generating the extension coloumn using the fiat-shamir challenges");
     let Terminal_processor = processor_table.extend_columns(challenges_extension.clone());
     let Terminal_memory = memory_table.extend_column_ppa(1, challenges_extension.clone());
     let Terminal_instruction = instruction_table.extend_column(1, challenges_extension.clone());
@@ -191,6 +223,7 @@ pub fn prove(
         .clone();
 
     //These contain polynomials for interpolation of extension columns
+    log::info!("interpolating the extension columns");
     let processor_interpol_columns_2 = processor_table
         .table
         .clone()
@@ -207,7 +240,8 @@ pub fn prove(
     // processor: ipa, mpa, iea, oea
     // memory: ppa
     // instruction: ppa, pea
-    // input and output tables are public, we dont commit to those, we only check their termnal extensions after extending
+    // input and output tables are public, we dont commit to those, we only check their terminal extensions after extending
+    log::info!("evaluating the extendion columns on the extended domain");
 
     for i in 0..processor_interpol_columns_2.clone().len() {
         extension_codewords.push(domain.evaluate(processor_interpol_columns_2[i].clone()));
@@ -222,7 +256,7 @@ pub fn prove(
     }
 
     let mut extension_codeword: Vec<Vec<u8>> = Vec::new();
-
+    log::info!("zipping all the extension codewords");
     for i in 0..expanded_length as usize {
         let mut x: Vec<u8> = vec![];
         for j in 0..extension_codewords.len() {
@@ -238,7 +272,7 @@ pub fn prove(
 
         data2.push(FieldElement::from_bytes(array));
     }
-
+    log::info!("commiting the extension codewords");
     let merkle2 = MerkleTree::new(&data2);
     channel.send(merkle2.inner.root().unwrap().to_vec());
 
@@ -308,6 +342,14 @@ pub fn prove(
 
     //print channel proof, proofsize, time taken for running prover, space taken etc etc.
 }
+
+ // ii) Decommitment -> query phase
+    // Decommitment involves verifier sending random elements from evaluation domain to prover. and prover responding with decommitments to the evaluations, which involve sending merkle paths along with evaluations.
+    //
+    //  The commitments made are: basecodewords, extension codewords, logd fri layers.
+    //
+    // with each successful query and valid decommitment, verifiers confidence in the proof increases.
+    // decommit the basewords and the extension codewords and also the combination polynomial to satisfy the verifier.
 
 // verifier
 // verifier knows -
