@@ -423,6 +423,7 @@ mod test_memory_table {
         }
          println!("tppa: {:?}", terminal[0]);
           let mut omicron_domain: Vec<FieldElement> = Vec::new();
+          println!("{:?}",memory_table.table.length);
         for i in 0..memory_table.table.height {
             omicron_domain.push(memory_table.table.omicron.pow(i));
             if i == 4 {

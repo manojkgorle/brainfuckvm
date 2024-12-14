@@ -277,6 +277,11 @@ mod test_instruction {
     use crate::fields::Field;
     use crate::fields::FieldElement;
     use crate::vm::VirtualMachine;
+    use super::InstructionTable;
+    use crate::tables::Table;
+    use crate::tables::instruction::ChallengeIndices;
+
+
     #[test]
     fn test_padding() {
         let field = Field(18446744069414584321);
@@ -315,4 +320,96 @@ mod test_instruction {
             FieldElement::zero(field)
         );
     }
+    #[test]
+    fn test_generate_air(){
+        let field = Field::new((1<<64)-(1<<32)+1);
+        let zero = FieldElement::zero(field);
+        let one = FieldElement::one(field);
+        let two = one + one;
+        let vm = VirtualMachine::new(field);
+        let generator = FieldElement::new(1753635133440165772, field);
+        // let omicron = generator.clone();
+        let order = 1 << 32;
+        // let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
+        let code2 = ">>[++-]<".to_string();
+        let program = vm.compile(code2);
+        println!("{:?}", program.clone());
+        let (rt, _, _) = vm.run(&program, "".to_string());
+        println!("{:?}", rt);
+        // assert_eq!(program.len(), 2);
+        let (processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix) =
+            vm.simulate(&program, "".to_string());
+        let challenges = vec![two; 11];
+        // let mut processor_table = ProcessorTable::new(
+        //     field,
+        //     processor_matrix.len() as u128,
+        //     generator,
+        //     order,
+        //     processor_matrix,
+        // );
+        // let mut memory_table = MemoryTable::new(
+        //     field,
+        //     memory_matrix.len() as u128,
+        //     generator,
+        //     order,
+        //     memory_matrix,
+        // );
+        let mut instruction_table = InstructionTable::new(
+            field,
+            instruction_matrix.len() as u128,
+            generator,
+            order,
+            instruction_matrix,
+        );
+        // let mut input_table = IOTable::new(
+        //     field,
+        //     input_matrix.len() as u128,
+        //     generator,
+        //     order,
+        //     input_matrix,
+        // );
+        // let mut output_table = IOTable::new(
+        //     field,
+        //     output_matrix.len() as u128,
+        //     generator,
+        //     order,
+        //     output_matrix,
+        // );
+
+        // processor_table.pad();
+        // memory_table.pad();
+        instruction_table.pad();
+        // input_table.pad();
+        // output_table.pad();
+        let terminal = instruction_table.extend_column(1,challenges.clone());
+        println!("instruction table after extending columns");
+        for row in instruction_table.table.matrix.clone() {
+            println!("{:?}", row);
+        }
+         println!("tppa: {:?}", terminal[0]);
+          let mut omicron_domain: Vec<FieldElement> = Vec::new();
+          println!("{:?}",instruction_table.table.length);
+        for i in 0..instruction_table.table.height {
+            omicron_domain.push(instruction_table.table.omicron.pow(i));
+            if i == 4 {
+                println!("omicron_domain: {:?}", omicron_domain); 
+            }
+        }
+        
+        let air = instruction_table.generate_air(challenges, terminal[0],terminal[1]);
+      
+        let b = air[0].evaluate(omicron_domain[0]);
+       
+        assert_eq!(b, zero);
+        //  for v in 0..rt-1 {
+        //     let t_all = air[1].evaluate(omicron_domain[v as usize]);
+        //       assert_eq!(t_all, zero);
+        // }
+        
+        //  let v =omicron_domain[4];
+
+        //     let t_air1 = air[2].evaluate(v);
+          
+        //     assert_eq!(t_air1, zero); 
+         }
 }
