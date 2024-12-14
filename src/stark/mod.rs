@@ -57,6 +57,7 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, f
     let mut input_table = IOTable::new(field, matrices[3].len() as u128, generator, order, matrices[3].clone());
     let mut output_table = IOTable::new(field, matrices[4].len() as u128, generator, order, matrices[4].clone());
 
+    //@todo instruction table height passed as parameter
     processor_table.pad();
     memory_table.pad();
     instruction_table.pad();
@@ -189,13 +190,11 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, f
     channel.send(x.to_bytes());
     challenges_combination.push(channel.receive_random_field_element(field));
 
-    // let processor_AIR = processor_table.generate_air(challenges_extension, Terminal_processor[0], Terminal_processor[1], Terminal_processor[2], Terminal_processor[3]);
-    // let memory_AIR= memory_table.generate_air(challenges_extension, Terminal_memory[0]);
-    // let instruction_AIR = instruction_table.generate_air(challenges_extension, Terminal_instruction[0], Terminal_instruction[1]);
+    let eval = FieldElement::zero(field);
 
-    let processor_zerofier = processor_table.generate_zerofier();
-    let memory_zerofier= memory_table.generate_zerofier();
-    let instruction_zerofier = instruction_table.generate_zerofier();
+    let processor_quotients = processor_table.generate_quotients(challenges_extension.clone(), Terminal_processor[0], Terminal_processor[1], Terminal_processor[2], Terminal_processor[3]);
+    let memory_quotients = memory_table.generate_quotients(challenges_extension.clone(), Terminal_memory[0]);
+    //let instruction_quotients = 
 
 }
 
