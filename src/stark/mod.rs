@@ -2,23 +2,22 @@
 use std::io::Read;
 
 use instruction::Indices;
+use instruction::InstructionTable;
 use io::IOTable;
 use memory::MemoryTable;
 use processor::ProcessorTable;
-use instruction::InstructionTable;
 
 use crate::channel;
-use crate::merkle::*;
 use crate::channel::*;
-use crate::fri::*;
 use crate::fields::Field;
 use crate::fields::FieldElement;
+use crate::fri::*;
+use crate::merkle::*;
 use crate::tables::*;
 use crate::univariate_polynomial::*;
 
-
 //@todo boundary, transition and terminal constraints: in all tables: should we be adding them? does that ensure they are individually zero if the sum is zero? check once
-//@todo Tipa, Tmpa, Tiea, Toea, Tpea, Tppai, Tppam, Tea, Tea' -> have to write equality amongst them, not written in terminal constraints 
+//@todo Tipa, Tmpa, Tiea, Toea, Tpea, Tppai, Tppam, Tea, Tea' -> have to write equality amongst them, not written in terminal constraints
 pub struct Stark<'a> {
     pub running_time: i32,
     pub memory_length: usize,
@@ -47,15 +46,51 @@ pub enum ChallengeIndices {
 // prove:
 // prove parameter - matrices, inputs
 // matrices -> processor, memory, instruction, i, o -> in this order
-pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, field: Field, offset: FieldElement, expansion_f: usize){
-    let generator = field.generator().pow((1<<32)-1);
-    let order = 1<<32;
+pub fn prove(
+    matrices: Vec<Vec<Vec<FieldElement>>>,
+    inputs: Vec<FieldElement>,
+    field: Field,
+    offset: FieldElement,
+    expansion_f: usize,
+) {
+    let generator = field.generator().pow((1 << 32) - 1);
+    let order = 1 << 32;
 
-    let mut processor_table  = ProcessorTable::new(field, matrices[0].clone().len() as u128, generator, order, matrices[0].clone());
-    let mut memory_table = MemoryTable::new(field, matrices[1].len() as u128, generator, order, matrices[1].clone());
-    let mut instruction_table = InstructionTable::new(field, matrices[2].len() as u128, generator, order, matrices[2].clone());
-    let mut input_table = IOTable::new(field, matrices[3].len() as u128, generator, order, matrices[3].clone());
-    let mut output_table = IOTable::new(field, matrices[4].len() as u128, generator, order, matrices[4].clone());
+    let mut processor_table = ProcessorTable::new(
+        field,
+        matrices[0].clone().len() as u128,
+        generator,
+        order,
+        matrices[0].clone(),
+    );
+    let mut memory_table = MemoryTable::new(
+        field,
+        matrices[1].len() as u128,
+        generator,
+        order,
+        matrices[1].clone(),
+    );
+    let mut instruction_table = InstructionTable::new(
+        field,
+        matrices[2].len() as u128,
+        generator,
+        order,
+        matrices[2].clone(),
+    );
+    let mut input_table = IOTable::new(
+        field,
+        matrices[3].len() as u128,
+        generator,
+        order,
+        matrices[3].clone(),
+    );
+    let mut output_table = IOTable::new(
+        field,
+        matrices[4].len() as u128,
+        generator,
+        order,
+        matrices[4].clone(),
+    );
 
     //@todo instruction table height passed as parameter
     processor_table.pad();
@@ -64,16 +99,29 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, f
     input_table.pad();
     output_table.pad();
 
-    let processor_interpol_columns = processor_table.table.clone().interpolate_columns(vec![0,1,2,3,4,5,6]);
-    let memory_interpol_columns = memory_table.table.clone().interpolate_columns(vec![0,1,2]);
-    let instruction_interpol_columns = instruction_table.table.clone().interpolate_columns(vec![0,1,2]);
+    let processor_interpol_columns = processor_table
+        .table
+        .clone()
+        .interpolate_columns(vec![0, 1, 2, 3, 4, 5, 6]);
+    let memory_interpol_columns = memory_table
+        .table
+        .clone()
+        .interpolate_columns(vec![0, 1, 2]);
+    let instruction_interpol_columns = instruction_table
+        .table
+        .clone()
+        .interpolate_columns(vec![0, 1, 2]);
 
     let initial_length = instruction_table.table.clone().height;
     //all codewords are evaluated on this expanded domain that has length expanded_length
-    let expanded_length = initial_length*(expansion_f as u128);
+    let expanded_length = initial_length * (expansion_f as u128);
 
-    let domain = FriDomain::new(offset, derive_omicron(generator, order, expanded_length), expanded_length);
-    
+    let domain = FriDomain::new(
+        offset,
+        derive_omicron(generator, order, expanded_length),
+        expanded_length,
+    );
+
     let mut basecodewords: Vec<Vec<FieldElement>> = Vec::new();
 
     // basecodewords vector order:
@@ -82,15 +130,15 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, f
     // instruction: ip, ci, ni
     // input and output tables are public, we dont commit to those, we only check their termnal extensions after extending
 
-    for i in 0..processor_interpol_columns.clone().len(){
+    for i in 0..processor_interpol_columns.clone().len() {
         basecodewords.push(domain.evaluate(processor_interpol_columns[i].clone()));
     }
 
-    for i in 0..memory_interpol_columns.clone().len(){
+    for i in 0..memory_interpol_columns.clone().len() {
         basecodewords.push(domain.evaluate(memory_interpol_columns[i].clone()));
     }
 
-    for i in 0..instruction_interpol_columns.clone().len(){
+    for i in 0..instruction_interpol_columns.clone().len() {
         basecodewords.push(domain.evaluate(instruction_interpol_columns[i].clone()));
     }
 
@@ -98,9 +146,9 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, f
 
     let mut basecodeword: Vec<Vec<u8>> = Vec::new();
 
-    for i in 0..expanded_length as usize{
+    for i in 0..expanded_length as usize {
         let mut x: Vec<u8> = vec![];
-        for j in 0..basecodewords.len(){
+        for j in 0..basecodewords.len() {
             x.extend(basecodewords[j][i].to_bytes().iter().map(|&x| x));
         }
         basecodeword.push(x);
@@ -109,14 +157,14 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, f
     //@todo make extend columns function return Terminal value , eg. Tipa, for every table and store it, use it to compare
     let mut data1 = vec![];
 
-    for i in 0..basecodeword.len(){ 
-        // difficulty in implementing -> let n = basecodewords[0].len(); 
+    for i in 0..basecodeword.len() {
+        // difficulty in implementing -> let n = basecodewords[0].len();
         // so hardcoded the value to 32*13 = 416 -> where 13 => clk, ip, ci, ni, mp, mv, inv, clk, mp, mv, ip, ci, ni
         let array: &[u8] = &basecodeword[i].to_vec();
 
         data1.push(FieldElement::from_bytes(array));
     }
-    
+
     // get 11 challenges array from fiat shamir
     let mut channel = Channel::new();
     let merkle1 = MerkleTree::new(&data1);
@@ -124,7 +172,7 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, f
 
     let mut challenges_extension = vec![];
 
-    for i in 0..10{
+    for i in 0..10 {
         let x = channel.receive_random_field_element(field);
         challenges_extension.push(x);
         channel.send(x.to_bytes());
@@ -135,13 +183,23 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, f
     let Terminal_processor = processor_table.extend_columns(challenges_extension.clone());
     let Terminal_memory = memory_table.extend_column_ppa(1, challenges_extension.clone());
     let Terminal_instruction = instruction_table.extend_column(1, challenges_extension.clone());
-    let Terminal_input = input_table.extend_column_ea(1, challenges_extension[ChallengeIndices::Gamma as usize]).clone();
-    let Terminal_output = output_table.extend_column_ea(1, challenges_extension[ChallengeIndices::Delta as usize]).clone();
+    let Terminal_input = input_table
+        .extend_column_ea(1, challenges_extension[ChallengeIndices::Gamma as usize])
+        .clone();
+    let Terminal_output = output_table
+        .extend_column_ea(1, challenges_extension[ChallengeIndices::Delta as usize])
+        .clone();
 
-    //These contain polynomials for interpolation of extension columns 
-    let processor_interpol_columns_2 = processor_table.table.clone().interpolate_columns(vec![7, 8, 9, 10]);
+    //These contain polynomials for interpolation of extension columns
+    let processor_interpol_columns_2 = processor_table
+        .table
+        .clone()
+        .interpolate_columns(vec![7, 8, 9, 10]);
     let memory_interpol_columns_2 = memory_table.table.clone().interpolate_columns(vec![3]);
-    let instruction_interpol_columns_2 = instruction_table.table.clone().interpolate_columns(vec![3, 4]);
+    let instruction_interpol_columns_2 = instruction_table
+        .table
+        .clone()
+        .interpolate_columns(vec![3, 4]);
 
     let mut extension_codewords: Vec<Vec<FieldElement>> = Vec::new();
 
@@ -151,23 +209,23 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, f
     // instruction: ppa, pea
     // input and output tables are public, we dont commit to those, we only check their termnal extensions after extending
 
-    for i in 0..processor_interpol_columns_2.clone().len(){
+    for i in 0..processor_interpol_columns_2.clone().len() {
         extension_codewords.push(domain.evaluate(processor_interpol_columns_2[i].clone()));
     }
 
-    for i in 0..memory_interpol_columns_2.clone().len(){
+    for i in 0..memory_interpol_columns_2.clone().len() {
         extension_codewords.push(domain.evaluate(memory_interpol_columns_2[i].clone()));
     }
 
-    for i in 0..instruction_interpol_columns_2.clone().len(){
+    for i in 0..instruction_interpol_columns_2.clone().len() {
         extension_codewords.push(domain.evaluate(instruction_interpol_columns_2[i].clone()));
     }
 
     let mut extension_codeword: Vec<Vec<u8>> = Vec::new();
 
-    for i in 0..expanded_length as usize{
+    for i in 0..expanded_length as usize {
         let mut x: Vec<u8> = vec![];
-        for j in 0..extension_codewords.len(){
+        for j in 0..extension_codewords.len() {
             x.extend(extension_codewords[j][i].to_bytes().iter().map(|&x| x));
         }
         extension_codeword.push(x);
@@ -175,7 +233,7 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, f
 
     let mut data2 = vec![];
 
-    for i in 0..extension_codeword.len(){ 
+    for i in 0..extension_codeword.len() {
         let array: &[u8] = &extension_codeword[i].to_vec();
 
         data2.push(FieldElement::from_bytes(array));
@@ -192,58 +250,80 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, f
 
     let eval = FieldElement::zero(field);
 
-
-    let processor_quotients = processor_table.generate_quotients(challenges_extension.clone(), Terminal_processor[0], Terminal_processor[1], Terminal_processor[2], Terminal_processor[3]);
-    let memory_quotients = memory_table.generate_quotients(challenges_extension.clone(), Terminal_memory[0]);
-    let instruction_quotients = instruction_table.generate_quotients(challenges_extension, Terminal_instruction[0], Terminal_instruction[1]);
+    let processor_quotients = processor_table.generate_quotients(
+        challenges_extension.clone(),
+        Terminal_processor[0],
+        Terminal_processor[1],
+        Terminal_processor[2],
+        Terminal_processor[3],
+    );
+    let memory_quotients =
+        memory_table.generate_quotients(challenges_extension.clone(), Terminal_memory[0]);
+    let instruction_quotients = instruction_table.generate_quotients(
+        challenges_extension,
+        Terminal_instruction[0],
+        Terminal_instruction[1],
+    );
 
     //for inter table arguments constraints
     assert_eq!(Terminal_processor[0], Terminal_instruction[0]); //Tipa = Tppa
     assert_eq!(Terminal_processor[1], Terminal_memory[0]); //Tmpa = Tppa
     assert_eq!(Terminal_processor[2], Terminal_input[0]); //Tipa = Tea input
     assert_eq!(Terminal_processor[3], Terminal_output[0]); //Tipa = Tea output
-    //let this be for now:- assert_eq!(Terminal_instruction[1], Tpea); //Tpea = program evaluation
+                                                           //let this be for now:- assert_eq!(Terminal_instruction[1], Tpea); //Tpea = program evaluation
 
     //form combination polynomial
-    let combination= combination_polynomial(processor_quotients, memory_quotients, instruction_quotients, challenges_combination, instruction_table.table.height as usize, field);
+    let combination = combination_polynomial(
+        processor_quotients,
+        memory_quotients,
+        instruction_quotients,
+        challenges_combination,
+        instruction_table.table.height as usize,
+        field,
+    );
     let combination_codeword = domain.evaluate(combination.clone());
-    
+
     let merkle_combination = MerkleTree::new(&combination_codeword);
     channel.send(merkle_combination.inner.root().unwrap().to_vec());
 
-    let (fri_polys, fri_domains, fri_layers, fri_merkles) =  fri_commit(combination.clone(), domain, combination_codeword, merkle_combination, &mut channel);
+    let (fri_polys, fri_domains, fri_layers, fri_merkles) = fri_commit(
+        combination.clone(),
+        domain,
+        combination_codeword,
+        merkle_combination,
+        &mut channel,
+    );
 
     let no_of_queries = 5;
-    decommit_fri(no_of_queries, expansion_f, 1<<64-1<<32+1, vec![&data1, &data2], vec![&merkle1, &merkle2], &fri_layers, &fri_merkles, &mut channel);
+    decommit_fri(
+        no_of_queries,
+        expansion_f,
+        1 << 64 - 1 << 32 + 1,
+        vec![&data1, &data2],
+        vec![&merkle1, &merkle2],
+        &fri_layers,
+        &fri_merkles,
+        &mut channel,
+    );
 
     //print channel proof, proofsize, time taken for running prover, space taken etc etc.
-
 }
 
-// use generate AIR -> generate zerofier -> generate quotient: on all tables
-// form combination polynomial from quotient polynomials and challenges array
-// evaluate combination polynomials on expanded evaluation domains to get combination codeword
-// perform fri :D, send commitments of fri functions (written in fri module) 
-// lessgooo
-
-//@todo IMP - we have interpolated columns of processor table already for commitment and fiat shamir, no need to do it again in AIR
-
 // verifier
-// verifier knows - 
+// verifier knows -
 // constraints (therefore AIR)
 // zerofiers (instruction zerofiers //@todo discuss once)
 // combination polynomial equation
 // challenges of extension columns
 // challenges of composition polynomial
-// 
-// prover sends to verifier - 
+//
+// prover sends to verifier -
 // height (whose correctness is indirectly verified through fri and degree bound)
 // base codewords merkle root, extension codewords merkle root
 // for each query (index) of verifier, prover sends respective evaluation and merkle authentication path of evaluation
 // written in fri decommit_on_query
 //
 //verifier will perform IOTable computations like extension of columns, will then send those values to prover via channel
-
 
 impl Stark<'_> {}
 
@@ -267,9 +347,8 @@ mod stark_test {
         let x = FieldElement::new(318, Field::new(421));
         println!("{}", x);
         let y = x.to_bytes();
-        for i in 0..y.len(){
+        for i in 0..y.len() {
             print!("{}, ", y[i]);
         }
     }
 }
-

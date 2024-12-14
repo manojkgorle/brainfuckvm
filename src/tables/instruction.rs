@@ -1,7 +1,7 @@
 use super::{derive_omicron, roundup_npow2, Table};
 use crate::fields::{Field, FieldElement};
 use crate::univariate_polynomial::*;
-pub struct InstructionTable { 
+pub struct InstructionTable {
     pub table: Table,
 }
 
@@ -83,28 +83,32 @@ impl InstructionTable {
         }
     }
     #[warn(unused_variables)]
-    pub fn extend_column(&mut self, rand_field_elem: u128, challenges: Vec<FieldElement>) ->Vec<FieldElement>{
-        let mut terminal:Vec<FieldElement>=Vec::new();
+    pub fn extend_column(
+        &mut self,
+        rand_field_elem: u128,
+        challenges: Vec<FieldElement>,
+    ) -> Vec<FieldElement> {
+        let mut terminal: Vec<FieldElement> = Vec::new();
         let field = self.table.field;
         let mut ppa = FieldElement::one(field);
         let mut pea = self.table.matrix[(0) as usize][Indices::Address as usize]
-        * challenges[ChallengeIndices::A as usize]
-        + self.table.matrix[(0) as usize][Indices::CurrentInstruction as usize]
-            * challenges[ChallengeIndices::B as usize]
-        + self.table.matrix[(0) as usize][Indices::NextInstruction as usize]
-            * challenges[ChallengeIndices::C as usize];
+            * challenges[ChallengeIndices::A as usize]
+            + self.table.matrix[(0) as usize][Indices::CurrentInstruction as usize]
+                * challenges[ChallengeIndices::B as usize]
+            + self.table.matrix[(0) as usize][Indices::NextInstruction as usize]
+                * challenges[ChallengeIndices::C as usize];
 
         self.table.matrix[(0) as usize][Indices::PermutationArg as usize] = ppa;
         self.table.matrix[(0) as usize][Indices::EvaluationArg as usize] = pea;
-        
-        for i in 0..self.table.length-1 {
-            let weighted_sum = self.table.matrix[(i+1) as usize][Indices::Address as usize]
+
+        for i in 0..self.table.length - 1 {
+            let weighted_sum = self.table.matrix[(i + 1) as usize][Indices::Address as usize]
                 * challenges[ChallengeIndices::A as usize]
-                + self.table.matrix[(i+1) as usize][Indices::CurrentInstruction as usize]
+                + self.table.matrix[(i + 1) as usize][Indices::CurrentInstruction as usize]
                     * challenges[ChallengeIndices::B as usize]
-                + self.table.matrix[(i+1) as usize][Indices::NextInstruction as usize]
+                + self.table.matrix[(i + 1) as usize][Indices::NextInstruction as usize]
                     * challenges[ChallengeIndices::C as usize];
-            if self.table.matrix[(i+1) as usize][Indices::Address as usize]
+            if self.table.matrix[(i + 1) as usize][Indices::Address as usize]
                 == self.table.matrix[i as usize][Indices::Address as usize]
             {
                 ppa *= weighted_sum - challenges[ChallengeIndices::Alpha as usize];
@@ -115,14 +119,18 @@ impl InstructionTable {
                 pea = pea * challenges[ChallengeIndices::Eta as usize] + weighted_sum;
                 self.table.matrix[(i + 1) as usize][Indices::EvaluationArg as usize] = pea;
             }
-           
         }
         terminal.push(ppa);
         terminal.push(pea);
         terminal
     }
 
-    pub fn generate_air(&self, challenges: Vec<FieldElement>,tppa:FieldElement,tpea:FieldElement) -> Vec<Polynomial> {
+    pub fn generate_air(
+        &self,
+        challenges: Vec<FieldElement>,
+        tppa: FieldElement,
+        tpea: FieldElement,
+    ) -> Vec<Polynomial> {
         let interpolated = self.table.clone().interpolate_columns(vec![
             Indices::Address as u128,
             Indices::CurrentInstruction as u128,
@@ -153,19 +161,21 @@ impl InstructionTable {
         let one = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         let mut air = vec![];
 
-        //Boundary constraint: 
+        //Boundary constraint:
         //ip=0
         //@todo ci  ni, ppa, pea ka bhi boundary constraint dalna hai?
 
         let boundaryair = ip.clone() + ppa.clone()
             - Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)])
             + pea.clone()
-            - Polynomial::constant((self.table.matrix[(0) as usize][Indices::Address as usize]
-            * challenges[ChallengeIndices::A as usize]
-            + self.table.matrix[(0) as usize][Indices::CurrentInstruction as usize]
-                * challenges[ChallengeIndices::B as usize]
-            + self.table.matrix[(0) as usize][Indices::NextInstruction as usize]
-                * challenges[ChallengeIndices::C as usize]));
+            - Polynomial::constant(
+                (self.table.matrix[(0) as usize][Indices::Address as usize]
+                    * challenges[ChallengeIndices::A as usize]
+                    + self.table.matrix[(0) as usize][Indices::CurrentInstruction as usize]
+                        * challenges[ChallengeIndices::B as usize]
+                    + self.table.matrix[(0) as usize][Indices::NextInstruction as usize]
+                        * challenges[ChallengeIndices::C as usize]),
+            );
         //@todo check this once!! initial value is not zero and one, set it to req value
         air.push(boundaryair);
 
@@ -218,14 +228,14 @@ impl InstructionTable {
         air.push(transitionair);
 
         //Terminal constraints:
-        
+
         //ppa - Tppa
         //pea - tpea
         //@todo Tppa and tipa given by prover, for now just taking it as empty polynomials to write constraint without error
         //@todo tpea is computed locally by verifier, taking empty polynomial for now
 
         let terminalair =
-            ppa.clone() -Polynomial::constant(tppa) + pea.clone() - Polynomial::constant(tpea) ;
+            ppa.clone() - Polynomial::constant(tppa) + pea.clone() - Polynomial::constant(tpea);
         //@todo separate Tppa - tipa term as it will cancel out
         air.push(terminalair);
 
@@ -257,9 +267,14 @@ impl InstructionTable {
         zerofiers
     }
 
-    pub fn generate_quotients(&self, challenges: Vec<FieldElement>,tppa:FieldElement,tpea:FieldElement) -> Vec<Polynomial> {
+    pub fn generate_quotients(
+        &self,
+        challenges: Vec<FieldElement>,
+        tppa: FieldElement,
+        tpea: FieldElement,
+    ) -> Vec<Polynomial> {
         let mut quotients = vec![];
-        let air = self.generate_air(challenges,tppa,tpea);
+        let air = self.generate_air(challenges, tppa, tpea);
         let zerofiers = self.generate_zerofier();
 
         for i in 0..air.len() {
@@ -275,12 +290,11 @@ mod test_instruction {
     use super::Indices;
     use crate::fields::Field;
     use crate::fields::FieldElement;
-    use crate::vm::VirtualMachine;
-    use crate::tables::processor::ProcessorTable;
     use crate::tables::instruction::InstructionTable;
     use crate::tables::io::IOTable;
     use crate::tables::memory::MemoryTable;
-
+    use crate::tables::processor::ProcessorTable;
+    use crate::vm::VirtualMachine;
 
     #[test]
     fn test_padding() {
@@ -328,11 +342,11 @@ mod test_instruction {
         let one = FieldElement::one(field);
         let two = one + one;
         let vm = VirtualMachine::new(field);
-        let generator = field.generator().pow((1<<32)-1);
+        let generator = field.generator().pow((1 << 32) - 1);
         let omicron = generator.clone();
         let order = 1 << 32;
         // let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
-        let code2 = ">>[++-]+".to_string();
+        let code2 = ">>+.[++-]+.".to_string();
         let program = vm.compile(code2);
         println!("{:?}", program.clone());
         let (rt, _, _) = vm.run(&program, "".to_string());
@@ -405,7 +419,7 @@ mod test_instruction {
         for i in 0..instruction_table.table.height {
             omicron_domain.push(instruction_table.table.omicron.pow(i));
             if i == 4 {
-                println!("omicron_domain: {:?}", omicron_domain); 
+                println!("omicron_domain: {:?}", omicron_domain);
             }
         }
         let air = instruction_table.generate_air(challenges, terminal[0], terminal[1]);
@@ -417,15 +431,25 @@ mod test_instruction {
         let b = air[0].evaluate(omicron_domain[0]);
         assert_eq!(b, zero);
 
-        for v in 0..instruction_table.table.length-1 {
+        for v in 0..instruction_table.table.length - 1 {
             let transition = air[1].evaluate(omicron_domain[v as usize]);
             //println!("{:?}: {}", transition, v);
             assert_eq!(transition, zero);
         }
 
-        let terminal = air[2].evaluate(omicron_domain[(instruction_table.table.length-1) as usize]);
+        let terminal =
+            air[2].evaluate(omicron_domain[(instruction_table.table.length - 1) as usize]);
         assert_eq!(terminal, zero);
 
-    }
+        println!("Input table after extending columns");
+        for row in input_table.table.matrix.clone() {
+            println!("{:?}", row);
+        }
+        println!("Output table after extending columns");
+        for row in output_table.table.matrix.clone() {
+            println!("{:?}", row);
+        }
 
+        //@todo check input output bt
+    }
 }
