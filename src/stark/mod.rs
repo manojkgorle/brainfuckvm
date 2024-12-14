@@ -7,6 +7,7 @@ use memory::MemoryTable;
 use processor::ProcessorTable;
 use instruction::InstructionTable;
 
+use crate::channel;
 use crate::merkle::*;
 use crate::channel::*;
 use crate::fri::*;
