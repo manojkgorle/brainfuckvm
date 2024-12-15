@@ -43,7 +43,9 @@ impl log::Log for ConsoleLogger {
 
 
 //@todo boundary, transition and terminal constraints: in all tables: should we be adding them? does that ensure they are individually zero if the sum is zero? check once
-//@todo Tipa, Tmpa, Tiea, Toea, Tpea, Tppai, Tppam, Tea, Tea' -> have to write equality amongst them, not written in terminal constraints
+//transition has this bt
+//input ouput giving lots of bt, run hone me excess time, input string bt, ask manoj
+
 pub struct Stark<'a> {
     pub running_time: i32,
     pub memory_length: usize,
