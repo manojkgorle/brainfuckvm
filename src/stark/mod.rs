@@ -315,6 +315,7 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field
     log::info!("Commiting the extension codewords");
     println!("Commiting the extension codewords...");
     let merkle2 = MerkleTree::new(&extension_codeword);
+    
     channel.send(merkle2.inner.root().unwrap().to_vec());
 
     let mut challenges_combination = vec![];
@@ -487,7 +488,7 @@ pub fn verify_proof(
     terminal_memory:Vec<FieldElement>,
     terminal_input:Vec<FieldElement>,
     terminal_output:Vec<FieldElement>,
-height:FieldElement){
+degree_bound:usize){
         let mut channel=Channel::new();
         // merkle root of the zipped base codewords
         let base_merkle_root =compressed_proof[0].clone();
@@ -515,7 +516,7 @@ height:FieldElement){
         // height should be power of 2
     // for fri_layer degree of the combination polynomial should be less then the height and the domain size will be the height*expansion_fact
     // fri.layer.len = 1+ log(height)/log2 
-    let number = height.0;
+    let number = degree_bound+1 as usize;
     let base = 2.0;
     let log_base_2 = (number as f64).log2();
     let fri_layer_length:usize=(log_base_2+1 as f64) as usize;
@@ -550,7 +551,7 @@ height:FieldElement){
             terminal_memory.clone(),
             terminal_input.clone(),
             terminal_output.clone(),
-            height,
+            degree_bound,
             fri_layer_length
         );
         // why 46 ??// here 46 is consistence acc to stark101 6 commitment of the f(x), f(gx), f(g^2x) for it's elem and the authentication path and other 41 for the fri layer 4 for all 10 layers and 1 for the last layer the constant term
@@ -573,11 +574,11 @@ pub fn verify_queries( base_idx: usize,
     terminal_memory:Vec<FieldElement>,
     terminal_input:Vec<FieldElement>,
     terminal_output:Vec<FieldElement>,
-height:FieldElement,
+degree_bound:usize,
 fri_layer_length:usize
 ){
     // length of the eval_domain
-    let len =height.0 as usize *blow_up_factor ;
+    let len = (degree_bound+1 as usize)*blow_up_factor ;
     let base_merkle_root = compressed_proof[0].clone();
     // doubt here how this compressed proof is storing the leaf and the proof_bytes // leaf of the zipped base codewords
     // doubt solved
@@ -635,7 +636,7 @@ fri_layer_length:usize
     assert_eq!(terminal_processor[3], terminal_output[0]); //Tipa = Tea output
     //@todo
     //let this be for now:- assert_eq!(Terminal_instruction[1], Tpea); //Tpea = program evaluation
-    let intial_length=blow_up_factor*height.0 as usize;
+  
 
     verify_fri_layers(
         base_idx + 8,
@@ -737,7 +738,9 @@ mod stark_test {
         let code = "++>+-[+--].".to_string();
         //let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
         let program = vm.compile(code);
+        
         let (running_time, input_symbols, output_symbols) = vm.run(&program, "".to_string());
+       
         let (processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix) =
             vm.simulate(&program, "".to_string());
         assert_eq!(running_time as usize, processor_matrix.len());
@@ -745,10 +748,14 @@ mod stark_test {
         let offset = FieldElement::one(field);
         let expansion_f =1;
         let num_queries = 1;
+        
         let v = vec![processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix];
+        
         let compressed_proof = prove(v, input_symbols, field, offset, expansion_f, num_queries);
+      
 
     }
+
     #[test]
     fn helper_tests() {
         let x = FieldElement::new(318, Field::new(421));
