@@ -44,15 +44,17 @@ impl IOTable {
         challenge: FieldElement,
     ) -> Vec<FieldElement> {
         let mut ea = FieldElement::new(rand_field_elem, self.table.field); // take rand_field_elem as zero if no random secret implementation
-        self.table.matrix[0][1] = ea;
+        let mut terminal: Vec<FieldElement> = Vec::new();
+        if(self.table.matrix.len()>0){
+            self.table.matrix[0][1] = ea;
         for i in 0..self.table.length - 1 {
             ea = self.table.matrix[i as usize][1] * challenge
                 + self.table.matrix[(i + 1) as usize][0];
             self.table.matrix[(i + 1) as usize][1] = ea;
             //Tea = IOTable.matrix[length-1][1]
         }
-        let mut terminal: Vec<FieldElement> = Vec::new();
         terminal.push(ea);
+        }
         terminal
     }
 }
