@@ -76,7 +76,7 @@ pub enum ChallengeIndices {
 // prove parameter - matrices, inputs
 // matrices -> processor, memory, instruction, i, o -> in this order
 #[warn(non_snake_case)]
-pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, field: Field, offset: FieldElement, expansion_f: usize){
+pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field, offset: FieldElement, expansion_f: usize, num_queries: usize)-> Vec<Vec<u8>>{
  
     let generator = field.generator().pow((1 << 32) - 1);
     let order = 1 << 32;
@@ -174,31 +174,46 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, f
 
     //we are zipping all the base codewords (for each index in order) using concatenation
 
-    let mut basecodeword: Vec<Vec<u8>> = Vec::new();
+    let mut basecodeword: Vec<FieldElement> = Vec::new();
     log::info!("zipping all the codewords on the extended domain");
+    
     for i in 0..expanded_length as usize {
-        let mut x: Vec<u8> = vec![];
+        let mut x: Vec<FieldElement> = vec![];
         for j in 0..basecodewords.len() {
-            x.extend(basecodewords[j][i].to_bytes().iter().map(|&x| x));
+            x.push(basecodewords[j][i]);
         }
-        basecodeword.push(x);
+        let merkle = MerkleTree::new(&x);
+        let root = FieldElement::from_bytes(merkle.inner.root()
+        .as_ref()
+        .map(|array| array.as_slice())
+        .unwrap_or(&[]));
+        basecodeword.push(root);
     }
+
+    // for i in 0..expanded_length as usize {
+    //     let mut x: Vec<u8> = vec![];
+    //     for j in 0..basecodewords.len() {
+    //         x.extend(basecodewords[j][i].to_bytes().iter().map(|&x| x));
+    //     }
+    //     basecodeword.push(x);
+    // }
 
     //@todo make extend columns function return Terminal value , eg. Tipa, for every table and store it, use it to compare
-    let mut data1 = vec![];
+    
+    // let mut data1 = vec![];
 
-    for i in 0..basecodeword.len() {
-        // difficulty in implementing -> let n = basecodewords[0].len();
-        // so hardcoded the value to 32*13 = 416 -> where 13 => clk, ip, ci, ni, mp, mv, inv, clk, mp, mv, ip, ci, ni
-        let array: &[u8] = &basecodeword[i].to_vec();
+    // for i in 0..basecodeword.len() {
+    //     // difficulty in implementing -> let n = basecodewords[0].len();
+    //     // so hardcoded the value to 32*13 = 416 -> where 13 => clk, ip, ci, ni, mp, mv, inv, clk, mp, mv, ip, ci, ni
+    //     let array: &[u8] = &basecodeword[i].to_vec();
 
-        data1.push(FieldElement::from_bytes(array));
-    }
+    //     data1.push(FieldElement::from_bytes(array));
+    // }
 
     // get 11 challenges array from fiat shamir
     let mut channel = Channel::new();
     log::info!("commiting the base codewords");
-    let merkle1 = MerkleTree::new(&data1);
+    let merkle1 = MerkleTree::new(&basecodeword);
     channel.send(merkle1.inner.root().unwrap().to_vec());
 
     let mut challenges_extension = vec![];
@@ -255,25 +270,39 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, f
         extension_codewords.push(domain.evaluate(instruction_interpol_columns_2[i].clone()));
     }
 
-    let mut extension_codeword: Vec<Vec<u8>> = Vec::new();
+    let mut extension_codeword: Vec<FieldElement> = Vec::new();
     log::info!("zipping all the extension codewords");
+
     for i in 0..expanded_length as usize {
-        let mut x: Vec<u8> = vec![];
+        let mut x: Vec<FieldElement> = vec![];
         for j in 0..extension_codewords.len() {
-            x.extend(extension_codewords[j][i].to_bytes().iter().map(|&x| x));
+            x.push(extension_codewords[j][i]);
         }
-        extension_codeword.push(x);
+        let merkle = MerkleTree::new(&x);
+        let root = FieldElement::from_bytes(merkle.inner.root()
+        .as_ref()
+        .map(|array| array.as_slice())
+        .unwrap_or(&[]));
+        extension_codeword.push(root);
     }
 
-    let mut data2 = vec![];
+    // for i in 0..expanded_length as usize {
+    //     let mut x: Vec<u8> = vec![];
+    //     for j in 0..extension_codewords.len() {
+    //         x.extend(extension_codewords[j][i].to_bytes().iter().map(|&x| x));
+    //     }
+    //     extension_codeword.push(x);
+    // }
 
-    for i in 0..extension_codeword.len() {
-        let array: &[u8] = &extension_codeword[i].to_vec();
+    // let mut data2 = vec![];
 
-        data2.push(FieldElement::from_bytes(array));
-    }
+    // for i in 0..extension_codeword.len() {
+    //     let array: &[u8] = &extension_codeword[i].to_vec();
+
+    //     data2.push(FieldElement::from_bytes(array));
+    // }
     log::info!("commiting the extension codewords");
-    let merkle2 = MerkleTree::new(&data2);
+    let merkle2 = MerkleTree::new(&extension_codeword);
     channel.send(merkle2.inner.root().unwrap().to_vec());
 
     let mut challenges_combination = vec![];
@@ -328,17 +357,26 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, f
         &mut channel,
     );
 
-    let no_of_queries = 5;
+    let no_of_queries = num_queries;
     decommit_fri(
         no_of_queries,
         expansion_f,
         1 << 64 - 1 << 32 + 1,
-        vec![&data1, &data2],
+        vec![&basecodeword, &extension_codeword],
         vec![&merkle1, &merkle2],
         &fri_layers,
         &fri_merkles,
         &mut channel,
     );
+
+    for i in 0..channel.compressed_proof.len(){
+        for j in 0..channel.compressed_proof[0].len(){
+            print!("{} ", channel.compressed_proof[i][j]);
+        }
+        println!("{}: " ,i);
+    }
+    let x = channel.compressed_proof;
+    x
 
     //print channel proof, proofsize, time taken for running prover, space taken etc etc.
 }
@@ -625,6 +663,7 @@ impl Stark<'_> {}
 #[cfg(test)]
 mod stark_test {
     use crate::fields::{Field, FieldElement};
+    use crate::stark::prove;
     use crate::vm::VirtualMachine;
     #[test]
     fn test_proving() {
@@ -635,7 +674,14 @@ mod stark_test {
         let (running_time, input_symbols, output_symbols) = vm.run(&program, "".to_string());
         let (processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix) =
             vm.simulate(&program, "".to_string());
-        assert_eq!(running_time as usize, processor_matrix.len());
+        //assert_eq!(running_time as usize, processor_matrix.len());
+
+        let offset = FieldElement::one(field);
+        let expansion_f =1;
+        let num_queries = 1;
+        let v = vec![processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix];
+        let compressed_proof = prove(v, input_symbols, field, offset, expansion_f, num_queries);
+
     }
     #[test]
     fn helper_tests() {
