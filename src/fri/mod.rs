@@ -30,27 +30,36 @@ pub fn combination_polynomial(
     //@todo we can also pass a single vector of all quotient
 
     for i in 0..processor_q.clone().len() {
-        let d = degree - processor_q[i].clone().degree();
+        if processor_q[i].degree()<degree {
+            let d = degree - processor_q[i].clone().degree();
         combination += Polynomial::new_from_coefficients(vec![alpha]) * processor_q[i].clone()
             + Polynomial::new_from_coefficients(vec![beta])
                 * x.clone().pow(d as u128)
                 * processor_q[i].clone();
+        }
+        else {println!("processor quotient {} degree greater than degree max", i);}
     }
 
     for i in 0..memory_q.clone().len() {
+        if memory_q[i].degree()<degree {
         let d = degree - memory_q[i].clone().degree();
         combination += Polynomial::new_from_coefficients(vec![alpha]) * memory_q[i].clone()
             + Polynomial::new_from_coefficients(vec![beta])
                 * x.clone().pow(d as u128)
                 * memory_q[i].clone();
+        }
+        else {println!("memory quotient {} degree greater than degree max", i);}
     }
 
     for i in 0..instruction_q.clone().len() {
+        if instruction_q[i].degree()<degree {
         let d = degree - instruction_q[i].clone().degree();
         combination += Polynomial::new_from_coefficients(vec![alpha]) * instruction_q[i].clone()
             + Polynomial::new_from_coefficients(vec![beta])
                 * x.clone().pow(d as u128)
                 * instruction_q[i].clone();
+        }
+        else {println!("instruction quotient {} degree greater than degree max", i);}
     }
 
     combination

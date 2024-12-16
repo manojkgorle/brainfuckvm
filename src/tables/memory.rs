@@ -228,7 +228,7 @@ impl MemoryTable {
             x.clone() - Polynomial::new_from_coefficients(vec![omicron.clone().pow(0)]);
         zerofiers.push(boundary_zerofier);
 
-        let mut transition_zerofier = Polynomial::new_from_coefficients(vec![]);
+        let mut transition_zerofier = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         for i in 0..self.table.length - 1 {
             transition_zerofier *=
                 x.clone() - Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]);

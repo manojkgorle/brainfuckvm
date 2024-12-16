@@ -90,6 +90,12 @@ impl Polynomial {
         let field = Field::new(self.coefficients[0].modulus());
         let n = self.coefficients.len();
         let m = poly2.coefficients.len();
+        if( m==0){
+            return (self, Polynomial::zero(field))
+        }
+        if( n==0){
+            return (self, Polynomial::zero(field))
+        }
         if n < m {
             return (
                 Polynomial::new_from_coefficients(vec![FieldElement::new(0, field)]),
