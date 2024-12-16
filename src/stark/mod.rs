@@ -302,7 +302,9 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field
     //     data2.push(FieldElement::from_bytes(array));
     // }
     log::info!("commiting the extension codewords");
+ 
     let merkle2 = MerkleTree::new(&extension_codeword);
+    
     channel.send(merkle2.inner.root().unwrap().to_vec());
 
     let mut challenges_combination = vec![];
@@ -333,7 +335,7 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field
     assert_eq!(Terminal_processor[1], Terminal_memory[0]); //Tmpa = Tppa
     assert_eq!(Terminal_processor[2], Terminal_input[0]); //Tipa = Tea input
     assert_eq!(Terminal_processor[3], Terminal_output[0]); //Tipa = Tea output
-                                                           //let this be for now:- assert_eq!(Terminal_instruction[1], Tpea); //Tpea = program evaluation
+    //let this be for now:- assert_eq!(Terminal_instruction[1], Tpea); //Tpea = program evaluation
 
     //form combination polynomial
     let combination = combination_polynomial(
@@ -669,18 +671,26 @@ mod stark_test {
     fn test_proving() {
         let field = Field(18446744069414584321);
         let vm = VirtualMachine::new(field);
+        
         let code = "++++".to_string();
+        
         let program = vm.compile(code);
+        
         let (running_time, input_symbols, output_symbols) = vm.run(&program, "".to_string());
+       
         let (processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix) =
             vm.simulate(&program, "".to_string());
         //assert_eq!(running_time as usize, processor_matrix.len());
+       
 
         let offset = FieldElement::one(field);
         let expansion_f =1;
         let num_queries = 1;
+        
         let v = vec![processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix];
+        
         let compressed_proof = prove(v, input_symbols, field, offset, expansion_f, num_queries);
+      
 
     }
     #[test]
