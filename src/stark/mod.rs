@@ -431,12 +431,12 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field
     );
     println!("decommit done");
 
-    for i in 0..channel.compressed_proof.len(){
-        for j in 0..channel.compressed_proof[0].len(){
-            print!("{} ", channel.compressed_proof[i][j]);
-        }
-        println!("{}: " ,i);
-    }
+    // for i in 0..channel.compressed_proof.len(){
+    //     for j in 0..channel.compressed_proof[0].len(){
+    //         print!("{} ", channel.compressed_proof[i][j]);
+    //     }
+    //     println!("{}: " ,i);
+    // }
     let x = channel.compressed_proof;
     println!("compressed proof printed above!");
     x
@@ -735,6 +735,7 @@ mod stark_test {
         let field = Field(18446744069414584321);
         let vm = VirtualMachine::new(field);
         let code = "++>+-[+--].".to_string();
+        //let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
         let program = vm.compile(code);
         let (running_time, input_symbols, output_symbols) = vm.run(&program, "".to_string());
         let (processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix) =

@@ -175,7 +175,7 @@ impl MemoryTable {
         let boundaryair = clk.clone() + mp.clone() + mv.clone() + ppa.clone()
             - Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         air.push(boundaryair);
-        println!("{:?}", air);
+        //println!("{:?}", air);
 
         //Transition constraints: * == next
         //1. (mp+1-mp*).(mp-mp*)
