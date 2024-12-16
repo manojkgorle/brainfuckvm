@@ -25,9 +25,9 @@ pub fn combination_polynomial(
         FieldElement::zero(field),
         FieldElement::one(field),
     ]);
-    let degree = height-1;
+    let degree = height - 1;
     //@todo what should be degree here since processor and instruction table can have different heights
-    //@todo we can also pass a single vector of all quotient 
+    //@todo we can also pass a single vector of all quotient
 
     for i in 0..processor_q.clone().len() {
         let d = degree - processor_q[i].clone().degree();
@@ -202,7 +202,7 @@ pub fn decommit_fri_layers(
 /// sends
 pub fn decommit_on_query(
     idx: usize,
-    blow_up_factor: usize,//expansion_f
+    blow_up_factor: usize,        //expansion_f
     f_eval: Vec<&[FieldElement]>, //this contains basecodewords zipped, and extension codewords zipped
     f_merkle: Vec<&MerkleTree>, //this contains MerkleTree of base codewords zipped, and extension codewords zipped
     fri_layers: &[Vec<FieldElement>],
@@ -391,10 +391,10 @@ mod test_fri_layer {
 
         assert_eq!(next_poly.coefficients.len(), 2);
         assert_eq!(next_poly.coefficients[0].0, 11);
-         assert_eq!(next_poly.coefficients[1].0, 3);
-         assert_eq!(next_eval_domain.length, 2);
-         assert_eq!(next_eval_domain.omega, FieldElement::new(16, field));
-         assert_eq!(next_evaluations.len(), 2);
+        assert_eq!(next_poly.coefficients[1].0, 3);
+        assert_eq!(next_eval_domain.length, 2);
+        assert_eq!(next_eval_domain.omega, FieldElement::new(16, field));
+        assert_eq!(next_evaluations.len(), 2);
         assert_eq!(next_evaluations[0].0, 14);
         assert_eq!(next_evaluations[1].0, 8);
     }
