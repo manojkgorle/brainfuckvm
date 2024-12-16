@@ -297,7 +297,8 @@ impl Mul for Polynomial {
 
 impl MulAssign for Polynomial {
     fn mul_assign(&mut self, other: Polynomial) {
-        let field = self.coefficients[0].modulus();
+        if(self.coefficients.len()>0){
+            let field = self.coefficients[0].modulus();
         let mut result = vec![
             FieldElement::new(0, Field::new(field));
             self.coefficients.len() + other.coefficients.len() - 1
@@ -308,8 +309,8 @@ impl MulAssign for Polynomial {
                 result[i + j] += self.coefficients[i] * other.coefficients[j];
             }
         }
-
-        self.coefficients = result;
+        self.coefficients = result
+        }
     }
 }
 
