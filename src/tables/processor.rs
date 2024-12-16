@@ -235,7 +235,7 @@ impl ProcessorTable {
         zerofiers.push(boundary_zerofier);
 
         //i0
-        let mut transition_i0_zerofier = Polynomial::new_from_coefficients(vec![]);
+        let mut transition_i0_zerofier = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         for i in 0..self.table.length - 1 {
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f('[') == ci {
@@ -246,7 +246,7 @@ impl ProcessorTable {
         zerofiers.push(transition_i0_zerofier);
 
         //i1
-        let mut transition_i1_zerofier = Polynomial::new_from_coefficients(vec![]);
+        let mut transition_i1_zerofier = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         for i in 0..self.table.length - 1 {
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f(']') == ci {
@@ -257,7 +257,7 @@ impl ProcessorTable {
         zerofiers.push(transition_i1_zerofier);
 
         //i2
-        let mut transition_i2_zerofier = Polynomial::new_from_coefficients(vec![]);
+        let mut transition_i2_zerofier = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         for i in 0..self.table.length - 1 {
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f('<') == ci {
@@ -268,7 +268,7 @@ impl ProcessorTable {
         zerofiers.push(transition_i2_zerofier);
 
         //i3
-        let mut transition_i3_zerofier = Polynomial::new_from_coefficients(vec![]);
+        let mut transition_i3_zerofier = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         for i in 0..self.table.length - 1 {
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f('>') == ci {
@@ -279,7 +279,7 @@ impl ProcessorTable {
         zerofiers.push(transition_i3_zerofier);
 
         //i4
-        let mut transition_i4_zerofier = Polynomial::new_from_coefficients(vec![]);
+        let mut transition_i4_zerofier = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         for i in 0..self.table.length - 1 {
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f('+') == ci {
@@ -290,7 +290,7 @@ impl ProcessorTable {
         zerofiers.push(transition_i4_zerofier);
 
         //i5
-        let mut transition_i5_zerofier = Polynomial::new_from_coefficients(vec![]);
+        let mut transition_i5_zerofier = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         for i in 0..self.table.length - 1 {
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f('-') == ci {
@@ -301,7 +301,7 @@ impl ProcessorTable {
         zerofiers.push(transition_i5_zerofier);
 
         //i6
-        let mut transition_i6_zerofier = Polynomial::new_from_coefficients(vec![]);
+        let mut transition_i6_zerofier = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         for i in 0..self.table.length - 1 {
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f(',') == ci {
@@ -312,7 +312,7 @@ impl ProcessorTable {
         zerofiers.push(transition_i6_zerofier);
 
         //i7
-        let mut transition_i7_zerofier = Polynomial::new_from_coefficients(vec![]);
+        let mut transition_i7_zerofier = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         for i in 0..self.table.length - 1 {
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f('.') == ci {
@@ -323,7 +323,7 @@ impl ProcessorTable {
         zerofiers.push(transition_i7_zerofier);
 
         //all
-        let mut transition_all_zerofier = Polynomial::new_from_coefficients(vec![]);
+        let mut transition_all_zerofier = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         for i in 0..self.table.length - 1 {
             transition_all_zerofier *=
                 x.clone() - Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]);
