@@ -888,5 +888,8 @@ mod test_processor {
         assert_eq!(air[4].evaluate(omicron_domain[1]), zero);
         assert_eq!(air[4].evaluate(omicron_domain[0]), zero);
         assert!(air[4].evaluate(omicron_domain[2]) != zero);
+        let number = 1048576;
+       
+   
     }
 }

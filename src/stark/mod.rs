@@ -1,5 +1,6 @@
 #![allow(unused_variables)]
 use std::io::Read;
+use std::f64;
 
 use instruction::Indices;
 use io::IOTable;
@@ -72,6 +73,7 @@ pub enum ChallengeIndices {
 // prove:
 // prove parameter - matrices, inputs
 // matrices -> processor, memory, instruction, i, o -> in this order
+#[warn(non_snake_case)]
 pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, field: Field, offset: FieldElement, expansion_f: usize){
  
     let generator = field.generator().pow((1<<32)-1);
@@ -157,7 +159,7 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, f
     for i in 0..10{
         let x = channel.receive_random_field_element(field);
         challenges_extension.push(x);
-        channel.send(x.to_bytes());
+        // channel.send(x.to_bytes());
     }
     challenges_extension.push(channel.receive_random_field_element(field));
 
@@ -220,7 +222,7 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, f
     let mut challenges_combination = vec![];
     let x = channel.receive_random_field_element(field);
     challenges_combination.push(x);
-    channel.send(x.to_bytes());
+    // channel.send(x.to_bytes());
     challenges_combination.push(channel.receive_random_field_element(field));
 
     let eval = FieldElement::zero(field);
@@ -284,6 +286,258 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: Vec<FieldElement>, f
 // written in fri decommit_on_query
 //
 //verifier will perform IOTable computations like extension of columns, will then send those values to prover via channel
+//pub fn verify proof{collect all betas to check for fri layer}
+//pub fn verify_queries{verify queries on the zipped value of base codewords and the extension codeowrds and also the terminal values }
+//pub fn verify_frilayer{verify the consistency of all the fri_layers with the given betas}
+
+
+//pub fn verify proof{collect all betas to check for fri layer}
+pub fn verify_proof(
+    num_of_queries: usize,
+    maximum_random_int: u64,
+    blow_up_factor: usize,//expansion_factor
+    field: Field,
+    fri_domains: &[Vec<FieldElement>],
+    compressed_proof: &[Vec<u8>],
+    terminal_processor:Vec<FieldElement>,
+    terminal_instruction:Vec<FieldElement>,
+    terminal_memory:Vec<FieldElement>,
+    terminal_input:Vec<FieldElement>,
+    terminal_output:Vec<FieldElement>,
+height:FieldElement){
+        let mut channel=Channel::new();
+        // merkle root of the zipped base codewords
+        let base_merkle_root =compressed_proof[0].clone();
+        channel.send(base_merkle_root.clone());
+
+        // get challenges for the extension columns
+        let mut challenges_extension = vec![];
+
+        for i in 0..10{
+            let x = channel.receive_random_field_element(field);
+            challenges_extension.push(x);
+          
+        }
+        challenges_extension.push(channel.receive_random_field_element(field));
+
+        let exten_merkle_root=compressed_proof[1].clone();
+        channel.send(exten_merkle_root.clone());
+
+        let combination_merkle_root=compressed_proof[2].clone();
+        channel.send(combination_merkle_root);
+
+        //commit to fri
+        let mut fri_merkle_roots:Vec<Vec<u8>> = Vec::new();
+        let mut betas:Vec<FieldElement>= Vec::new();
+        // height should be power of 2
+    // for fri_layer degree of the combination polynomial should be less then the height and the domain size will be the height*expansion_fact
+    // fri.layer.len = 1+ log(height)/log2 
+    let number = height.0;
+    let base = 2.0;
+    let log_base_2 = (number as f64).log2();
+    let fri_layer_length:usize=(log_base_2+1 as f64) as usize;
+    for i in 0..fri_layer_length-1 as usize{
+        let beta = channel.receive_random_field_element(field);
+        betas.push(beta);
+        let fri_root=compressed_proof[3+i].clone();
+        channel.send(fri_root.clone());
+        fri_merkle_roots.push(fri_root); }
+        let last_layer_free_term = 
+        // last root will be 3+fri_layer_length-1
+        //last term of the constant polynomial
+        compressed_proof[2 as usize + fri_layer_length].clone();
+    channel.send(last_layer_free_term.clone());
+    // base_idx will be the point where the end of the compressed_proof indices for thr fri-layer_root commitment after this we have added the element and there authentication path we can see that in the utils.rs of the fri_layer decommit
+    let mut base_idx = 3 as usize + fri_layer_length;
+    for i in 0..num_of_queries{
+        let idx = channel.receive_random_int(0, maximum_random_int, true) as usize;
+        // verify_queries
+        verify_queries(
+            base_idx + i,
+            idx,
+            blow_up_factor,
+            field,
+            &fri_merkle_roots,
+            &fri_domains,
+            compressed_proof,
+            &betas,
+            &mut channel,
+            terminal_processor.clone(),
+            terminal_instruction.clone(),
+            terminal_memory.clone(),
+            terminal_input.clone(),
+            terminal_output.clone(),
+            height,
+            fri_layer_length
+        );
+        // why 46 ??// here 46 is consistence acc to stark101 6 commitment of the f(x), f(gx), f(g^2x) for it's elem and the authentication path and other 41 for the fri layer 4 for all 10 layers and 1 for the last layer the constant term
+        // in our case it will be 8 (for the base_x , base_gx,extenion_x, extension_gx) + 4*(fri_layer_length -1)+1 for the constant term 
+        base_idx+= 8 +(4*(fri_layer_length-1));
+}
+}
+//pub fn verify_queries{verify queries on the zipped value of base codewords and the extension codeowrds and also the terminal values }
+pub fn verify_queries( base_idx: usize,
+    idx: usize,
+    blow_up_factor: usize,
+    field: Field,
+    fri_merkle_roots: &[Vec<u8>],
+    fri_domains: &[Vec<FieldElement>],
+    compressed_proof: &[Vec<u8>],
+    betas: &[FieldElement],
+    channel: &mut Channel,
+    terminal_processor:Vec<FieldElement>,
+    terminal_instruction:Vec<FieldElement>,
+    terminal_memory:Vec<FieldElement>,
+    terminal_input:Vec<FieldElement>,
+    terminal_output:Vec<FieldElement>,
+height:FieldElement,
+fri_layer_length:usize
+){
+    // length of the eval_domain
+    let len =height.0 as usize *blow_up_factor ;
+    let base_merkle_root = compressed_proof[0].clone();
+    // doubt here how this compressed proof is storing the leaf and the proof_bytes // leaf of the zipped base codewords
+    // doubt solved
+     let base_x=compressed_proof[base_idx].clone();
+     channel.send(base_x.clone());
+     //doubt here this is the proof_bytes
+     let base_x_auth=compressed_proof[base_idx + 1].clone();
+     channel.send(base_x_auth.clone());
+     assert!(MerkleTree::validate(
+        base_merkle_root.clone(),
+        base_x_auth,
+        idx,
+        base_x,
+        len as usize
+    ));
+    let base_gx = compressed_proof[base_idx + 2].clone();
+    channel.send(base_gx.clone());
+    let base_gx_auth = compressed_proof[base_idx + 3].clone();
+    channel.send(base_gx_auth.clone());
+    assert!(MerkleTree::validate(
+        base_merkle_root.clone(),
+        base_gx_auth,
+        idx + blow_up_factor,
+        base_gx,
+        len as usize
+    ));
+    let exten_merkle_root =compressed_proof[1].clone();
+    let exten_x=compressed_proof[base_idx+4].clone();
+     channel.send(exten_x.clone());
+     
+     let exten_x_auth=compressed_proof[base_idx + 5].clone();
+     channel.send(exten_x_auth.clone());
+     assert!(MerkleTree::validate(
+        exten_merkle_root.clone(),
+        exten_x_auth,
+        idx,// doubt this idx should change or not acc to me merkle tree is different so idx will remain same
+        exten_x,
+        len as usize
+    ));
+    let exten_gx = compressed_proof[base_idx + 6].clone();
+    channel.send(exten_gx.clone());
+    let exten_gx_auth = compressed_proof[base_idx + 7].clone();
+    channel.send(exten_gx_auth.clone());
+    assert!(MerkleTree::validate(
+        exten_merkle_root.clone(),
+        exten_gx_auth,
+        idx + blow_up_factor,
+        exten_gx,
+        len as usize
+    ));
+    //for inter table arguments constraints
+    assert_eq!(terminal_processor[0], terminal_instruction[0]); //Tipa = Tppa
+    assert_eq!(terminal_processor[1], terminal_memory[0]); //Tmpa = Tppa
+    assert_eq!(terminal_processor[2], terminal_input[0]); //Tipa = Tea input
+    assert_eq!(terminal_processor[3], terminal_output[0]); //Tipa = Tea output
+    //@todo
+    //let this be for now:- assert_eq!(Terminal_instruction[1], Tpea); //Tpea = program evaluation
+    let intial_length=blow_up_factor*height.0 as usize;
+
+    verify_fri_layers(
+        base_idx + 8,
+        idx,
+        field,
+        fri_merkle_roots,
+        fri_domains,
+        compressed_proof,
+        betas,
+        channel,
+        len,
+        fri_layer_length
+
+
+    );
+}
+//pub fn verify_frilayer{verify the consistency of all the fri_layers with the given betas}
+pub fn verify_fri_layers(
+    base_idx: usize,
+    idx: usize,
+    field: Field,
+    fri_merkle_roots: &[Vec<u8>],
+    fri_domains: &[Vec<FieldElement>],
+    compressed_proof: &[Vec<u8>],
+    betas: &[FieldElement],
+    channel: &mut Channel,
+    intial_length:usize,
+    fri_layer_length:usize)
+
+{
+    let mut lengths:Vec<usize> =vec![0_usize;fri_layer_length-1 as usize];
+    for i in 0..fri_layer_length-1 as usize{
+        // let len_value =intial_length/2_usize.pow(i as u32);
+        // length.push(len_value);
+        lengths[i]=intial_length/2_usize.pow(i as u32);
+     }
+    for i in 0..fri_layer_length-1 as usize{
+        let length = lengths[i];
+        let elem_idx=idx%length;
+        let elem = compressed_proof[base_idx + 4 * i].clone();
+        channel.send(elem.clone());
+        let elem_proof = compressed_proof[base_idx + 4 * i + 1].clone();
+        channel.send(elem_proof.clone());
+        let merkle_root = if i == 0 {
+            compressed_proof[2].clone()
+        } else {
+            fri_merkle_roots[i - 1].clone()
+        };
+        if i != 0 {
+            // checking fri polynomials consistency.
+            let prev_elem =
+                FieldElement::from_bytes(&compressed_proof[base_idx + 4 * (i - 1)].clone());
+            let prev_sibling =
+                FieldElement::from_bytes(&compressed_proof[base_idx + 4 * (i - 1) + 2].clone());
+            let two = FieldElement::new(2, field);
+            let computed_elem = (prev_elem + prev_sibling) / two
+                + (betas[i - 1] * (prev_elem - prev_sibling)
+                    / (two * fri_domains[i - 1][idx % lengths[i-1]]));
+            assert!(computed_elem.0 == FieldElement::from_bytes(&elem).0);
+        }
+        assert!(MerkleTree::validate(
+            merkle_root.clone(),
+            elem_proof,
+            elem_idx,
+            elem.clone(),
+            length,
+        ));
+        let sibling_idx = (idx + length / 2) % length;
+        let sibling = compressed_proof[base_idx + 4 * i + 2].clone();
+        channel.send(sibling.clone());
+        let sibling_proof = compressed_proof[base_idx + 4 * i + 3].clone();
+        channel.send(sibling_proof.clone());
+
+        assert!(MerkleTree::validate(
+            merkle_root,
+            sibling_proof,
+            sibling_idx,
+            sibling.clone(),
+            length,
+        ));
+
+    }
+
+}
+
 
 
 impl Stark<'_> {}
