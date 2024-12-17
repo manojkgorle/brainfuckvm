@@ -678,7 +678,7 @@ fri_layer_length:usize
      assert!(MerkleTree::validate(
         base_merkle_root.clone(),
         base_x_auth,
-        496,
+        idx,
         base_x,
         len as usize
     ));
@@ -690,7 +690,7 @@ fri_layer_length:usize
     assert!(MerkleTree::validate(
         base_merkle_root.clone(),
         base_gx_auth,
-        496 + blow_up_factor,
+        idx + blow_up_factor,
         base_gx,
         len as usize
     ));
@@ -703,7 +703,7 @@ fri_layer_length:usize
     assert!(MerkleTree::validate(
         exten_merkle_root.clone(),
         exten_x_auth,
-        496,
+        idx,
         exten_x,
         len as usize
     ));
@@ -714,7 +714,7 @@ fri_layer_length:usize
     assert!(MerkleTree::validate(
         exten_merkle_root.clone(),
         exten_gx_auth,
-        496+ blow_up_factor,
+        idx+ blow_up_factor,
         exten_gx,
         len as usize
     ));
@@ -735,7 +735,7 @@ fri_layer_length:usize
 
     verify_fri_layers(
         base_idx + 8,
-        496,
+        idx,
         field,
         fri_merkle_roots,
         fri_domains,
