@@ -31,7 +31,7 @@ fn main() {
     //let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
     let program = vm.compile(code);
 
-    let (running_time, input_symbols, output_symbols) = vm.run(&program, "112".to_string());
+    let (running_time, input_symbols, _output_symbols) = vm.run(&program, "112".to_string());
 
     let (processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix) =
         vm.simulate(&program, "112".to_string());
@@ -48,19 +48,13 @@ fn main() {
         input_matrix,
         output_matrix,
     ];
-    let (degree_bound, compressed_proof, Tp, Tm, Tins, Ti, To, fri_d) =
+    let (degree_bound, compressed_proof, tp, tm, tins, ti, to, fri_d) =
         prove(v, input_symbols, field, offset, expansion_f, num_queries);
-    // println!("\ncompressed proof returned");
-    // for i in 0..compressed_proof.len(){
-    //     for j in 0..compressed_proof[i].len(){
-    //         print!("{} ", compressed_proof[i][j]);
-    //     }
-    //     println!("\n{}: " ,i);
-    // }
+
     let maximum_random_int =
         ((degree_bound + 1) * expansion_f as u128 - expansion_f as u128) as u64;
 
-    let domain = FriDomain::new(
+    let _domain = FriDomain::new(
         offset,
         derive_omicron(generator, order, (degree_bound + 1) * expansion_f as u128),
         (degree_bound + 1) * expansion_f as u128,
@@ -72,11 +66,11 @@ fn main() {
         field,
         &fri_d,
         &compressed_proof,
-        Tp,
-        Tins,
-        Tm,
-        Ti,
-        To,
+        tp,
+        tins,
+        tm,
+        ti,
+        to,
         degree_bound as usize,
     );
 }
