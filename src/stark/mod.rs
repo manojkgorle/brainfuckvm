@@ -17,8 +17,8 @@ use crate::merkle::*;
 use crate::tables::*;
 use crate::univariate_polynomial::*;
 static CONSOLE_LOGGER: ConsoleLogger = ConsoleLogger;
+use log::{Level, LevelFilter, Metadata, Record,info};
 use chrono::Local;
-use log::{Level, LevelFilter, Metadata, Record};
 struct ConsoleLogger;
 
 impl log::Log for ConsoleLogger {
@@ -70,6 +70,7 @@ pub enum ChallengeIndices {
 // matrices -> processor, memory, instruction, input, output -> in this order
 
 #[warn(non_snake_case)]
+ 
 pub fn prove(
     matrices: Vec<Vec<Vec<FieldElement>>>,
     inputs: String,
@@ -87,6 +88,7 @@ pub fn prove(
     Vec<FieldElement>,
     Vec<Vec<FieldElement>>,
 ) {
+    env_logger::init();
     let generator = field.generator().pow((1 << 32) - 1);
     let order = 1 << 32;
     log::info!("Generating tables");

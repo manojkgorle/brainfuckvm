@@ -365,7 +365,7 @@ pub fn gen_lagrange_polynomials(x: Vec<FieldElement>) -> Vec<Polynomial> {
         let mut denominator = Vec::new();
 
         let roots = &x[..i];
-        log::debug!("generating polynomial from roots, i:{:?}", i);
+        
         let numerator = gen_polynomial_from_roots([roots, &x[i + 1..]].concat());
         for j in 0..n {
             if i == j {
@@ -392,7 +392,7 @@ pub fn gen_lagrange_polynomials_parallel(x: Vec<FieldElement>) -> Vec<Polynomial
             let mut denominator = Vec::new();
 
             let roots = &x[..i];
-            log::debug!("generating polynomial from roots, i:{:?}", i);
+           
             let numerator: Polynomial = gen_polynomial_from_roots([roots, &x[i + 1..]].concat());
 
             for j in 0..n {
@@ -415,11 +415,10 @@ pub fn gen_lagrange_polynomials_parallel(x: Vec<FieldElement>) -> Vec<Polynomial
 }
 
 pub fn interpolate_lagrange_polynomials(x: Vec<FieldElement>, y: Vec<FieldElement>) -> Polynomial {
-    // println!("x ={:?}", x);
-    // println!("y ={:?}", y);
+   
     let n = x.len();
-    log::debug!("generating lagrange polynomials");
-    let start_time = Local::now();
+   
+    
     let lagrange_polynomials = gen_lagrange_polynomials(x.clone());
     let field = Field::new(x[0].modulus());
     let mut result = Polynomial::new_from_coefficients(vec![FieldElement::new(0, field); n]);
@@ -427,10 +426,7 @@ pub fn interpolate_lagrange_polynomials(x: Vec<FieldElement>, y: Vec<FieldElemen
     for i in 0..n {
         result += lagrange_polynomials[i].scalar_mul(y[i]);
     }
-    log::debug!(
-        "lagrange polynomials generated in {:?}µs",
-        (Local::now() - start_time).num_microseconds().unwrap()
-    );
+    
     result
 }
 impl PartialEq for Polynomial {
