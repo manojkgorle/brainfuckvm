@@ -405,9 +405,10 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field
         memory_q,
         instruction_q,
         challenges_combination,
-        degree_bound as usize,
+        (degree_bound+1) as usize,
         field,
     );
+    println!("combination polynomial degree: {}", combination.degree());
     let combination_codeword = domain.evaluate(combination.clone());
     let merkle_combination = MerkleTree::new(&combination_codeword);
     channel.send(merkle_combination.inner.root().unwrap().to_vec());
@@ -432,19 +433,20 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field
     );
     println!("decommit done");
 
-    // for i in 0..channel.compressed_proof.len(){
-    //     for j in 0..channel.compressed_proof[0].len(){
-    //         print!("{} ", channel.compressed_proof[i][j]);
-    //     }
-    //     println!("{}: " ,i);
-    // }
-    let x = channel.compressed_proof;
-    println!("compressed proof printed above!");
-
     let mut fri_eval_domains = vec![];
     for i in 0..fri_domains.len(){
         fri_eval_domains.push(fri_domains[i].list());
     }
+
+    let x = channel.compressed_proof;
+    for i in 0..x.len(){
+        for j in 0..x[i].len(){
+            print!("{} ", x[i][j]);
+        }
+        println!("\n{}: " , i);
+    }
+    println!("compressed proof printed above!");
+
     (degree_bound, x, Terminal_processor, Terminal_memory, Terminal_instruction, Terminal_input, Terminal_output, fri_eval_domains)
     
     //print channel proof, proofsize, time taken for running prover, space taken etc etc.
@@ -755,11 +757,19 @@ mod stark_test {
         assert_eq!(running_time as usize, processor_matrix.len());
 
         let offset = FieldElement::one(field);
-        let expansion_f =1;
+        let expansion_f = 1;
         let num_queries = 1;
         
         let v = vec![processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix];
         let (degree_bound, compressed_proof, Tp, Tm, Tins, Ti, To, fri_d) = prove(v, input_symbols, field, offset, expansion_f, num_queries);
+        println!("\ncompressed proof returned");
+        for i in 0..compressed_proof.len(){
+            for j in 0..compressed_proof[i].len(){
+                print!("{} ", compressed_proof[i][j]);
+            }
+            println!("\n{}: " ,i);
+        }
+        
         let domain = FriDomain::new(offset, derive_omicron(generator, order, (degree_bound+1)*expansion_f as u128) , (degree_bound+1)*expansion_f as u128);
         verify_proof(num_queries as usize, (degree_bound+1) as u64, expansion_f as usize, field, &fri_d, &compressed_proof, Tp, Tins, Tm, Ti, To, degree_bound as usize);
 
