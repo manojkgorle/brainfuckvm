@@ -222,6 +222,7 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field
     println!("Commiting the base codewords...");
     let merkle1 = MerkleTree::new(&basecodeword);
     channel.send(merkle1.inner.root().unwrap().to_vec());
+    println!("base codeword sent to compressed proof");
 
     let mut challenges_extension = vec![];
 
@@ -317,6 +318,7 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field
     let merkle2 = MerkleTree::new(&extension_codeword);
     
     channel.send(merkle2.inner.root().unwrap().to_vec());
+    println!("exten codeword sent to compressed proof");
 
     let mut challenges_combination = vec![];
     let x = channel.receive_random_field_element(field);
@@ -412,6 +414,7 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field
     let combination_codeword = domain.evaluate(combination.clone());
     let merkle_combination = MerkleTree::new(&combination_codeword);
     channel.send(merkle_combination.inner.root().unwrap().to_vec());
+    println!("combination codeword sent to compressed proof");
     let (fri_polys, fri_domains, fri_layers, fri_merkles) = fri_commit(
         combination.clone(),
         domain,
@@ -432,15 +435,13 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field
         &mut channel,
     );
     println!("decommit done");
-    println!("prover compressed proof printed below!");
-    for i in 0..channel.compressed_proof.len(){
-        for j in 0..channel.compressed_proof[i].len(){
-            print!("{} ", channel.compressed_proof[i][j]);
-        }
-        println!("\n{}: " ,i);
-    }
-  
- 
+    // println!("prover compressed proof printed below!");
+    // for i in 0..channel.compressed_proof.len(){
+    //     for j in 0..channel.compressed_proof[i].len(){
+    //         print!("{} ", channel.compressed_proof[i][j]);
+    //     }
+    //     println!("\n{}: " ,i);
+    // }
 
     let mut fri_eval_domains = vec![];
     for i in 0..fri_domains.len(){
@@ -448,13 +449,14 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field
     }
 
     let x = channel.compressed_proof;
-    for i in 0..x.len(){
-        for j in 0..x[i].len(){
-            print!("{} ", x[i][j]);
-        }
-        println!("\n{}: " , i);
-    }
-    println!("compressed proof printed above!");
+    // for i in 0..x.len(){
+    //     for j in 0..x[i].len(){
+    //         print!("{} ", x[i][j]);
+    //     }
+    //     println!("\n{}: " , i);
+    // }
+    // println!("compressed proof printed above!");
+    println!("compressed proof length: {}", x.len());
 
     (degree_bound, x, Terminal_processor, Terminal_memory, Terminal_instruction, Terminal_input, Terminal_output, fri_eval_domains)
     
@@ -505,14 +507,14 @@ pub fn verify_proof(
     terminal_input:Vec<FieldElement>,
     terminal_output:Vec<FieldElement>,
 degree_bound:usize){
-    println!("giving verifier compressed proof printed below!{}",compressed_proof.len());
-    for i in 0..3{
-        for j in 0..compressed_proof[i].len(){
-            print!("{} ", compressed_proof[i][j]);
-        }
-        println!("\n{}: " ,i);
+    // println!("giving verifier compressed proof printed below!{}",compressed_proof.len());
+    // for i in 0..3{
+    //     for j in 0..compressed_proof[i].len(){
+    //         print!("{} ", compressed_proof[i][j]);
+    //     }
+    //     println!("\n{}: " ,i);
        
-    }
+    // }
         let mut channel=Channel::new();
         // merkle root of the zipped base codewords
         let base_merkle_root =compressed_proof[0].clone();
@@ -535,6 +537,14 @@ degree_bound:usize){
         println!("exten merkle root: {:?}", base_merkle_root.len());
         
         channel.send(exten_merkle_root.clone());
+        
+        let mut challenges_combination = vec![];
+        let x = channel.receive_random_field_element(field);
+        challenges_combination.push(x);
+
+        // channel.send(x.to_bytes());
+        challenges_combination.push(channel.receive_random_field_element(field));
+        let eval = FieldElement::zero(field);
 
         let combination_merkle_root=compressed_proof[2].clone();
         
@@ -559,14 +569,14 @@ degree_bound:usize){
         fri_merkle_roots.push(fri_root); }
         let last_layer_free_term = 
         // last root will be 3+fri_layer_length-1
-        //last term of the constant polynomial
+        // last term of the constant polynomial
         compressed_proof[2 as usize + fri_layer_length].clone();
     channel.send(last_layer_free_term.clone());
     // base_idx will be the point where the end of the compressed_proof indices for thr fri-layer_root commitment after this we have added the element and there authentication path we can see that in the utils.rs of the fri_layer decommit
     let mut base_idx = 3 as usize + fri_layer_length;
     for i in 0..num_of_queries{
         let idx = channel.receive_random_int(0, maximum_random_int, true) as usize;
-        println!("{:?} verifier-idx",idx);
+        println!("Verifier index received from channel: {}", idx);
         // verify_queries
         verify_queries(
             base_idx + i,
@@ -657,7 +667,7 @@ fri_layer_length:usize
      
      let exten_x_auth=compressed_proof[base_idx + 5].clone();
      channel.send(exten_x_auth.clone());
-     assert!(MerkleTree::validate(
+    assert!(MerkleTree::validate(
         exten_merkle_root.clone(),
         exten_x_auth,
         496,
@@ -740,10 +750,11 @@ pub fn verify_fri_layers(
             let two = FieldElement::new(2, field);
             let computed_elem = (prev_elem + prev_sibling) / two
                 + (betas[i - 1] * (prev_elem - prev_sibling)
-                    / (two * fri_domains[i - 1][496 % lengths[i-1]]));
-            // assert!(computed_elem.0 == FieldElement::from_bytes(&elem).0);
-            println!("{} computed_elem.0",computed_elem.0); 
-            println!("{} FieldElement::from_bytes(&elem).0",FieldElement::from_bytes(&elem).0);     }
+                    / (two * fri_domains[i - 1][idx % lengths[i-1]]));
+            assert!(computed_elem.0 == FieldElement::from_bytes(&elem).0);
+            // println!("{} computed_elem.0",computed_elem.0); 
+            // println!("{} FieldElement::from_bytes(&elem).0",FieldElement::from_bytes(&elem).0);     
+            }
         assert!(MerkleTree::validate(
             merkle_root.clone(),
             elem_proof,
@@ -815,13 +826,13 @@ mod stark_test {
         
         let v = vec![processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix];
         let (degree_bound, compressed_proof, Tp, Tm, Tins, Ti, To, fri_d) = prove(v, input_symbols, field, offset, expansion_f, num_queries);
-        println!("\ncompressed proof returned");
-        for i in 0..compressed_proof.len(){
-            for j in 0..compressed_proof[i].len(){
-                print!("{} ", compressed_proof[i][j]);
-            }
-            println!("\n{}: " ,i);
-        }
+        // println!("\ncompressed proof returned");
+        // for i in 0..compressed_proof.len(){
+        //     for j in 0..compressed_proof[i].len(){
+        //         print!("{} ", compressed_proof[i][j]);
+        //     }
+        //     println!("\n{}: " ,i);
+        // }
         let maximum_random_int =( (degree_bound+1)*expansion_f as u128-expansion_f as u128) as u64;
         
         let domain = FriDomain::new(offset, derive_omicron(generator, order, (degree_bound+1)*expansion_f as u128) , (degree_bound+1)*expansion_f as u128);

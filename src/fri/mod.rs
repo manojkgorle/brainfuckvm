@@ -164,14 +164,16 @@ pub fn fri_commit(
         let next_merkle_tree = MerkleTree::new(&next_layer);
         fri_polys.push(next_poly);
         fri_domains.push(next_eval_domain);
-        fri_layers.push(next_layer);
+        fri_layers.push(next_layer.clone());
         // send the next merkle tree root to the verifier
         channel.send(next_merkle_tree.inner.root().unwrap().to_vec());
+        println!("fri root sent to compressed proof, layer len: {}", next_layer.clone().len());
         fri_merkle.push(next_merkle_tree);
     }
 
     // send the last layers free term to the verifier
     channel.send(fri_layers[fri_layers.len() - 1][0].to_bytes());
+    println!("fri root sent to compressed proof, layer len: {}", fri_layers[fri_layers.len()-1].clone().len());
     (fri_polys, fri_domains, fri_layers, fri_merkle)
 }
 
@@ -189,10 +191,12 @@ pub fn decommit_fri_layers(
 ) {
     log::debug!("Decommitting on fri layers for query {}", idx);
     // we dont send authentication path for element in last layer, as all elements are equal, regardless of query, as they are evaluations of a constant polynomial
+    //println!("frilayer len: {}", fri_layers.len());
     for (layer, merkle) in fri_layers[..fri_layers.len() - 1]
         .iter()
         .zip(fri_merkle[..fri_merkle.len() - 1].iter())
     {
+        //println!("fri layer lengths: {}", layer.len());
         log::debug!("sending elements and merkle proofs for layer");
         let length = layer.len();
         let elem_idx = idx % length;
@@ -203,11 +207,13 @@ pub fn decommit_fri_layers(
         channel.send(layer[sibling_idx].to_bytes());
         let sibling_proof = merkle.get_authentication_path(sibling_idx);
         channel.send(sibling_proof);
+        println!("4 vec sent to compressed proof");
     }
 
     // send the last layer element.
     log::debug!("sending element of last layer");
     channel.send(fri_layers.last().unwrap()[0].to_bytes());
+    println!("1 vec sent to compressed proof");
 }
 
 /// sends
@@ -245,6 +251,7 @@ pub fn decommit_on_query(
     channel.send(f_merkle[1].get_authentication_path(idx)); // merkle proof for extensioncodeword[idx] or f(x)
     channel.send(f_eval[1][idx + blow_up_factor].to_bytes()); //extensioncodeword[idx+blowupfactor] or f(g*x)
     channel.send(f_merkle[1].get_authentication_path(idx + blow_up_factor)); // merkle proof for extensioncodeword[idx+blowupfactor] or f(g*x)
+    println!("8 vec sent to compressed proof");
     decommit_fri_layers(idx, fri_layers, fri_merkle, channel)
 }
 
@@ -260,7 +267,7 @@ pub fn decommit_fri(
 ) {
     for _ in 0..num_of_queries {
         let idx = channel.receive_random_int(0, maximum_random_int, true);
-        println!("prover-idx ={:?}", idx);
+        println!("Prover index received from channel: {}", idx);
         decommit_on_query(
             idx as usize,
             blow_up_factor,
