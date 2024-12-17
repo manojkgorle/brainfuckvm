@@ -240,11 +240,44 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field
     let Terminal_memory = memory_table.extend_column_ppa(1, challenges_extension.clone());
     let Terminal_instruction = instruction_table.extend_column(1, challenges_extension.clone());
     let Terminal_input = input_table
-        .extend_column_ea(1, challenges_extension[ChallengeIndices::Gamma as usize])
+        .extend_column_ea(0, challenges_extension[ChallengeIndices::Gamma as usize])
         .clone();
     let Terminal_output = output_table
-        .extend_column_ea(1, challenges_extension[ChallengeIndices::Delta as usize])
+        .extend_column_ea(0, challenges_extension[ChallengeIndices::Delta as usize])
         .clone();
+
+    println!("processor table after extending columns");
+    for row in processor_table.table.matrix.clone() {
+        println!("{:?}", row);
+    }
+    println!("input table after extending columns");
+    for row in input_table.table.matrix.clone() {
+        println!("{:?}", row);
+    }
+    println!("output table after extending columns");
+    for row in output_table.table.matrix.clone() {
+        println!("{:?}", row);
+    }
+    print!("\nprocessor table terminal values\n");
+    for i in 0..Terminal_processor.len(){
+        print!("{} ", Terminal_processor[i]);
+    }
+    print!("\nmemory table terminal values\n");
+    for i in 0..Terminal_memory.len(){
+        print!("{} ", Terminal_memory[i]);
+    }
+    print!("\ninstruction table terminal values\n");
+    for i in 0..Terminal_instruction.len(){
+        print!("{} ", Terminal_instruction[i]);
+    }
+    print!("\ninput table terminal values\n");
+    for i in 0..Terminal_input.len(){
+        print!("{} ", Terminal_input[i]);
+    }
+    print!("\noutput table terminal values\n");
+    for i in 0..Terminal_output.len(){
+        print!("{} ", Terminal_output[i]);
+    }
 
     //These contain polynomials for interpolation of extension columns
     log::info!("Interpolating the extension columns");
@@ -267,7 +300,7 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field
     // instruction: ppa, pea
     // input and output tables are public, we dont commit to those, we only check their terminal extensions after extending
     log::info!("Evaluating the extension columns on the extended domain");
-    println!("Evaluating the extension columns on the extended domain...");
+    println!("\nEvaluating the extension columns on the extended domain...");
 
     for i in 0..processor_interpol_columns_2.clone().len() {
         extension_codewords.push(domain.evaluate(processor_interpol_columns_2[i].clone()));
@@ -631,15 +664,15 @@ fri_layer_length:usize
      for i in 0..base_merkle_root.len(){
          print!("{} ", base_merkle_root[i]);
      }
-        println!("\nbase_merkle_root of verifier ");
-        for i in 0..base_x_auth.len(){
-            print!("{} ", base_x_auth[i]);
-        } println!("\n base_x_auth of verifier");
-        println!("{} idx ",idx);
-        for i in 0..base_x.len(){
-            print!("{} ", base_x[i]);
-        } println!("\n base_x of verifier");
-        println!("{}",len);
+        // println!("\nbase_merkle_root of verifier ");
+        // for i in 0..base_x_auth.len(){
+        //     print!("{} ", base_x_auth[i]);
+        // } println!("\n base_x_auth of verifier");
+        // println!("{} idx ",idx);
+        // for i in 0..base_x.len(){
+        //     print!("{} ", base_x[i]);
+        // } println!("\n base_x of verifier");
+        // println!("{}",len);
 
 
      assert!(MerkleTree::validate(
@@ -686,12 +719,18 @@ fri_layer_length:usize
         len as usize
     ));
     //for inter table arguments constraints
-    // assert_eq!(terminal_processor[0], terminal_instruction[0]); //Tipa = Tppa
-    // assert_eq!(terminal_processor[1], terminal_memory[0]); //Tmpa = Tppa
-    // assert_eq!(terminal_processor[2], terminal_input[0]); //Tipa = Tea input
-    // assert_eq!(terminal_processor[3], terminal_output[0]); //Tipa = Tea output
+
+    assert_eq!(terminal_processor[0], terminal_instruction[0]); //Tipa = Tppa
+    assert_eq!(terminal_processor[1], terminal_memory[0]); //Tmpa = Tppa
+    if(terminal_input.len()>0){
+        assert_eq!(terminal_processor[2], terminal_input[0]); //Tiea = Tea input
+    }
+    if(terminal_output.len()>0){
+    assert_eq!(terminal_processor[3], terminal_output[0]); //Toea = Tea output
+    }
+
     //@todo
-    //let this be for now:- assert_eq!(Terminal_instruction[1], Tpea); //Tpea = program evaluation
+    //let this be for now sinze program evaluation has not been evaluated from program:- assert_eq!(Terminal_instruction[1], Tpea); //Tpea = program evaluation
   
 
     verify_fri_layers(
@@ -781,13 +820,13 @@ pub fn verify_fri_layers(
     let last_elem = compressed_proof[base_idx + 4*(fri_layer_length-1)].clone();
     channel.send(last_elem);
 
-    println!(" verifier compressed proof printed below! {}",channel.compressed_proof.len());
-    for i in 0..channel.compressed_proof.len(){
-        for j in 0..channel.compressed_proof[i].len(){
-            print!("{} ", channel.compressed_proof[i][j]);
-        }
-        println!("\n{}: " ,i);
-    }
+    // println!(" verifier compressed proof printed below! {}",channel.compressed_proof.len());
+    // for i in 0..channel.compressed_proof.len(){
+    //     for j in 0..channel.compressed_proof[i].len(){
+    //         print!("{} ", channel.compressed_proof[i][j]);
+    //     }
+    //     println!("\n{}: " ,i);
+    // }
     let x = channel.compressed_proof.clone();
    
 
@@ -810,14 +849,14 @@ mod stark_test {
         let vm = VirtualMachine::new(field);
         let generator = field.generator().pow((1<<32)-1);
         let order = 1<<32;
-        let code = "++>+-[+--].".to_string();
+        let code = "++>+-[+--],.,.,.".to_string();
         //let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
         let program = vm.compile(code);
         
-        let (running_time, input_symbols, output_symbols) = vm.run(&program, "".to_string());
+        let (running_time, input_symbols, output_symbols) = vm.run(&program, "112".to_string());
        
         let (processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix) =
-            vm.simulate(&program, "".to_string());
+            vm.simulate(&program, "112".to_string());
         assert_eq!(running_time as usize, processor_matrix.len());
 
         let offset = FieldElement::one(field);
