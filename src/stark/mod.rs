@@ -261,6 +261,7 @@ pub fn prove(
     let terminal_output = output_table
         .extend_column_ea(0, challenges_extension[ChallengeIndices::Delta as usize])
         .clone();
+   
 
     //These contain polynomials for interpolation of extension columns
     log::info!("Interpolating the extension columns");
@@ -357,7 +358,7 @@ pub fn prove(
     );
 
     log::debug!("generating the memory AIR");
-    let memory_air = memory_table.generate_air(challenges_extension.clone(), Terminal_memory[0]);
+    let memory_air = memory_table.generate_air(challenges_extension.clone(), terminal_memory[0]);
 
     log::debug!("generating the instruction AIR");
     let instruction_air = instruction_table.generate_air(
