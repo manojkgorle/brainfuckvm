@@ -34,7 +34,7 @@ impl Channel {
 
     pub fn receive_random_field_element(&mut self, field: Field) -> FieldElement {
         let received_int = self.receive_random_int(0, (field.0 - 1) as u64, true);
-        log::debug!("received_int: {}", received_int);
+        
         FieldElement::new(received_int as u128, field)
     }
 
