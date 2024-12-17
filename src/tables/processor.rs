@@ -131,7 +131,7 @@ impl ProcessorTable {
 
     //the matrix taken here is padded
     pub fn extend_columns(&mut self, challenges: Vec<FieldElement>) -> Vec<FieldElement> {
-        //@todo Note: Taking init 1 for now, change to random secret initial value which we check by difference constraint of tmpa = Tppa
+        //Note: Taking init 1 for now, change to random secret initial value which we check by difference constraint of tmpa = Tppa
         let mut ipa = FieldElement::one(self.table.field);
         let mut mpa = FieldElement::one(self.table.field);
         let mut iea = FieldElement::zero(self.table.field);
@@ -401,8 +401,6 @@ impl ProcessorTable {
     }
 
     // boundary constraints for the base coloumns
-    // the values of instructionpermutaion ipa and mpa I am taking as 1
-    // @todo pa, ea are obtained when the table is extended.
     pub fn generate_air(
         &self,
         challenges: Vec<FieldElement>,
@@ -410,7 +408,7 @@ impl ProcessorTable {
         tmpa: FieldElement,
         tiea: FieldElement,
         toea: FieldElement,
-        eval: FieldElement,
+        _eval: FieldElement,
     ) -> Vec<Polynomial> {
         let f =
             |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, self.table.field) };
@@ -455,7 +453,6 @@ impl ProcessorTable {
         //iea=oea=1 (we are using 1 instead of any random number)
         let poly_two =
             Polynomial::new_from_coefficients(vec![FieldElement::new(2, self.table.field)]);
-        //@todo should we separate out ipa and mpa -2 into ipa -1 and mpa -1 so that malicious prover cant set ppa=2 and mpa =0 or something like that?
         let boundary_air = clk.clone()
             + ip.clone()
             + mp.clone()
@@ -586,7 +583,7 @@ impl ProcessorTable {
                     - oea_next.clone())
             + (ci.clone() - Polynomial::constant(f('.'))) * (oea.clone() - oea_next.clone());
         air.push(trasition_all);
-        //@todo have to seperate the terminal
+
         // Terminal constraints
         // tipa, tmpa- last row not accumulated so:
         // 1.ipa.(a.ip+ b.ci+c.ni-alpha)-tipa
@@ -786,7 +783,7 @@ mod test_processor {
         output_table.pad();
 
         let terminal = processor_table.extend_columns(challenges.clone());
-        let terminal2 = memory_table.extend_column_ppa(1, challenges.clone());
+        //let terminal2 = memory_table.extend_column_ppa(1, challenges.clone());
 
         println!("processor table after extending columns");
         for row in processor_table.table.matrix.clone() {
@@ -827,7 +824,7 @@ mod test_processor {
         // assert_eq!(air[5].evaluate(omicron_domain[0]), zero);
         // assert!(air[5].evaluate(omicron_domain[2]) != zero);
     }
-    #[test] //@todo the transition constraint on particular ci
+    #[test]
     fn test_not_air() {
         let field = Field::new((1 << 64) - (1 << 32) + 1);
         let zero = FieldElement::zero(field);
@@ -948,9 +945,9 @@ mod test_processor {
     }
 
     #[test]
-    fn IO_program() {
+    fn io_program() {
         let field = Field::new((1 << 64) - (1 << 32) + 1);
-        let zero = FieldElement::zero(field);
+        let _zero = FieldElement::zero(field);
         let one = FieldElement::one(field);
         let two = one + one;
         let vm = VirtualMachine::new(field);
@@ -1012,8 +1009,8 @@ mod test_processor {
         output_table.pad();
 
         let terminal = processor_table.extend_columns(challenges.clone());
-        let terminal2 = input_table.extend_column_ea(1, two);
-        let terminal3 = output_table.extend_column_ea(1, two);
+        //let terminal2 = input_table.extend_column_ea(1, two);
+        //let terminal3 = output_table.extend_column_ea(1, two);
 
         println!("processor table after extending columns");
         for row in processor_table.table.matrix.clone() {
@@ -1035,7 +1032,7 @@ mod test_processor {
                 println!("omicron_domain: {:?}", omicron_domain);
             }
         }
-        let air = processor_table.generate_air(
+        let _air = processor_table.generate_air(
             challenges,
             terminal[0],
             terminal[1],
