@@ -90,11 +90,11 @@ impl Polynomial {
         let field = Field::new(self.coefficients[0].modulus());
         let n = self.coefficients.len();
         let m = poly2.coefficients.len();
-        if( m==0){
-            return (self, Polynomial::zero(field))
+        if (m == 0) {
+            return (self, Polynomial::zero(field));
         }
-        if( n==0){
-            return (self, Polynomial::zero(field))
+        if (n == 0) {
+            return (self, Polynomial::zero(field));
         }
         if n < m {
             return (
@@ -303,19 +303,19 @@ impl Mul for Polynomial {
 
 impl MulAssign for Polynomial {
     fn mul_assign(&mut self, other: Polynomial) {
-        if(self.coefficients.len()>0){
+        if (self.coefficients.len() > 0) {
             let field = self.coefficients[0].modulus();
-        let mut result = vec![
-            FieldElement::new(0, Field::new(field));
-            self.coefficients.len() + other.coefficients.len() - 1
-        ];
+            let mut result = vec![
+                FieldElement::new(0, Field::new(field));
+                self.coefficients.len() + other.coefficients.len() - 1
+            ];
 
-        for i in 0..self.coefficients.len() {
-            for j in 0..other.coefficients.len() {
-                result[i + j] += self.coefficients[i] * other.coefficients[j];
+            for i in 0..self.coefficients.len() {
+                for j in 0..other.coefficients.len() {
+                    result[i + j] += self.coefficients[i] * other.coefficients[j];
+                }
             }
-        }
-        self.coefficients = result
+            self.coefficients = result
         }
     }
 }

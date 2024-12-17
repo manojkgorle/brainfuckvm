@@ -68,6 +68,7 @@ impl InstructionTable {
 
     // Note: Before padding initiate the matrix in table.
     // Add padding rows to convert the matrix derived from trace to a matrix of length of a power of 2
+    
     pub fn pad(&mut self) {
         let zero = FieldElement::new(0, self.table.field);
         let length = self.table.length as usize;
@@ -85,7 +86,7 @@ impl InstructionTable {
     #[warn(unused_variables)]
     pub fn extend_column(
         &mut self,
-        rand_field_elem: u128,
+        _rand_field_elem: u128,
         challenges: Vec<FieldElement>,
     ) -> Vec<FieldElement> {
         let mut terminal: Vec<FieldElement> = Vec::new();
@@ -163,20 +164,19 @@ impl InstructionTable {
 
         //Boundary constraint:
         //ip=0
-        //@todo ci  ni, ppa, pea ka bhi boundary constraint dalna hai?
 
         let boundaryair = ip.clone() + ppa.clone()
             - Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)])
             + pea.clone()
             - Polynomial::constant(
-                (self.table.matrix[(0) as usize][Indices::Address as usize]
+                self.table.matrix[(0) as usize][Indices::Address as usize]
                     * challenges[ChallengeIndices::A as usize]
                     + self.table.matrix[(0) as usize][Indices::CurrentInstruction as usize]
                         * challenges[ChallengeIndices::B as usize]
                     + self.table.matrix[(0) as usize][Indices::NextInstruction as usize]
-                        * challenges[ChallengeIndices::C as usize]),
+                        * challenges[ChallengeIndices::C as usize],
             );
-        //@todo check this once!! initial value is not zero and one, set it to req value
+
         air.push(boundaryair);
 
         //Transition constraints: * == next
@@ -231,12 +231,9 @@ impl InstructionTable {
 
         //ppa - Tppa
         //pea - tpea
-        //@todo Tppa and tipa given by prover, for now just taking it as empty polynomials to write constraint without error
-        //@todo tpea is computed locally by verifier, taking empty polynomial for now
 
         let terminalair =
             ppa.clone() - Polynomial::constant(tppa) + pea.clone() - Polynomial::constant(tpea);
-        //@todo separate Tppa - tipa term as it will cancel out
         air.push(terminalair);
 
         air
@@ -254,7 +251,8 @@ impl InstructionTable {
             x.clone() - Polynomial::new_from_coefficients(vec![omicron.clone().pow(0)]);
         zerofiers.push(boundary_zerofier);
 
-        let mut transition_zerofier = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
+        let mut transition_zerofier =
+            Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         for i in 0..self.table.length - 1 {
             transition_zerofier *=
                 x.clone() - Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]);
@@ -284,7 +282,6 @@ impl InstructionTable {
     }
 }
 
-// @todo test instruction table padding.
 #[cfg(test)]
 mod test_instruction {
     use super::Indices;
@@ -294,8 +291,8 @@ mod test_instruction {
     use crate::tables::io::IOTable;
     use crate::tables::memory::MemoryTable;
     use crate::tables::processor::ProcessorTable;
-    use crate::vm::VirtualMachine;
     use crate::tables::roundup_npow2;
+    use crate::vm::VirtualMachine;
 
     #[test]
     fn test_padding() {
@@ -344,7 +341,7 @@ mod test_instruction {
         let two = one + one;
         let vm = VirtualMachine::new(field);
         let generator = field.generator().pow((1 << 32) - 1);
-        let omicron = generator.clone();
+        let _omicron = generator.clone();
         let order = 1 << 32;
         // let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
         let code2 = ">>[++-]+-".to_string();
@@ -452,7 +449,5 @@ mod test_instruction {
         for row in output_table.table.matrix.clone() {
             println!("{:?}", row);
         }
-
-        //@todo check input output bt
     }
 }

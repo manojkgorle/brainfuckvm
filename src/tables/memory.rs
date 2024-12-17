@@ -175,7 +175,6 @@ impl MemoryTable {
         let boundaryair = clk.clone() + mp.clone() + mv.clone() + ppa.clone()
             - Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         air.push(boundaryair);
-        //println!("{:?}", air);
 
         //Transition constraints: * == next
         //1. (mp+1-mp*).(mp-mp*)
@@ -199,9 +198,8 @@ impl MemoryTable {
         air.push(transitionair);
 
         //Terminal constraints:
-
         //ppa.(d.clk+e.mp+f.mv-beta)-Tppa
-        // Tppa  given by prover, for now just taking it as empty polynomials to write constraint without error
+
         let terminalair = ppa
             * (clk.scalar_mul(challenges[ChallengeIndices::D as usize])
                 + mp.scalar_mul(challenges[ChallengeIndices::E as usize])
@@ -228,7 +226,8 @@ impl MemoryTable {
             x.clone() - Polynomial::new_from_coefficients(vec![omicron.clone().pow(0)]);
         zerofiers.push(boundary_zerofier);
 
-        let mut transition_zerofier = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
+        let mut transition_zerofier =
+            Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         for i in 0..self.table.length - 1 {
             transition_zerofier *=
                 x.clone() - Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]);
@@ -258,12 +257,6 @@ impl MemoryTable {
     }
 }
 
-//@todo test extend column ppa
-//@todo test generate air
-//@todo test generate zerofier
-//@todo test generate quotient
-//@todo test memory table padding
-
 #[cfg(test)]
 mod test_memory_table {
     #![allow(unused_variables)]
@@ -273,9 +266,9 @@ mod test_memory_table {
     use crate::tables::io::IOTable;
     use crate::tables::memory::{ChallengeIndices, Indices};
     use crate::tables::processor::ProcessorTable;
+    use crate::tables::roundup_npow2;
     use crate::tables::Table;
     use crate::vm::VirtualMachine;
-    use crate::tables::roundup_npow2;
 
     #[test]
     fn test_padding() {
