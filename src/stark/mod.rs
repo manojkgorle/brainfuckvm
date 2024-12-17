@@ -88,7 +88,10 @@ pub fn prove(
     Vec<FieldElement>,
     Vec<Vec<FieldElement>>,
 ) {
+    // log::set_logger(&CONSOLE_LOGGER).unwrap();
+    // log::set_max_level(LevelFilter::Info);
     env_logger::init();
+    let start_time = Local::now();
     let generator = field.generator().pow((1 << 32) - 1);
     let order = 1 << 32;
     log::info!("Generating tables");
@@ -334,6 +337,7 @@ pub fn prove(
 
     channel.send(merkle2.inner.root().unwrap().to_vec());
 
+   log::info!("receiving challenges for the combination polynomial");
     let mut challenges_combination = vec![];
     let x = channel.receive_random_field_element(field);
     challenges_combination.push(x);
@@ -342,6 +346,7 @@ pub fn prove(
     challenges_combination.push(channel.receive_random_field_element(field));
     let eval = FieldElement::zero(field);
 
+    log::debug!("generating the processor AIR");
     let processor_air = processor_table.generate_air(
         challenges_extension.clone(),
         Terminal_processor[0],
@@ -351,8 +356,10 @@ pub fn prove(
         eval,
     );
 
+    log::debug!("generating the memory AIR");
     let memory_air = memory_table.generate_air(challenges_extension.clone(), Terminal_memory[0]);
 
+    log::debug!("generating the instruction AIR");
     let instruction_air = instruction_table.generate_air(
         challenges_extension.clone(),
         Terminal_instruction[0],
@@ -360,12 +367,16 @@ pub fn prove(
     );
 
     // form zerofiers
+    log::debug!("generating the processor zerofiers");
     let processor_zerofiers = processor_table.generate_zerofier();
 
+    log::debug!("generating the memory zerofiers");
     let memory_zerofiers = memory_table.generate_zerofier();
 
+    log::debug!("generating the instruction zerofiers");
     let instruction_zerofiers = instruction_table.generate_zerofier();
 
+ log::info!("generating the quotient polynomial of all the Tables");
     let mut processor_q = vec![];
     for i in 0..processor_zerofiers.len() {
         processor_q.push(
@@ -392,6 +403,8 @@ pub fn prove(
     // form combination polynomial
     // 9 is the maximum factor in AIR degree
     let degree_bound = roundup_npow2(9 * (instruction_table.table.height - 1)) - 1;
+
+    log::debug!("generating the combination polynomial");
     let combination = combination_polynomial(
         processor_q,
         memory_q,
@@ -400,11 +413,13 @@ pub fn prove(
         (degree_bound + 1) as usize,
         field,
     );
-
+    log::info!("evaluating the combination polynomial");
     let combination_codeword = domain.evaluate(combination.clone());
+    log::info!("commiting the combination codewords");
     let merkle_combination = MerkleTree::new(&combination_codeword);
     channel.send(merkle_combination.inner.root().unwrap().to_vec());
 
+ log::info!("generating and commiting the Fri_layer ");
     let (fri_polys, fri_domains, fri_layers, fri_merkles) = fri_commit(
         combination.clone(),
         domain,
@@ -413,6 +428,7 @@ pub fn prove(
         &mut channel,
     );
 
+    log::debug!("decommiting the Fri_layer");
     let no_of_queries = num_queries;
     decommit_fri(
         no_of_queries,
@@ -430,8 +446,14 @@ pub fn prove(
         fri_eval_domains.push(fri_domains[i].list());
     }
 
-    let x = channel.compressed_proof;
+    let x = channel.compressed_proof.clone();
     // println!("compressed proof length: {}", x.len());
+    log::info!(
+        "proof generation complete, time taken: {}ms, proof size: {} bytes, compressed proof size: {} bytes",
+        (Local::now() - start_time).num_milliseconds(),
+        channel.proof_size(),
+        channel.compressed_proof_size()
+    );
 
     (
         degree_bound,
@@ -443,6 +465,7 @@ pub fn prove(
         Terminal_output,
         fri_eval_domains,
     )
+    
 }
 
 // verifier knows -
@@ -471,6 +494,8 @@ pub fn verify_proof(
     terminal_output: Vec<FieldElement>,
     degree_bound: usize,
 ) {
+    log::info!("verifying proof");
+    let start = Local::now();
     let mut channel = Channel::new();
     // merkle root of the zipped base codewords
     let base_merkle_root = compressed_proof[0].clone();
@@ -552,6 +577,10 @@ pub fn verify_proof(
         // in our case it will be 8 (for the base_x , base_gx,extenion_x, extension_gx) + 4*(fri_layer_length -1)+1 for the constant term
         base_idx += 8 + (4 * (fri_layer_length - 1));
     }
+    log::info!(
+        "verification successful, time taken: {:?}µs",
+        (Local::now() - start).num_microseconds().unwrap()
+    );
 }
 //pub fn verify_queries{verify queries on the zipped value of base codewords and the extension codeowrds and also the terminal values }
 pub fn verify_queries(
