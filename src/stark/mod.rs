@@ -70,8 +70,6 @@ pub enum ChallengeIndices {
 // matrices -> processor, memory, instruction, input, output -> in this order
 
 #[warn(non_snake_case)]
-pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field, offset: FieldElement, expansion_f: usize, num_queries: usize)-> (u128, Vec<Vec<u8>>, Vec<FieldElement>, Vec<FieldElement>, Vec<FieldElement>, Vec<FieldElement>, Vec<FieldElement>, Vec<Vec<FieldElement>>){
-    env_logger::init();
  
 pub fn prove(
     matrices: Vec<Vec<Vec<FieldElement>>>,
@@ -90,6 +88,7 @@ pub fn prove(
     Vec<FieldElement>,
     Vec<Vec<FieldElement>>,
 ) {
+    env_logger::init();
     let generator = field.generator().pow((1 << 32) - 1);
     let order = 1 << 32;
     log::info!("Generating tables");
