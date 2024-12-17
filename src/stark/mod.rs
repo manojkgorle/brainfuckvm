@@ -435,15 +435,13 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field
         &mut channel,
     );
     println!("decommit done");
-    println!("prover compressed proof printed below!");
-    for i in 0..channel.compressed_proof.len(){
-        for j in 0..channel.compressed_proof[i].len(){
-            print!("{} ", channel.compressed_proof[i][j]);
-        }
-        println!("\n{}: " ,i);
-    }
-  
- 
+    // println!("prover compressed proof printed below!");
+    // for i in 0..channel.compressed_proof.len(){
+    //     for j in 0..channel.compressed_proof[i].len(){
+    //         print!("{} ", channel.compressed_proof[i][j]);
+    //     }
+    //     println!("\n{}: " ,i);
+    // }
 
     let mut fri_eval_domains = vec![];
     for i in 0..fri_domains.len(){
@@ -669,7 +667,7 @@ fri_layer_length:usize
      
      let exten_x_auth=compressed_proof[base_idx + 5].clone();
      channel.send(exten_x_auth.clone());
-     assert!(MerkleTree::validate(
+    assert!(MerkleTree::validate(
         exten_merkle_root.clone(),
         exten_x_auth,
         496,
@@ -753,9 +751,10 @@ pub fn verify_fri_layers(
             let computed_elem = (prev_elem + prev_sibling) / two
                 + (betas[i - 1] * (prev_elem - prev_sibling)
                     / (two * fri_domains[i - 1][idx % lengths[i-1]]));
-            // assert!(computed_elem.0 == FieldElement::from_bytes(&elem).0);
-            println!("{} computed_elem.0",computed_elem.0); 
-            println!("{} FieldElement::from_bytes(&elem).0",FieldElement::from_bytes(&elem).0);     }
+            assert!(computed_elem.0 == FieldElement::from_bytes(&elem).0);
+            // println!("{} computed_elem.0",computed_elem.0); 
+            // println!("{} FieldElement::from_bytes(&elem).0",FieldElement::from_bytes(&elem).0);     
+            }
         assert!(MerkleTree::validate(
             merkle_root.clone(),
             elem_proof,
@@ -827,13 +826,13 @@ mod stark_test {
         
         let v = vec![processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix];
         let (degree_bound, compressed_proof, Tp, Tm, Tins, Ti, To, fri_d) = prove(v, input_symbols, field, offset, expansion_f, num_queries);
-        println!("\ncompressed proof returned");
-        for i in 0..compressed_proof.len(){
-            for j in 0..compressed_proof[i].len(){
-                print!("{} ", compressed_proof[i][j]);
-            }
-            println!("\n{}: " ,i);
-        }
+        // println!("\ncompressed proof returned");
+        // for i in 0..compressed_proof.len(){
+        //     for j in 0..compressed_proof[i].len(){
+        //         print!("{} ", compressed_proof[i][j]);
+        //     }
+        //     println!("\n{}: " ,i);
+        // }
         let maximum_random_int =( (degree_bound+1)*expansion_f as u128-expansion_f as u128) as u64;
         
         let domain = FriDomain::new(offset, derive_omicron(generator, order, (degree_bound+1)*expansion_f as u128) , (degree_bound+1)*expansion_f as u128);
