@@ -143,7 +143,7 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field
         .clone()
         .interpolate_columns(vec![0, 1, 2]);
 
-    let initial_length = roundup_npow2(9*instruction_table.table.clone().height);
+    let initial_length = roundup_npow2(9*(instruction_table.table.clone().height-1));
     //all codewords are evaluated on this expanded domain that has length expanded_length
     let expanded_length = initial_length * (expansion_f as u128);
     log::info!("Extending the domain");
@@ -399,7 +399,7 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field
     println!("\ninstruc table height: {}", instruction_table.table.height);
     // form combination polynomial
     // 9 is the maximum factor in AIR degree
-    let degree_bound = roundup_npow2(9*instruction_table.table.height)-1;
+    let degree_bound = roundup_npow2(9*(instruction_table.table.height-1))-1;
     let combination = combination_polynomial(
         processor_q,
         memory_q,
@@ -424,7 +424,7 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field
     decommit_fri(
         no_of_queries,
         expansion_f,
-        1 << 64 - 1 << 32 + 1,
+        (expanded_length-expansion_f as u128) as u64,
         vec![&basecodeword, &extension_codeword],
         vec![&merkle1, &merkle2],
         &fri_layers,
@@ -439,7 +439,7 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field
         }
         println!("\n{}: " ,i);
     }
-    let x = channel.compressed_proof;
+  
  
 
     let mut fri_eval_domains = vec![];
@@ -566,6 +566,7 @@ degree_bound:usize){
     let mut base_idx = 3 as usize + fri_layer_length;
     for i in 0..num_of_queries{
         let idx = channel.receive_random_int(0, maximum_random_int, true) as usize;
+        println!("{:?} verifier-idx",idx);
         // verify_queries
         verify_queries(
             base_idx + i,
@@ -611,55 +612,69 @@ fri_layer_length:usize
     // length of the eval_domain
     let len = (degree_bound+1 as usize)*blow_up_factor ;
     let base_merkle_root = compressed_proof[0].clone();
-    // doubt here how this compressed proof is storing the leaf and the proof_bytes // leaf of the zipped base codewords
-    // doubt solved
+  
      let base_x=compressed_proof[base_idx].clone();
      channel.send(base_x.clone());
-     //doubt here this is the proof_bytes
+    
      let base_x_auth=compressed_proof[base_idx + 1].clone();
      channel.send(base_x_auth.clone());
-    //  assert!(MerkleTree::validate(
-    //     base_merkle_root.clone(),
-    //     base_x_auth,
-    //     idx,
-    //     base_x,
-    //     len as usize
-    // ));
+     for i in 0..base_merkle_root.len(){
+         print!("{} ", base_merkle_root[i]);
+     }
+        println!("\nbase_merkle_root of verifier ");
+        for i in 0..base_x_auth.len(){
+            print!("{} ", base_x_auth[i]);
+        } println!("\n base_x_auth of verifier");
+        println!("{} idx ",idx);
+        for i in 0..base_x.len(){
+            print!("{} ", base_x[i]);
+        } println!("\n base_x of verifier");
+        println!("{}",len);
+
+
+     assert!(MerkleTree::validate(
+        base_merkle_root.clone(),
+        base_x_auth,
+        496,
+        base_x,
+        len as usize
+    ));
+    
     let base_gx = compressed_proof[base_idx + 2].clone();
     channel.send(base_gx.clone());
     let base_gx_auth = compressed_proof[base_idx + 3].clone();
     channel.send(base_gx_auth.clone());
-    // assert!(MerkleTree::validate(
-    //     base_merkle_root.clone(),
-    //     base_gx_auth,
-    //     idx + blow_up_factor,
-    //     base_gx,
-    //     len as usize
-    // ));
+    assert!(MerkleTree::validate(
+        base_merkle_root.clone(),
+        base_gx_auth,
+        496 + blow_up_factor,
+        base_gx,
+        len as usize
+    ));
     let exten_merkle_root =compressed_proof[1].clone();
     let exten_x=compressed_proof[base_idx+4].clone();
      channel.send(exten_x.clone());
      
      let exten_x_auth=compressed_proof[base_idx + 5].clone();
      channel.send(exten_x_auth.clone());
-    //  assert!(MerkleTree::validate(
-    //     exten_merkle_root.clone(),
-    //     exten_x_auth,
-    //     idx,// doubt this idx should change or not acc to me merkle tree is different so idx will remain same
-    //     exten_x,
-    //     len as usize
-    // ));
+     assert!(MerkleTree::validate(
+        exten_merkle_root.clone(),
+        exten_x_auth,
+        496,
+        exten_x,
+        len as usize
+    ));
     let exten_gx = compressed_proof[base_idx + 6].clone();
     channel.send(exten_gx.clone());
     let exten_gx_auth = compressed_proof[base_idx + 7].clone();
     channel.send(exten_gx_auth.clone());
-    // assert!(MerkleTree::validate(
-    //     exten_merkle_root.clone(),
-    //     exten_gx_auth,
-    //     idx + blow_up_factor,
-    //     exten_gx,
-    //     len as usize
-    // ));
+    assert!(MerkleTree::validate(
+        exten_merkle_root.clone(),
+        exten_gx_auth,
+        496+ blow_up_factor,
+        exten_gx,
+        len as usize
+    ));
     //for inter table arguments constraints
     // assert_eq!(terminal_processor[0], terminal_instruction[0]); //Tipa = Tppa
     // assert_eq!(terminal_processor[1], terminal_memory[0]); //Tmpa = Tppa
@@ -671,7 +686,7 @@ fri_layer_length:usize
 
     verify_fri_layers(
         base_idx + 8,
-        idx,
+        496,
         field,
         fri_merkle_roots,
         fri_domains,
@@ -727,30 +742,34 @@ pub fn verify_fri_layers(
                 + (betas[i - 1] * (prev_elem - prev_sibling)
                     / (two * fri_domains[i - 1][idx % lengths[i-1]]));
             // assert!(computed_elem.0 == FieldElement::from_bytes(&elem).0);
-        }
-        // assert!(MerkleTree::validate(
-        //     merkle_root.clone(),
-        //     elem_proof,
-        //     elem_idx,
-        //     elem.clone(),
-        //     length,
-        // ));
+            println!("{} computed_elem.0",computed_elem.0); 
+            println!("{} FieldElement::from_bytes(&elem).0",FieldElement::from_bytes(&elem).0);     }
+        assert!(MerkleTree::validate(
+            merkle_root.clone(),
+            elem_proof,
+            elem_idx,
+            elem.clone(),
+            length,
+        ));
         let sibling_idx = (idx + length / 2) % length;
         let sibling = compressed_proof[base_idx + 4 * i + 2].clone();
         channel.send(sibling.clone());
         let sibling_proof = compressed_proof[base_idx + 4 * i + 3].clone();
         channel.send(sibling_proof.clone());
 
-    //     assert!(MerkleTree::validate(
-    //         merkle_root,
-    //         sibling_proof,
-    //         sibling_idx,
-    //         sibling.clone(),
-    //         length,
-    //     ));
+        assert!(MerkleTree::validate(
+            merkle_root,
+            sibling_proof,
+            sibling_idx,
+            sibling.clone(),
+            length,
+        ));
 
     // 
     }
+    let last_elem = compressed_proof[base_idx + 4*(fri_layer_length-1)].clone();
+    channel.send(last_elem);
+
     println!(" verifier compressed proof printed below! {}",channel.compressed_proof.len());
     for i in 0..channel.compressed_proof.len(){
         for j in 0..channel.compressed_proof[i].len(){
@@ -803,9 +822,10 @@ mod stark_test {
             }
             println!("\n{}: " ,i);
         }
+        let maximum_random_int =( (degree_bound+1)*expansion_f as u128-expansion_f as u128) as u64;
         
         let domain = FriDomain::new(offset, derive_omicron(generator, order, (degree_bound+1)*expansion_f as u128) , (degree_bound+1)*expansion_f as u128);
-        verify_proof(num_queries as usize, (degree_bound+1) as u64, expansion_f as usize, field, &fri_d, &compressed_proof, Tp, Tins, Tm, Ti, To, degree_bound as usize);
+        verify_proof(num_queries as usize,maximum_random_int , expansion_f as usize, field, &fri_d, &compressed_proof, Tp, Tins, Tm, Ti, To, degree_bound as usize);
 
     }
 
