@@ -237,13 +237,13 @@ pub fn decommit_on_query(
     let base_x_auth=f_merkle[0].get_authentication_path(idx).clone();
     
     channel.send(f_merkle[0].get_authentication_path(idx)); // merkle proof for basecodeword[idx] or f(x)
-    for i in 0..base_x_auth.len(){
-        print!("{} ", base_x_auth[i]);
-    } println!("\n base_x_auth of prover");
-    println!("{} of prover",idx);
-    for i in 0..base_x.len(){
-        print!("{}  ", base_x[i]);
-    } println!("\nbase_x of prover");
+    // for i in 0..base_x_auth.len(){
+    //     print!("{} ", base_x_auth[i]);
+    // } println!("\n base_x_auth of prover");
+    // println!("{} of prover",idx);
+    // for i in 0..base_x.len(){
+    //     print!("{}  ", base_x[i]);
+    // } println!("\nbase_x of prover");
     channel.send(f_eval[0][idx + blow_up_factor].to_bytes()); //basecodeword[idx+blowupfactor] or f(g*x)
     channel.send(f_merkle[0].get_authentication_path(idx + blow_up_factor)); // merkle proof for basecodeword[idx+blowupfactor] or f(g*x)
 

@@ -192,7 +192,7 @@ impl ProcessorTable {
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f(',') == ci {
                 iea = iea * challenges[ChallengeIndices::Gamma as usize]
-                    + self.table.matrix[i as usize][Indices::MemoryValue as usize];
+                    + self.table.matrix[(i+1) as usize][Indices::MemoryValue as usize];
                 self.table.matrix[(i + 1) as usize][Indices::InputEvaluation as usize] = iea;
             } else {
                 self.table.matrix[(i + 1) as usize][Indices::InputEvaluation as usize] = iea;
