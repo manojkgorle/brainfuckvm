@@ -1,3 +1,5 @@
+use alloy::primitives::ruint::BaseConvertError;
+
 use crate::channel::*;
 use crate::fields::*;
 use crate::merkle::*;
@@ -224,8 +226,18 @@ pub fn decommit_on_query(
     // at gx -> clk*, ip*, ci*, ni*, mp*, mv*, inv*: (""); ipa*, mpa*, iea*, oea*: ("")
     // get basecodeword[idx], basecodewords[idx+blowupfactor] and extensioncodeword[idx], extensioncodeword[idx+blowupfactor] and send them over the channel, along with the merkle proofs.
     assert!(idx + blow_up_factor < f_eval[0].len());
+    let base_x=(f_eval[0][idx].to_bytes().clone());
     channel.send(f_eval[0][idx].to_bytes()); //basecodeword[idx] or f(x)
+    let base_x_auth=f_merkle[0].get_authentication_path(idx).clone();
+    
     channel.send(f_merkle[0].get_authentication_path(idx)); // merkle proof for basecodeword[idx] or f(x)
+    for i in 0..base_x_auth.len(){
+        print!("{} ", base_x_auth[i]);
+    } println!("\n base_x_auth of prover");
+    println!("{} of prover",idx);
+    for i in 0..base_x.len(){
+        print!("{}  ", base_x[i]);
+    } println!("\nbase_x of prover");
     channel.send(f_eval[0][idx + blow_up_factor].to_bytes()); //basecodeword[idx+blowupfactor] or f(g*x)
     channel.send(f_merkle[0].get_authentication_path(idx + blow_up_factor)); // merkle proof for basecodeword[idx+blowupfactor] or f(g*x)
 
@@ -248,6 +260,7 @@ pub fn decommit_fri(
 ) {
     for _ in 0..num_of_queries {
         let idx = channel.receive_random_int(0, maximum_random_int, true);
+        println!("prover-idx ={:?}", idx);
         decommit_on_query(
             idx as usize,
             blow_up_factor,
