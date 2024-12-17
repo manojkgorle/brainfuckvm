@@ -740,7 +740,7 @@ pub fn verify_fri_layers(
             let two = FieldElement::new(2, field);
             let computed_elem = (prev_elem + prev_sibling) / two
                 + (betas[i - 1] * (prev_elem - prev_sibling)
-                    / (two * fri_domains[i - 1][idx % lengths[i-1]]));
+                    / (two * fri_domains[i - 1][496 % lengths[i-1]]));
             // assert!(computed_elem.0 == FieldElement::from_bytes(&elem).0);
             println!("{} computed_elem.0",computed_elem.0); 
             println!("{} FieldElement::from_bytes(&elem).0",FieldElement::from_bytes(&elem).0);     }
