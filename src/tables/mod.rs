@@ -145,7 +145,7 @@ impl Table {
         polynomial
     }
 
-    pub fn next_interpolate_columns(self, column_indices: Vec<u128>) -> Vec<Polynomial> {
+    pub fn next_interpolate_columns(self, _column_indices: Vec<u128>) -> Vec<Polynomial> {
         let mut next_interpolated: Vec<Polynomial> = Vec::new();
         if self.height == 0 {
             let poly = Polynomial::new_from_coefficients(vec![FieldElement::zero(Field::new(
@@ -345,7 +345,7 @@ mod test_operations {
         ]);
         table.matrix = matrix;
         let codewords = table.lde(domain);
-        // @todo change the expected codewords @m-pandey5
+
         let expected_codewords = vec![
             vec![
                 FieldElement::new(8, field),

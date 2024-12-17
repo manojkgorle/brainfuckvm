@@ -135,9 +135,9 @@ impl MemoryTable {
                     [Indices::MemoryValue as usize]
                     * challenges[ChallengeIndices::F as usize]
                 - challenges[ChallengeIndices::Beta as usize]);
-        let mut Tppa: Vec<FieldElement> = Vec::new();
-        Tppa.push(tppa);
-        Tppa
+        let mut terminal: Vec<FieldElement> = Vec::new();
+        terminal.push(tppa);
+        terminal
     }
 
     //this is after padding and extension
@@ -382,10 +382,10 @@ mod test_memory_table {
         println!("{}:0", ppa.0);
         matrix[0].push(FieldElement::one(field));
         for i in 0..matrix.len() - 1 {
-            let weighted_sum = (matrix[i as usize][0] * challenges[0]
+            let weighted_sum = matrix[i as usize][0] * challenges[0]
                 + matrix[i as usize][1] * challenges[1]
                 + matrix[i as usize][2] * challenges[2]
-                - challenges[3]);
+                - challenges[3];
             matrix[(i + 1) as usize].push(ppa * weighted_sum);
             ppa *= weighted_sum;
             println!(

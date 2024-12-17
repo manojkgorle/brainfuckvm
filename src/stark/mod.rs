@@ -252,13 +252,13 @@ pub fn prove(
     // use extend column function on tables -> extends the base columns to extension columns
     log::info!("Generating the extension column using the fiat-shamir challenges");
 
-    let Terminal_processor = processor_table.extend_columns(challenges_extension.clone());
-    let Terminal_memory = memory_table.extend_column_ppa(1, challenges_extension.clone());
-    let Terminal_instruction = instruction_table.extend_column(1, challenges_extension.clone());
-    let Terminal_input = input_table
+    let terminal_processor = processor_table.extend_columns(challenges_extension.clone());
+    let terminal_memory = memory_table.extend_column_ppa(1, challenges_extension.clone());
+    let terminal_instruction = instruction_table.extend_column(1, challenges_extension.clone());
+    let terminal_input = input_table
         .extend_column_ea(0, challenges_extension[ChallengeIndices::Gamma as usize])
         .clone();
-    let Terminal_output = output_table
+    let terminal_output = output_table
         .extend_column_ea(0, challenges_extension[ChallengeIndices::Delta as usize])
         .clone();
 
@@ -349,10 +349,10 @@ pub fn prove(
     log::debug!("generating the processor AIR");
     let processor_air = processor_table.generate_air(
         challenges_extension.clone(),
-        Terminal_processor[0],
-        Terminal_processor[1],
-        Terminal_processor[2],
-        Terminal_processor[3],
+        terminal_processor[0],
+        terminal_processor[1],
+        terminal_processor[2],
+        terminal_processor[3],
         eval,
     );
 
@@ -362,8 +362,8 @@ pub fn prove(
     log::debug!("generating the instruction AIR");
     let instruction_air = instruction_table.generate_air(
         challenges_extension.clone(),
-        Terminal_instruction[0],
-        Terminal_instruction[1],
+        terminal_instruction[0],
+        terminal_instruction[1],
     );
 
     // form zerofiers
@@ -458,11 +458,11 @@ pub fn prove(
     (
         degree_bound,
         x,
-        Terminal_processor,
-        Terminal_memory,
-        Terminal_instruction,
-        Terminal_input,
-        Terminal_output,
+        terminal_processor,
+        terminal_memory,
+        terminal_instruction,
+        terminal_input,
+        terminal_output,
         fri_eval_domains,
     )
     
@@ -658,10 +658,10 @@ pub fn verify_queries(
 
     assert_eq!(terminal_processor[0], terminal_instruction[0]); //Tipa = Tppa
     assert_eq!(terminal_processor[1], terminal_memory[0]); //Tmpa = Tppa
-    if (terminal_input.len() > 0) {
+    if terminal_input.len() > 0 {
         assert_eq!(terminal_processor[2], terminal_input[0]); //Tiea = Tea input
     }
-    if (terminal_output.len() > 0) {
+    if terminal_output.len() > 0 {
         assert_eq!(terminal_processor[3], terminal_output[0]); //Toea = Tea output
     }
 
@@ -790,7 +790,7 @@ mod stark_test {
             input_matrix,
             output_matrix,
         ];
-        let (degree_bound, compressed_proof, Tp, Tm, Tins, Ti, To, fri_d) =
+        let (degree_bound, compressed_proof, tp, tm, tins, ti, to, fri_d) =
             prove(v, input_symbols, field, offset, expansion_f, num_queries);
 
         let maximum_random_int =
@@ -808,11 +808,11 @@ mod stark_test {
             field,
             &fri_d,
             &compressed_proof,
-            Tp,
-            Tins,
-            Tm,
-            Ti,
-            To,
+            tp,
+            tins,
+            tm,
+            ti,
+            to,
             degree_bound as usize,
         );
     }
