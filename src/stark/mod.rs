@@ -17,7 +17,7 @@ use crate::merkle::*;
 use crate::tables::*;
 use crate::univariate_polynomial::*;
 static CONSOLE_LOGGER: ConsoleLogger = ConsoleLogger;
-use log::{Level, LevelFilter, Metadata, Record};
+use log::{Level, LevelFilter, Metadata, Record,info};
 use chrono::Local;
 struct ConsoleLogger;
 
@@ -77,6 +77,7 @@ pub enum ChallengeIndices {
 // matrices -> processor, memory, instruction, i, o -> in this order
 #[warn(non_snake_case)]
 pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field, offset: FieldElement, expansion_f: usize, num_queries: usize)-> (u128, Vec<Vec<u8>>, Vec<FieldElement>, Vec<FieldElement>, Vec<FieldElement>, Vec<FieldElement>, Vec<FieldElement>, Vec<Vec<FieldElement>>){
+    env_logger::init();
  
     let generator = field.generator().pow((1 << 32) - 1);
     let order = 1 << 32;
@@ -319,7 +320,7 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field
     
     channel.send(merkle2.inner.root().unwrap().to_vec());
     println!("exten codeword sent to compressed proof");
-
+    log::info!("receiving the challeneges for combination polynomial");
     let mut challenges_combination = vec![];
     let x = channel.receive_random_field_element(field);
     challenges_combination.push(x);
@@ -335,6 +336,7 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field
     //     Terminal_processor[2],
     //     Terminal_processor[3],
     // );
+    log::debug!("generating processor table AIR");
     let processor_air = processor_table.generate_air(challenges_extension.clone(), Terminal_processor[0], Terminal_processor[1], Terminal_processor[2], Terminal_processor[3], eval);
     println!("\nproc air degree: ");
     for i in 0..processor_air.len(){
@@ -343,7 +345,7 @@ pub fn prove(matrices: Vec<Vec<Vec<FieldElement>>>, inputs: String, field: Field
 
     // let memory_quotients =
     //     memory_table.generate_quotients(challenges_extension.clone(), Terminal_memory[0]);
-
+    log::debug!("generating processor table AIR");
     let memory_air = memory_table.generate_air(challenges_extension.clone(), Terminal_memory[0]);
     println!("\nmemory air degree: ");
     for i in 0..memory_air.len(){
@@ -690,7 +692,7 @@ fri_layer_length:usize
     // assert_eq!(terminal_processor[1], terminal_memory[0]); //Tmpa = Tppa
     // assert_eq!(terminal_processor[2], terminal_input[0]); //Tipa = Tea input
     // assert_eq!(terminal_processor[3], terminal_output[0]); //Tipa = Tea output
-    //@todo
+    // //@todo
     //let this be for now:- assert_eq!(Terminal_instruction[1], Tpea); //Tpea = program evaluation
   
 
@@ -822,7 +824,7 @@ mod stark_test {
 
         let offset = FieldElement::one(field);
         let expansion_f = 1;
-        let num_queries = 1;
+        let num_queries = 2;
         
         let v = vec![processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix];
         let (degree_bound, compressed_proof, Tp, Tm, Tins, Ti, To, fri_d) = prove(v, input_symbols, field, offset, expansion_f, num_queries);
