@@ -192,7 +192,7 @@ impl ProcessorTable {
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f(',') == ci {
                 iea = iea * challenges[ChallengeIndices::Gamma as usize]
-                    + self.table.matrix[i as usize][Indices::MemoryValue as usize];
+                    + self.table.matrix[(i + 1) as usize][Indices::MemoryValue as usize];
                 self.table.matrix[(i + 1) as usize][Indices::InputEvaluation as usize] = iea;
             } else {
                 self.table.matrix[(i + 1) as usize][Indices::InputEvaluation as usize] = iea;
@@ -235,7 +235,8 @@ impl ProcessorTable {
         zerofiers.push(boundary_zerofier);
 
         //i0
-        let mut transition_i0_zerofier = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
+        let mut transition_i0_zerofier =
+            Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         for i in 0..self.table.length - 1 {
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f('[') == ci {
@@ -246,7 +247,8 @@ impl ProcessorTable {
         zerofiers.push(transition_i0_zerofier);
 
         //i1
-        let mut transition_i1_zerofier = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
+        let mut transition_i1_zerofier =
+            Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         for i in 0..self.table.length - 1 {
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f(']') == ci {
@@ -257,7 +259,8 @@ impl ProcessorTable {
         zerofiers.push(transition_i1_zerofier);
 
         //i2
-        let mut transition_i2_zerofier = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
+        let mut transition_i2_zerofier =
+            Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         for i in 0..self.table.length - 1 {
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f('<') == ci {
@@ -268,7 +271,8 @@ impl ProcessorTable {
         zerofiers.push(transition_i2_zerofier);
 
         //i3
-        let mut transition_i3_zerofier = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
+        let mut transition_i3_zerofier =
+            Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         for i in 0..self.table.length - 1 {
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f('>') == ci {
@@ -279,7 +283,8 @@ impl ProcessorTable {
         zerofiers.push(transition_i3_zerofier);
 
         //i4
-        let mut transition_i4_zerofier = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
+        let mut transition_i4_zerofier =
+            Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         for i in 0..self.table.length - 1 {
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f('+') == ci {
@@ -290,7 +295,8 @@ impl ProcessorTable {
         zerofiers.push(transition_i4_zerofier);
 
         //i5
-        let mut transition_i5_zerofier = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
+        let mut transition_i5_zerofier =
+            Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         for i in 0..self.table.length - 1 {
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f('-') == ci {
@@ -301,7 +307,8 @@ impl ProcessorTable {
         zerofiers.push(transition_i5_zerofier);
 
         //i6
-        let mut transition_i6_zerofier = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
+        let mut transition_i6_zerofier =
+            Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         for i in 0..self.table.length - 1 {
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f(',') == ci {
@@ -312,7 +319,8 @@ impl ProcessorTable {
         zerofiers.push(transition_i6_zerofier);
 
         //i7
-        let mut transition_i7_zerofier = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
+        let mut transition_i7_zerofier =
+            Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         for i in 0..self.table.length - 1 {
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f('.') == ci {
@@ -323,7 +331,8 @@ impl ProcessorTable {
         zerofiers.push(transition_i7_zerofier);
 
         //all
-        let mut transition_all_zerofier = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
+        let mut transition_all_zerofier =
+            Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         for i in 0..self.table.length - 1 {
             transition_all_zerofier *=
                 x.clone() - Polynomial::new_from_coefficients(vec![omicron.clone().pow(i)]);
@@ -490,7 +499,7 @@ impl ProcessorTable {
         //ci =<
         // ip⋆−ip−1
         // mp⋆−mp+1
-        let trasition_i2 = (ip_next.clone() - ip.clone() - poly_one.clone())*poly_two.clone()
+        let trasition_i2 = (ip_next.clone() - ip.clone() - poly_one.clone()) * poly_two.clone()
             + (mp_next.clone() - mp.clone() + poly_one.clone());
         air.push(trasition_i2);
         //ci=>
@@ -513,7 +522,7 @@ impl ProcessorTable {
         // mp⋆−mp
         // mv⋆−mv+1
         // ci = -
-        let trasition_i5 = (ip_next.clone() - ip.clone() - poly_one.clone())*poly_two.clone()
+        let trasition_i5 = (ip_next.clone() - ip.clone() - poly_one.clone()) * poly_two.clone()
             + (mp_next.clone() - mp.clone())
             + (mv_next.clone() - mv.clone() + poly_one.clone());
         air.push(trasition_i5);
@@ -778,7 +787,7 @@ mod test_processor {
 
         let terminal = processor_table.extend_columns(challenges.clone());
         let terminal2 = memory_table.extend_column_ppa(1, challenges.clone());
-        
+
         println!("processor table after extending columns");
         for row in processor_table.table.matrix.clone() {
             println!("{:?}", row);
@@ -910,33 +919,32 @@ mod test_processor {
             let t_all = air[9].evaluate(omicron_domain[v as usize]);
             assert_eq!(t_all, zero);
         }
-        
-    //let v =omicron_domain[1];
-    // let t_air1 = air[10].evaluate(v);
-    // println!("{:?}",air[0].evaluate(v));
-    //assert_ne!(t_air1, zero);
-    
 
-    for v in omicron_domain.clone(){
-        println!("{:?}", air[3].evaluate(v))
-    }
-    println!("this was <");
-    for v in omicron_domain.clone(){
-        println!("{:?}",air[4].evaluate(v))
-    }
-    println!("this was >");
-    for v in omicron_domain.clone(){
-        println!("{:?}",air[5].evaluate(v))
-    }
-    println!("this was +");
-    for v in omicron_domain.clone(){
-        println!("{:?}",air[6].evaluate(v))
-    }
-    println!("this was -");
-      
-    assert_eq!(air[4].evaluate(omicron_domain[1]), zero);
-    assert_eq!(air[4].evaluate(omicron_domain[0]), zero);
-    assert!(air[4].evaluate(omicron_domain[2]) != zero);
+        //let v =omicron_domain[1];
+        // let t_air1 = air[10].evaluate(v);
+        // println!("{:?}",air[0].evaluate(v));
+        //assert_ne!(t_air1, zero);
+
+        for v in omicron_domain.clone() {
+            println!("{:?}", air[3].evaluate(v))
+        }
+        println!("this was <");
+        for v in omicron_domain.clone() {
+            println!("{:?}", air[4].evaluate(v))
+        }
+        println!("this was >");
+        for v in omicron_domain.clone() {
+            println!("{:?}", air[5].evaluate(v))
+        }
+        println!("this was +");
+        for v in omicron_domain.clone() {
+            println!("{:?}", air[6].evaluate(v))
+        }
+        println!("this was -");
+
+        assert_eq!(air[4].evaluate(omicron_domain[1]), zero);
+        assert_eq!(air[4].evaluate(omicron_domain[0]), zero);
+        assert!(air[4].evaluate(omicron_domain[2]) != zero);
     }
 
     #[test]
@@ -1006,7 +1014,7 @@ mod test_processor {
         let terminal = processor_table.extend_columns(challenges.clone());
         let terminal2 = input_table.extend_column_ea(1, two);
         let terminal3 = output_table.extend_column_ea(1, two);
-        
+
         println!("processor table after extending columns");
         for row in processor_table.table.matrix.clone() {
             println!("{:?}", row);
@@ -1036,7 +1044,7 @@ mod test_processor {
             omicron_domain[4],
         );
         let f = |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, field) };
-        
+
         println!("{} {}", f('1'), f('5'))
 
         // let b = air[0].evaluate(omicron_domain[0]);
@@ -1048,5 +1056,4 @@ mod test_processor {
         //     assert_eq!(t_all, zero);
         // }
     }
-
 }

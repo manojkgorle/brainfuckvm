@@ -376,16 +376,15 @@ mod test_field_operations {
     }
 
     #[test]
-    fn test_encoding(){
+    fn test_encoding() {
         let field = Field::new(100007);
         let a = FieldElement::new(256, field);
         let b = a.to_bytes();
         let c = FieldElement::from_bytes(&b);
         println!("a:{}", a);
-        for i in 0..b.len(){
+        for i in 0..b.len() {
             println!("{}", b[i]);
         }
         assert_eq!(a.0, c.0);
     }
-
 }
