@@ -7,9 +7,8 @@ use crate::univariate_polynomial::*;
 //we can use ntt fast fns for optimization, but rn we just implement using direct evaluate and multiply functions of polynomials
 //some fns, structs and parameters are changed accordingly compared to fri.py and ntt.py, because we are not using extension fields
 
-//@todo pass difference quotient polynomial as a parameter too if using random secret initials
+//pass difference quotient polynomial as a parameter too if using random secret initials
 //challenges = [alpha, beta], given by fiat shamir
-//@todo this has to be inside prover/main?, check once
 //boundary_q includes boundary constraints for all tables together, similarly for others
 
 pub fn combination_polynomial(
@@ -232,9 +231,9 @@ pub fn decommit_on_query(
     // at gx -> clk*, ip*, ci*, ni*, mp*, mv*, inv*: (""); ipa*, mpa*, iea*, oea*: ("")
     // get basecodeword[idx], basecodewords[idx+blowupfactor] and extensioncodeword[idx], extensioncodeword[idx+blowupfactor] and send them over the channel, along with the merkle proofs.
     assert!(idx + blow_up_factor < f_eval[0].len());
-    let base_x = (f_eval[0][idx].to_bytes().clone());
+    let _base_x = f_eval[0][idx].to_bytes().clone();
     channel.send(f_eval[0][idx].to_bytes()); //basecodeword[idx] or f(x)
-    let base_x_auth = f_merkle[0].get_authentication_path(idx).clone();
+    let _base_x_auth = f_merkle[0].get_authentication_path(idx).clone();
 
     channel.send(f_merkle[0].get_authentication_path(idx)); // merkle proof for basecodeword[idx] or f(x)
                                                             // for i in 0..base_x_auth.len(){
@@ -393,8 +392,6 @@ impl FriDomain {
 }
 
 #[cfg(test)]
-//@todo write test for fri layer, in stark 101, eval domain was a vector, here it is FriDomain struct, thus some code and values will change accordingly
-
 mod test_fri_layer {
     use super::*;
     //use crate::{field::Field, utils::*};
