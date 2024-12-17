@@ -28,40 +28,42 @@ pub fn combination_polynomial(
         FieldElement::one(field),
     ]);
     let degree = height - 1;
-    //@todo what should be degree here since processor and instruction table can have different heights
-    //@todo we can also pass a single vector of all quotient
 
     for i in 0..processor_q.clone().len() {
-        if processor_q[i].degree()<degree {
+        if processor_q[i].degree() < degree {
             let d = degree - processor_q[i].clone().degree();
-        combination += Polynomial::new_from_coefficients(vec![alpha]) * processor_q[i].clone()
-            + Polynomial::new_from_coefficients(vec![beta])
-                * x.clone().pow(d as u128)
-                * processor_q[i].clone();
+            combination += Polynomial::new_from_coefficients(vec![alpha]) * processor_q[i].clone()
+                + Polynomial::new_from_coefficients(vec![beta])
+                    * x.clone().pow(d as u128)
+                    * processor_q[i].clone();
+        } else {
+            println!("processor quotient {} degree greater than degree max", i);
         }
-        else {println!("processor quotient {} degree greater than degree max", i);}
     }
 
     for i in 0..memory_q.clone().len() {
-        if memory_q[i].degree()<degree {
-        let d = degree - memory_q[i].clone().degree();
-        combination += Polynomial::new_from_coefficients(vec![alpha]) * memory_q[i].clone()
-            + Polynomial::new_from_coefficients(vec![beta])
-                * x.clone().pow(d as u128)
-                * memory_q[i].clone();
+        if memory_q[i].degree() < degree {
+            let d = degree - memory_q[i].clone().degree();
+            combination += Polynomial::new_from_coefficients(vec![alpha]) * memory_q[i].clone()
+                + Polynomial::new_from_coefficients(vec![beta])
+                    * x.clone().pow(d as u128)
+                    * memory_q[i].clone();
+        } else {
+            println!("memory quotient {} degree greater than degree max", i);
         }
-        else {println!("memory quotient {} degree greater than degree max", i);}
     }
 
     for i in 0..instruction_q.clone().len() {
-        if instruction_q[i].degree()<degree {
-        let d = degree - instruction_q[i].clone().degree();
-        combination += Polynomial::new_from_coefficients(vec![alpha]) * instruction_q[i].clone()
-            + Polynomial::new_from_coefficients(vec![beta])
-                * x.clone().pow(d as u128)
-                * instruction_q[i].clone();
+        if instruction_q[i].degree() < degree {
+            let d = degree - instruction_q[i].clone().degree();
+            combination += Polynomial::new_from_coefficients(vec![alpha])
+                * instruction_q[i].clone()
+                + Polynomial::new_from_coefficients(vec![beta])
+                    * x.clone().pow(d as u128)
+                    * instruction_q[i].clone();
+        } else {
+            println!("instruction quotient {} degree greater than degree max", i);
         }
-        else {println!("instruction quotient {} degree greater than degree max", i);}
     }
 
     combination
@@ -167,13 +169,11 @@ pub fn fri_commit(
         fri_layers.push(next_layer.clone());
         // send the next merkle tree root to the verifier
         channel.send(next_merkle_tree.inner.root().unwrap().to_vec());
-        println!("fri root sent to compressed proof, layer len: {}", next_layer.clone().len());
         fri_merkle.push(next_merkle_tree);
     }
 
     // send the last layers free term to the verifier
     channel.send(fri_layers[fri_layers.len() - 1][0].to_bytes());
-    println!("fri root sent to compressed proof, layer len: {}", fri_layers[fri_layers.len()-1].clone().len());
     (fri_polys, fri_domains, fri_layers, fri_merkle)
 }
 
@@ -207,13 +207,13 @@ pub fn decommit_fri_layers(
         channel.send(layer[sibling_idx].to_bytes());
         let sibling_proof = merkle.get_authentication_path(sibling_idx);
         channel.send(sibling_proof);
-        println!("4 vec sent to compressed proof");
+        //println!("4 vec sent to compressed proof");
     }
 
     // send the last layer element.
     log::debug!("sending element of last layer");
     channel.send(fri_layers.last().unwrap()[0].to_bytes());
-    println!("1 vec sent to compressed proof");
+    //println!("1 vec sent to compressed proof");
 }
 
 /// sends
@@ -232,18 +232,18 @@ pub fn decommit_on_query(
     // at gx -> clk*, ip*, ci*, ni*, mp*, mv*, inv*: (""); ipa*, mpa*, iea*, oea*: ("")
     // get basecodeword[idx], basecodewords[idx+blowupfactor] and extensioncodeword[idx], extensioncodeword[idx+blowupfactor] and send them over the channel, along with the merkle proofs.
     assert!(idx + blow_up_factor < f_eval[0].len());
-    let base_x=(f_eval[0][idx].to_bytes().clone());
+    let base_x = (f_eval[0][idx].to_bytes().clone());
     channel.send(f_eval[0][idx].to_bytes()); //basecodeword[idx] or f(x)
-    let base_x_auth=f_merkle[0].get_authentication_path(idx).clone();
-    
+    let base_x_auth = f_merkle[0].get_authentication_path(idx).clone();
+
     channel.send(f_merkle[0].get_authentication_path(idx)); // merkle proof for basecodeword[idx] or f(x)
-    // for i in 0..base_x_auth.len(){
-    //     print!("{} ", base_x_auth[i]);
-    // } println!("\n base_x_auth of prover");
-    // println!("{} of prover",idx);
-    // for i in 0..base_x.len(){
-    //     print!("{}  ", base_x[i]);
-    // } println!("\nbase_x of prover");
+                                                            // for i in 0..base_x_auth.len(){
+                                                            //     print!("{} ", base_x_auth[i]);
+                                                            // } println!("\n base_x_auth of prover");
+                                                            // println!("{} of prover",idx);
+                                                            // for i in 0..base_x.len(){
+                                                            //     print!("{}  ", base_x[i]);
+                                                            // } println!("\nbase_x of prover");
     channel.send(f_eval[0][idx + blow_up_factor].to_bytes()); //basecodeword[idx+blowupfactor] or f(g*x)
     channel.send(f_merkle[0].get_authentication_path(idx + blow_up_factor)); // merkle proof for basecodeword[idx+blowupfactor] or f(g*x)
 
@@ -251,7 +251,7 @@ pub fn decommit_on_query(
     channel.send(f_merkle[1].get_authentication_path(idx)); // merkle proof for extensioncodeword[idx] or f(x)
     channel.send(f_eval[1][idx + blow_up_factor].to_bytes()); //extensioncodeword[idx+blowupfactor] or f(g*x)
     channel.send(f_merkle[1].get_authentication_path(idx + blow_up_factor)); // merkle proof for extensioncodeword[idx+blowupfactor] or f(g*x)
-    println!("8 vec sent to compressed proof");
+                                                                             //println!("8 vec sent to compressed proof");
     decommit_fri_layers(idx, fri_layers, fri_merkle, channel)
 }
 
@@ -267,7 +267,6 @@ pub fn decommit_fri(
 ) {
     for _ in 0..num_of_queries {
         let idx = channel.receive_random_int(0, maximum_random_int, true);
-        println!("Prover index received from channel: {}", idx);
         decommit_on_query(
             idx as usize,
             blow_up_factor,
