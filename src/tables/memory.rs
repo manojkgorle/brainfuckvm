@@ -157,12 +157,7 @@ impl MemoryTable {
         let mv = interpolated[Indices::MemoryValue as usize].clone();
         let ppa = interpolated[Indices::PermutationArg as usize].clone();
 
-        let next_interpolated = self.table.clone().next_interpolate_columns(vec![
-            Indices::Cycle as u128,
-            Indices::MemoryPointer as u128,
-            Indices::MemoryValue as u128,
-            Indices::PermutationArg as u128,
-        ]);
+        let next_interpolated = self.table.clone().next_interpolate_columns(interpolated);
 
         let clk_next = next_interpolated[Indices::Cycle as usize].clone();
         let mp_next = next_interpolated[Indices::MemoryPointer as usize].clone();
@@ -462,6 +457,11 @@ mod test_memory_table {
         instruction_table.pad();
         input_table.pad();
         output_table.pad();
+        processor_table.table.generate_omicron_domain();
+        memory_table.table.generate_omicron_domain();
+        instruction_table.table.generate_omicron_domain();
+        input_table.table.generate_omicron_domain();
+        output_table.table.generate_omicron_domain();
         let terminal = memory_table.extend_column_ppa(1, challenges.clone());
         let terminal2 = processor_table.extend_columns(challenges.clone());
         println!("memory_table after extending columns");
@@ -561,6 +561,11 @@ mod test_memory_table {
         instruction_table.pad();
         input_table.pad();
         output_table.pad();
+        processor_table.table.generate_omicron_domain();
+        memory_table.table.generate_omicron_domain();
+        instruction_table.table.generate_omicron_domain();
+        input_table.table.generate_omicron_domain();
+        output_table.table.generate_omicron_domain();
         let terminal = memory_table.extend_column_ppa(1, challenges.clone());
         println!("memory_table after extending columns");
         for row in memory_table.table.matrix.clone() {

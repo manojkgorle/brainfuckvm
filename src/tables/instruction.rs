@@ -68,7 +68,7 @@ impl InstructionTable {
 
     // Note: Before padding initiate the matrix in table.
     // Add padding rows to convert the matrix derived from trace to a matrix of length of a power of 2
-    
+
     pub fn pad(&mut self) {
         let zero = FieldElement::new(0, self.table.field);
         let length = self.table.length as usize;
@@ -145,13 +145,7 @@ impl InstructionTable {
         let ppa = interpolated[Indices::PermutationArg as usize].clone();
         let pea = interpolated[Indices::EvaluationArg as usize].clone();
 
-        let next_interpolated = self.table.clone().next_interpolate_columns(vec![
-            Indices::Address as u128,
-            Indices::CurrentInstruction as u128,
-            Indices::NextInstruction as u128,
-            Indices::PermutationArg as u128,
-            Indices::EvaluationArg as u128,
-        ]);
+        let next_interpolated = self.table.clone().next_interpolate_columns(interpolated);
 
         let ip_next = next_interpolated[Indices::Address as usize].clone();
         let ci_next = next_interpolated[Indices::CurrentInstruction as usize].clone();
