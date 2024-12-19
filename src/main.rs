@@ -51,7 +51,7 @@ pub use crate::tables::Table;
 pub use crate::vm::VirtualMachine;
 use rayon::ThreadPoolBuilder;
 fn main() {
-    let guard = ProfilerGuard::new(10).unwrap();
+    let guard = ProfilerGuard::new(100).unwrap();
     // ThreadPoolBuilder::new()
     // .thread_name(|i| format!("par-iter-{}", i))
     // .build_global()

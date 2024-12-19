@@ -4,6 +4,7 @@ use std::cmp::{Ord, PartialOrd};
 use std::fmt::write;
 use std::fmt::{Debug, Display};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use core::hint::unreachable_unchecked;
 // Define a field
 // Define a field element
 // Define arithmetic operations on field elements
@@ -24,7 +25,10 @@ pub enum ChallengeIndices {
     Gamma,
     Eta,
 }
-
+/// The Goldilocks prime
+pub const P: u64 = 0xFFFF_FFFF_0000_0001;
+/// Two's complement of `ORDER`, i.e. `2^64 - ORDER = 2^32 - 1`.
+pub const NEG_ORDER: u64 = P.wrapping_neg();
 impl Field {
     #[inline(always)]
     pub fn new(x: u128) -> Field {
@@ -141,7 +145,6 @@ impl FieldElement {
             Field(u128::from_be_bytes(y)),
         )
     }
-
 }
 
 impl Add for FieldElement {
@@ -320,9 +323,11 @@ impl Debug for FieldElement {
 
 #[cfg(test)]
 mod test_field_operations {
-    use std::primitive;
+    use chrono::Local;
+
     #[allow(arithmetic_overflow)]
     use super::*;
+    use std::primitive;
 
     #[test]
     fn test_field_add() {
@@ -410,5 +415,23 @@ mod test_field_operations {
         let b = a.to_bytes();
         let c = FieldElement::from_bytes(&b);
         assert_eq!(a.0, c.0);
+    }
+
+    #[test]
+    fn bench_field_mul() {
+        let field = Field::new(7);
+        let a = FieldElement::new(1, field);
+        let b = FieldElement::new(2, field);
+        let c = a * b;
+        assert_eq!(c.0, 2);
+
+        let field = Field::new(P.into());
+        let a = FieldElement::new(1687837, field);
+        let b = FieldElement::new(1687837, field);
+        let t = Local::now();
+        for _ in 0..100000000 {
+            let c = a * b;
+        }
+        println!("Time taken: {:?}", Local::now().signed_duration_since(t));
     }
 }

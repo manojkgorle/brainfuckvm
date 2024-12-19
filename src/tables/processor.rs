@@ -441,15 +441,6 @@ impl ProcessorTable {
             Indices::OutputEvaluation as u128,
         ];
         let interpolated = self.table.clone().interpolate_columns(indices_vec.clone());
-        let next_interpolated = self.table.clone().next_interpolate_columns(interpolated.clone());
-        // let (interpolated, next_interpolated) = rayon::join(
-        //     || self.table.clone().interpolate_columns(indices_vec.clone()),
-        //     || {
-        //         self.table
-        //             .clone()
-        //             .next_interpolate_columns(indices_vec.clone())
-        //     },
-        // );
         let clk = interpolated[Indices::Cycle as usize].clone();
         let ip = interpolated[Indices::InstructionPointer as usize].clone();
         let ci = interpolated[Indices::CurrentInstruction as usize].clone();
@@ -842,11 +833,14 @@ mod test_processor {
         let b = air[0].evaluate(omicron_domain[0]);
         assert_eq!(b, zero);
 
-        for v in 0..rt-1 {
+        for v in 0..rt - 1 {
             let t_all = air[9].evaluate(omicron_domain[v as usize]);
             assert_eq!(t_all, zero);
         }
-        println!("{},{} height", processor_table.table.height,processor_table.table.length);
+        println!(
+            "{},{} height",
+            processor_table.table.height, processor_table.table.length
+        );
 
         // assert_eq!(air[5].evaluate(omicron_domain[1]), zero);
         // assert_eq!(air[5].evaluate(omicron_domain[0]), zero);
