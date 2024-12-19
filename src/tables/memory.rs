@@ -180,13 +180,13 @@ impl MemoryTable {
         //1. (mp+1-mp*).(mp-mp*)
         //2. (mp-mp*).mv*
         //3. (mp-mp*).(mv-mv*)
-        //4. (clk - 1 - clk*).(mv*-mv)
+        //4. (clk + 1 - clk*).(mv*-mv)
         //5. ppa.(d.clk + e.mp + f.mv - beta) - ppa*
         let transitionair = (mp.clone() + one.clone() - mp_next.clone())
             * (mp.clone() - mp_next.clone())
             + (mp.clone() - mp_next.clone()) * mv_next.clone()
-            + (mp.clone() - mp_next.clone()) * (mv.clone() - mv_next.clone())
-            + (clk.clone() - one.clone() - clk_next) * (mv_next.clone() - mv.clone())
+            //+ (mp.clone() - mp_next.clone()) * (mv.clone() - mv_next.clone())
+            + (clk.clone() + one.clone() - clk_next) * (mv_next.clone() - mv.clone())
             + ppa.clone()
                 * (clk.scalar_mul(challenges[ChallengeIndices::D as usize])
                     + mp.scalar_mul(challenges[ChallengeIndices::E as usize])
@@ -251,6 +251,7 @@ impl MemoryTable {
         let zerofiers = self.generate_zerofier();
 
         for i in 0..air.len() {
+            assert_eq!(air[i].clone().q_div(zerofiers[i].clone()).1, Polynomial::constant(FieldElement::zero(self.table.field)));
             quotients.push(air[i].clone().q_div(zerofiers[i].clone()).0);
         }
         quotients
@@ -409,7 +410,7 @@ mod test_memory_table {
         // let omicron = generator.clone();
         let order = 1 << 32;
         // let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
-        let code2 = ">>[++-]<".to_string();
+        let code2 = "++>+-[+--]++.".to_string();
         let program = vm.compile(code2);
         println!("{:?}", program.clone());
         let (rt, _, _) = vm.run(&program, "".to_string());
@@ -432,7 +433,7 @@ mod test_memory_table {
             roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
-            memory_matrix,
+            memory_matrix.clone(),
         );
         let mut instruction_table = InstructionTable::new(
             field,
@@ -481,17 +482,20 @@ mod test_memory_table {
 
         let b = air[0].evaluate(omicron_domain[0]);
 
+
         assert_eq!(b, zero);
         for v in 0..rt - 1 {
             let t_all = air[1].evaluate(omicron_domain[v as usize]);
-            assert_eq!(t_all, zero);
+            //println!("{}", t_all);
+            assert_eq!(t_all, zero, "failed at {}", v);
         }
 
         let v = omicron_domain[4];
 
-        let t_air1 = air[2].evaluate(v);
-
+        let t_air1 = air[2].evaluate(omicron_domain[rt as usize-1]);
+        //println!("{}",t_air1);
         assert_eq!(t_air1, zero);
+
     }
 
     #[test]
@@ -585,7 +589,6 @@ mod test_memory_table {
         let v = omicron_domain[3];
 
         let t_air1 = air[2].evaluate(v);
-
         assert_ne!(t_air1, zero);
     }
 }

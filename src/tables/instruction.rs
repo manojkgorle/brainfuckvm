@@ -189,7 +189,7 @@ impl InstructionTable {
         //7. (ip*-ip-1).(pea*-pea)
         //8. (ip*-ip).(pea* - pea.eta - (a.ip*+b.ci*+c.ni*))
 
-        let transitionair = (ip.clone() - ip_next.clone())
+         let transitionair = (ip.clone() - ip_next.clone())
             * (ip_next.clone() - ip.clone() - one.clone())
             + (ip.clone() - ip_next.clone()) * (ni.clone() - ci_next.clone())
             + (ip_next.clone() - ip.clone() - one.clone()) * (ci_next.clone() - ci.clone())
@@ -197,9 +197,9 @@ impl InstructionTable {
             + (ip.clone() + one.clone() - ip_next.clone())
                 * (ppa_next.clone()
                     - ppa.clone()
-                        * (ip_next
-                            .clone()
-                            .scalar_mul(challenges[ChallengeIndices::A as usize])
+                         * (ip_next
+                             .clone()
+                             .scalar_mul(challenges[ChallengeIndices::A as usize])
                             + ci_next
                                 .clone()
                                 .scalar_mul(challenges[ChallengeIndices::B as usize])
@@ -207,7 +207,7 @@ impl InstructionTable {
                                 .clone()
                                 .scalar_mul(challenges[ChallengeIndices::C as usize])
                             - Polynomial::new_from_coefficients(vec![
-                                challenges[ChallengeIndices::A as usize],
+                                challenges[ChallengeIndices::Alpha as usize],
                             ])))
             + (ip.clone() - ip_next.clone()) * (ppa_next.clone() - ppa.clone())
             + (ip_next.clone() - ip.clone() - one) * (pea_next.clone() - pea.clone())
@@ -276,6 +276,7 @@ impl InstructionTable {
         let zerofiers = self.generate_zerofier();
 
         for i in 0..air.len() {
+            assert_eq!(air[i].clone().q_div(zerofiers[i].clone()).1, Polynomial::constant(FieldElement::zero(self.table.field)));
             quotients.push(air[i].clone().q_div(zerofiers[i].clone()).0);
         }
         quotients
@@ -292,6 +293,7 @@ mod test_instruction {
     use crate::tables::memory::MemoryTable;
     use crate::tables::processor::ProcessorTable;
     use crate::tables::roundup_npow2;
+    use crate::univariate_polynomial::Polynomial;
     use crate::vm::VirtualMachine;
 
     #[test]
@@ -344,7 +346,7 @@ mod test_instruction {
         let _omicron = generator.clone();
         let order = 1 << 32;
         // let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
-        let code2 = ">>[++-]+-".to_string();
+        let code2 = "++>+-[+--]++.".to_string();
         let program = vm.compile(code2);
         println!("{:?}", program.clone());
         let (rt, _, _) = vm.run(&program, "".to_string());
@@ -427,27 +429,29 @@ mod test_instruction {
         // for row in air.clone() {
         //     println!("{:?}", row);
         // }
-
-        let b = air[0].evaluate(omicron_domain[0]);
+        let zerofiers = instruction_table.generate_zerofier();
+        let b = air[0].clone().evaluate(omicron_domain[0]);
         assert_eq!(b, zero);
 
         for v in 0..instruction_table.table.length - 1 {
-            let transition = air[1].evaluate(omicron_domain[v as usize]);
-            //println!("{:?}: {}", transition, v);
-            assert_eq!(transition, zero);
+            let transition = air[1].clone(); //.evaluate(omicron_domain[v as usize]);
+            assert_eq!(air[1].clone().q_div(zerofiers[1].clone()).1, Polynomial::zero(field), "failed at {}", v);
+
+            //println!("{:?}: {}: {}", transition, v, zerofiers[1].evaluate(omicron_domain[v as usize]));
+            //assert_eq!(transition, zero);
         }
 
         let terminal =
             air[2].evaluate(omicron_domain[(instruction_table.table.length - 1) as usize]);
         assert_eq!(terminal, zero);
 
-        println!("Input table after extending columns");
-        for row in input_table.table.matrix.clone() {
-            println!("{:?}", row);
-        }
-        println!("Output table after extending columns");
-        for row in output_table.table.matrix.clone() {
-            println!("{:?}", row);
-        }
+        // println!("Input table after extending columns");
+        // for row in input_table.table.matrix.clone() {
+        //     println!("{:?}", row);
+        // }
+        // println!("Output table after extending columns");
+        // for row in output_table.table.matrix.clone() {
+        //     println!("{:?}", row);
+        // }
     }
 }

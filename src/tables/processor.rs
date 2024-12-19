@@ -367,6 +367,7 @@ impl ProcessorTable {
         let zerofiers = self.generate_zerofier();
 
         for i in 0..air.len() {
+            assert_eq!(air[i].clone().q_div(zerofiers[i].clone()).1, Polynomial::constant(FieldElement::zero(self.table.field)));
             quotients.push(air[i].clone().q_div(zerofiers[i].clone()).0);
         }
         quotients
@@ -727,8 +728,9 @@ mod test_processor {
         let generator = FieldElement::new(1753635133440165772, field);
         // let omicron = generator.clone();
         let order = 1 << 32;
-        let code2 = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
-        // let code2 = ">>[++-]<".to_string();
+        //let code2 = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
+        //let code2 = ">>[++-]<".to_string();
+        let code2 = "++>+-[+--]++.".to_string();
 
         let program = vm.compile(code2);
         println!("{:?}", program.clone());
