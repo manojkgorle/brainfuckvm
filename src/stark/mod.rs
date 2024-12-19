@@ -368,6 +368,10 @@ pub fn prove(
 
     let mut processor_q = vec![];
     for i in 0..processor_zerofiers.len() {
+        assert_eq!((processor_air[i]
+            .clone()
+            .q_div(processor_zerofiers[i].clone()))
+        .1, Polynomial::constant(FieldElement::zero(field)));
         processor_q.push(
             (processor_air[i]
                 .clone()
@@ -377,10 +381,20 @@ pub fn prove(
     }
     let mut memory_q = vec![];
     for i in 0..memory_zerofiers.len() {
+        assert_eq!((memory_air[i]
+            .clone()
+            .q_div(memory_zerofiers[i].clone()))
+        .1, Polynomial::constant(FieldElement::zero(field)), "Failed at memory_q: {}", i);
         memory_q.push((memory_air[i].clone().q_div(memory_zerofiers[i].clone())).0);
     }
+
     let mut instruction_q = vec![];
+
     for i in 0..instruction_zerofiers.len() {
+        assert_eq!((instruction_air[i]
+            .clone()
+            .q_div(instruction_zerofiers[i].clone()))
+        .1, Polynomial::zero(field), "failed at {}", i);
         instruction_q.push(
             (instruction_air[i]
                 .clone()
@@ -739,8 +753,8 @@ mod stark_test {
         let vm = VirtualMachine::new(field);
         let generator = field.generator().pow((1 << 32) - 1);
         let order = 1 << 32;
-        let code = "++.".to_string();
-        //let code = "++>+-[+--]++.".to_string();
+        //let code = "++.".to_string();
+        let code = "++>+-[+--]++.".to_string();
         //let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
         let program = vm.compile(code);
 
