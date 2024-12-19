@@ -157,12 +157,7 @@ impl MemoryTable {
         let mv = interpolated[Indices::MemoryValue as usize].clone();
         let ppa = interpolated[Indices::PermutationArg as usize].clone();
 
-        let next_interpolated = self.table.clone().next_interpolate_columns(vec![
-            Indices::Cycle as u128,
-            Indices::MemoryPointer as u128,
-            Indices::MemoryValue as u128,
-            Indices::PermutationArg as u128,
-        ]);
+        let next_interpolated = self.table.clone().next_interpolate_columns(interpolated);
 
         let clk_next = next_interpolated[Indices::Cycle as usize].clone();
         let mp_next = next_interpolated[Indices::MemoryPointer as usize].clone();

@@ -160,38 +160,42 @@ impl Table {
         polynomial
     }
 
-    pub fn next_interpolate_columns(self, _column_indices: Vec<u128>) -> Vec<Polynomial> {
+    pub fn next_interpolate_columns(self, interpolated:Vec<Polynomial>) -> Vec<Polynomial> {
         let mut next_interpolated: Vec<Polynomial> = Vec::new();
-        if self.height == 0 {
-            let poly = Polynomial::new_from_coefficients(vec![FieldElement::zero(Field::new(
-                self.field.0,
-            ))]);
-            next_interpolated.push(poly);
-            return next_interpolated;
-        }
+        // if self.height == 0 {
+        //     let poly = Polynomial::new_from_coefficients(vec![FieldElement::zero(Field::new(
+        //         self.field.0,
+        //     ))]);
+        //     next_interpolated.push(poly);
+        //     return next_interpolated;
+        // }
 
-        let mut omicron_domain: Vec<FieldElement> = Vec::new();
-        omicron_domain.push(self.omicron.pow(self.height - 1));
-        for i in 0..self.height - 1 {
-            omicron_domain.push(self.omicron.pow(i));
-        }
+        // let mut omicron_domain: Vec<FieldElement> = Vec::new();
+        // omicron_domain.push(self.omicron.pow(self.height - 1));
+        // for i in 0..self.height - 1 {
+        //     omicron_domain.push(self.omicron.pow(i));
+        // }
 
-        for c in 0..self.matrix[0].len() {
-            let mut trace: Vec<FieldElement> = Vec::new();
-            for row in self.matrix.iter() {
-                trace.push(row[c]);
-            }
-            let values = trace.clone();
+        // for c in 0..self.matrix[0].len() {
+        //     let mut trace: Vec<FieldElement> = Vec::new();
+        //     for row in self.matrix.iter() {
+        //         trace.push(row[c]);
+        //     }
+        //     let values = trace.clone();
 
-            if values.len() != omicron_domain.len() {
-                panic!("length of domain and values are unequal");
-            };
-            // println!("domain ={:?}", omicron_domain);
-            // println!("values ={:?}", values);
+        //     if values.len() != omicron_domain.len() {
+        //         panic!("length of domain and values are unequal");
+        //     };
+        //     // println!("domain ={:?}", omicron_domain);
+        //     // println!("values ={:?}", values);
 
-            let poly = interpolate_lagrange_polynomials(omicron_domain.clone(), values);
-            // println!("poly ={:?}", poly);
-            next_interpolated.push(poly);
+        //     let poly = interpolate_lagrange_polynomials(omicron_domain.clone(), values);
+        //     // println!("poly ={:?}", poly);
+        //     next_interpolated.push(poly);
+        // }
+        for i in interpolated{
+            let next_interpolate = i.compose(self.omicron);
+            next_interpolated.push(next_interpolate)
         }
         next_interpolated
     }
@@ -318,7 +322,60 @@ mod test_operations {
         ])];
         println!("polynomials ={:?}", polynomials[0]);
         assert_eq!(polynomials[0], expected_polynomials[0]);
+        let mut  next_polynomials:Vec<Polynomial>=vec![];
+        for i in polynomials{
+            let next_polynomial =i.compose(omega);
+            next_polynomials.push(next_polynomial);
+            
+        }
+        println!("{:?}",next_polynomials[0]);
     }
+    #[test]
+    fn test_next_interpolate(){
+        let field = Field::new(17);
+        let offset = FieldElement::new(2, field);
+        let length = 4_u128;
+        let omega = FieldElement::new(13, field);
+        let domain = FriDomain::new(offset, omega, length);
+        let generator = FieldElement::new(3, field);
+        let order = 16;
+        let mut table = Table::new_2(field, 3, 5, 4, generator, order);
+        let mut matrix: Vec<Vec<FieldElement>> = Vec::new();
+        matrix.push(vec![
+            FieldElement::new(1, field),
+            FieldElement::new(2, field),
+            FieldElement::new(3, field),
+            FieldElement::new(4, field),
+            FieldElement::new(5, field),
+        ]);
+        matrix.push(vec![
+            FieldElement::new(6, field),
+            FieldElement::new(7, field),
+            FieldElement::new(8, field),
+            FieldElement::new(9, field),
+            FieldElement::new(10, field),
+        ]);
+        matrix.push(vec![
+            FieldElement::new(11, field),
+            FieldElement::new(12, field),
+            FieldElement::new(13, field),
+            FieldElement::new(14, field),
+            FieldElement::new(15, field),
+        ]);
+        matrix.push(vec![
+            FieldElement::new(16, field),
+            FieldElement::new(17, field),
+            FieldElement::new(18, field),
+            FieldElement::new(19, field),
+            FieldElement::new(20, field),
+        ]);
+        table.matrix = matrix;
+        let column_indices = vec![0, 1, 2];
+        // let polynomials = table.next_interpolate_columns(column_indices);
+        // println!("polynomial_next{:?}",polynomials[0]);
+
+    }
+
     #[test]
     fn test_lde() {
         let field = Field::new(17);
