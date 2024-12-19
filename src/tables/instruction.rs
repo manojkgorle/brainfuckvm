@@ -68,7 +68,7 @@ impl InstructionTable {
 
     // Note: Before padding initiate the matrix in table.
     // Add padding rows to convert the matrix derived from trace to a matrix of length of a power of 2
-    
+
     pub fn pad(&mut self) {
         let zero = FieldElement::new(0, self.table.field);
         let length = self.table.length as usize;

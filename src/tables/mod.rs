@@ -3,22 +3,25 @@ use crate::fri::*;
 use crate::multivariate_polynomial::*;
 use crate::ntt::*;
 use crate::univariate_polynomial::{interpolate_lagrange_polynomials, Polynomial};
+use chrono::Local;
 use rand::*;
 pub mod instruction;
 pub mod io;
 pub mod memory;
+use rayon::prelude::*;
 pub mod processor;
 #[derive(Debug, Clone)]
 // we are not going to use the randomizers in the table
 pub struct Table {
     pub field: Field,
-    base_width: u128,        //number of base columns in the table.
-    full_width: u128,        //total no. of coloumn using extension and all
-    length: u128,            //Number of rows in the table.
-    pub height: u128,        //Represents the rounded-up next power of two of the table length
+    base_width: u128,                  //number of base columns in the table.
+    full_width: u128,                  //total no. of coloumn using extension and all
+    length: u128,                      //Number of rows in the table.
+    pub height: u128, //Represents the rounded-up next power of two of the table length
     omicron: FieldElement, //represent the generator eval_domain depends on the generator and the order of the subgroup
     generator: FieldElement, // A generator for the multiplicative group of the field
     order: u128,           //order of the generator.
+    omicron_domain: Vec<FieldElement>, //The domain of the table
     pub matrix: Vec<Vec<FieldElement>>,
 }
 
@@ -45,6 +48,7 @@ impl Table {
             omicron,
             generator,
             order,
+            omicron_domain: Vec::new(),
             matrix,
         }
     }
@@ -67,6 +71,7 @@ impl Table {
             omicron,
             generator,
             order,
+            omicron_domain: Vec::new(),
             matrix: Vec::new(), // Initialize as empty
         }
     }
@@ -91,6 +96,7 @@ impl Table {
             omicron,
             generator,
             order,
+            omicron_domain: Vec::new(),
             matrix: matrix,
         }
     }
@@ -114,6 +120,15 @@ impl Table {
         (order & (order - 1)) == 0
     }
 
+    pub fn generate_omicron_domain(&mut self) {
+        let mut omicron_domain: Vec<FieldElement> = Vec::new();
+        for i in 0..self.height {
+            omicron_domain.push(self.omicron.pow(i));
+        }
+        self.omicron_domain = omicron_domain;
+    }
+
+    // @todo optimize this
     pub fn interpolate_columns(self, column_indices: Vec<u128>) -> Vec<Polynomial> {
         let mut polynomial: Vec<Polynomial> = Vec::new();
         if self.height == 0 {

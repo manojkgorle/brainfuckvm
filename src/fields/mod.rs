@@ -381,9 +381,9 @@ mod test_field_operations {
         let a = FieldElement::new(256, field);
         let b = a.to_bytes();
         let c = FieldElement::from_bytes(&b);
-        println!("a:{}", a);
+        // println!("a:{}", a);
         for i in 0..b.len() {
-            println!("{}", b[i]);
+            // println!("{}", b[i]);
         }
         assert_eq!(a.0, c.0);
     }
