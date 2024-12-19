@@ -3,12 +3,15 @@ use chrono::Local;
 use crate::fields::{Field, FieldElement};
 use rayon::prelude::*;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
+use crate::fields::{NEG_ORDER, P};
 // How should we be interpolating polynomials?
 // -> lagrange interpolation
 // -> iNTT inverse Number Theoretic Transformation
 // How should we be evaluating polynomials?
 // -> Normal evaluation
 // -> NTT Number Theoretic Transformation
+
+// @todo time to redefine algebra?
 
 /// a_0 + a_1 * x + a_2 * x^2 + a_3 * x^3 + ... + a_n * x^n
 #[derive(Debug, Clone)]
@@ -179,6 +182,7 @@ impl Polynomial {
     pub fn constant(constant: FieldElement) -> Self {
         Polynomial::new_from_coefficients(vec![constant])
     }
+
 }
 
 impl Add for Polynomial {
@@ -187,23 +191,25 @@ impl Add for Polynomial {
     fn add(self, other: Polynomial) -> Polynomial {
         let mut result = Vec::new();
         let mut i = 0;
-
-        while i < self.coefficients.len() && i < other.coefficients.len() {
-            result.push(self.coefficients[i] + other.coefficients[i]);
+        let field = Field::new(other.coefficients[0].modulus());
+        let coeff = self.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
+        let coeff2 = other.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
+        while i < coeff.len() && i < coeff2.len() {
+            result.push(coeff[i] + coeff2[i]);
             i += 1;
         }
 
-        while i < self.coefficients.len() {
-            result.push(self.coefficients[i]);
+        while i < coeff.len() {
+            result.push(coeff[i]);
             i += 1;
         }
 
-        while i < other.coefficients.len() {
-            result.push(other.coefficients[i]);
+        while i < coeff2.len() {
+            result.push(coeff2[i]);
             i += 1;
         }
-
-        Polynomial::new_from_coefficients(result)
+        let res = result.iter().map(|x| FieldElement::new(*x, field)).collect::<Vec<FieldElement>>();
+        Polynomial::new_from_coefficients(res)
     }
 }
 
@@ -211,23 +217,25 @@ impl AddAssign for Polynomial {
     fn add_assign(&mut self, other: Polynomial) {
         let mut result = Vec::new();
         let mut i = 0;
-
-        while i < self.coefficients.len() && i < other.coefficients.len() {
-            result.push(self.coefficients[i] + other.coefficients[i]);
+        let field = Field::new(self.coefficients[0].modulus());
+        let coeff = other.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
+        let coeff2 = other.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
+        while i < coeff.len() && i < coeff2.len() {
+            result.push(coeff[i] + coeff2[i]);
             i += 1;
         }
 
-        while i < self.coefficients.len() {
-            result.push(self.coefficients[i]);
+        while i < coeff.len() {
+            result.push(coeff[i]);
             i += 1;
         }
 
-        while i < other.coefficients.len() {
-            result.push(other.coefficients[i]);
+        while i < coeff2.len() {
+            result.push(coeff2[i]);
             i += 1;
         }
 
-        self.coefficients = result;
+        self.coefficients = result.iter().map(|x| FieldElement::new(*x, field)).collect::<Vec<FieldElement>>();
     }
 }
 
@@ -287,35 +295,37 @@ impl Mul for Polynomial {
     fn mul(self, other: Polynomial) -> Polynomial {
         let field = Field::new(self.coefficients[0].modulus());
         let mut result = vec![
-            FieldElement::new(0, field);
+            0;
             self.coefficients.len() + other.coefficients.len() - 1
         ];
-
-        for i in 0..self.coefficients.len() {
-            for j in 0..other.coefficients.len() {
-                result[i + j] += self.coefficients[i] * other.coefficients[j];
+        let coeff = self.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
+        let coeff2 = other.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
+        for i in 0..coeff.len() {
+            for j in 0..coeff2.len() {
+                result[i + j] += coeff[i] * coeff2[j];
             }
         }
-
-        Polynomial::new_from_coefficients(result)
+        let res = result.iter().map(|x| FieldElement::new(*x, field)).collect::<Vec<FieldElement>>();
+        Polynomial::new_from_coefficients(res)
     }
 }
 
 impl MulAssign for Polynomial {
     fn mul_assign(&mut self, other: Polynomial) {
         if self.coefficients.len() > 0 {
-            let field = self.coefficients[0].modulus();
+            let field = Field::new(self.coefficients[0].modulus());
             let mut result = vec![
-                FieldElement::new(0, Field::new(field));
+                0;
                 self.coefficients.len() + other.coefficients.len() - 1
             ];
-
-            for i in 0..self.coefficients.len() {
-                for j in 0..other.coefficients.len() {
-                    result[i + j] += self.coefficients[i] * other.coefficients[j];
+            let coeff = self.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
+            let coeff2 = other.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
+            for i in 0..coeff.len() {
+                for j in 0..coeff2.len() {
+                    result[i + j] += coeff[i] * coeff2[j];
                 }
             }
-            self.coefficients = result
+            self.coefficients = result.iter().map(|x| FieldElement::new(*x, field)).collect::<Vec<FieldElement>>();
         }
     }
 }
@@ -441,6 +451,67 @@ impl PartialEq for Polynomial {
         true
     }
 }
+
+// fn karatsuba_multiply(a: &[u128], b: &[u128]) -> Vec<u128> {
+//     let n = a.len();
+//     let m = b.len();
+
+//     // Base case: if the polynomials are small, use the naive multiplication
+//     if n < 32 || m < 32 {
+//         return naive_multiply(a, b);
+//     }
+
+//     // Ensure both polynomials have the same length by padding with zeros
+//     let max_len = n.max(m);
+//     let mut a_padded = vec![0; max_len];
+//     let mut b_padded = vec![0; max_len];
+//     a_padded[..n].copy_from_slice(a);
+//     b_padded[..m].copy_from_slice(b);
+
+//     // Split the polynomials into two halves
+//     let mid = max_len / 2;
+//     let (a_low, a_high) = a_padded.split_at(mid);
+//     let (b_low, b_high) = b_padded.split_at(mid);
+
+//     // Recursive calls to Karatsuba
+//     let z0 = karatsuba_multiply(a_low, b_low);
+//     let z1 = karatsuba_multiply(&vec_add(a_low, a_high), &vec_add(b_low, b_high));
+//     let z2 = karatsuba_multiply(a_high, b_high);
+
+//     // Combine the results
+//     let mut result = vec![0; 2 * max_len - 1];
+//     for (i, &val) in z0.iter().enumerate() {
+//         result[i] += val;
+//     }
+//     for (i, &val) in z1.iter().enumerate() {
+//         result[i + mid] += val - z0[i] - z2[i];
+//     }
+//     for (i, &val) in z2.iter().enumerate() {
+//         result[i + 2 * mid] += val;
+//     }
+
+//     result
+// }
+
+// // Helper function to add two vectors element-wise
+// fn vec_add(a: &[u128], b: &[u128]) -> Vec<u128> {
+//     a.iter().zip(b.iter()).map(|(&x, &y)| x + y).collect()
+// }
+
+// // Naive polynomial multiplication (for small inputs)
+// fn naive_multiply(a: &[u128], b: &[u128]) -> Vec<u128> {
+//     let n = a.len();
+//     let m = b.len();
+//     let mut result = vec![0; n + m - 1];
+
+//     for i in 0..n {
+//         for j in 0..m {
+//             result[i + j] += a[i] * b[j];
+//         }
+//     }
+
+//     result
+// }
 
 #[cfg(test)]
 mod test_polynomials {
@@ -970,4 +1041,24 @@ mod test_polynomials {
         let result = Polynomial::collinearity(evaluation_form);
         assert!(result);
     }
+
+    // #[test]
+    // fn bench_mul() {
+    //     let field = Field::new(P as u128);
+    //     let a = vec![1, 2, 3, 4, 5,6, 7, 8, 0, 1, 2, 3, 4, 5,6, 7, 8, 0, 1, 2, 3, 4, 5,6, 7, 8, 0,1, 2, 3, 4, 5,6, 7, 8, 9];
+    //     let b  = vec![1, 2, 3, 4, 5,6, 7, 8, 0, 1, 2, 3, 4, 5,6, 7, 8, 0, 1, 2, 3, 4, 5,6, 7, 8, 0,1, 2, 3, 4, 5,6, 7, 8, 9];
+    //     let t = Local::now();
+    //     let poly = Polynomial::new_from_coefficients(a.iter().map(|x| FieldElement::new(*x, field)).collect());
+    //     let poly2 = Polynomial::new_from_coefficients(b.iter().map(|x| FieldElement::new(*x, field)).collect());
+    //     for _ in 0..100 {
+    //         karatsuba_multiply(&a, &b);
+    //     }
+    //     println!("Time: {:?}", Local::now().signed_duration_since(t));
+    //     let t = Local::now();
+    //     for _ in 0..100 {
+    //        let _ = poly.clone() * poly2.clone();
+    //     }
+    //     println!("Time: {:?}", Local::now().signed_duration_since(t));
+
+    // }
 }

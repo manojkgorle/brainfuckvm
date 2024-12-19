@@ -41,7 +41,7 @@ impl InstructionTable {
         length: u128,
         generator: FieldElement,
         order: u128,
-        matrix: Vec<Vec<FieldElement>>,
+        matrix: &[Vec<FieldElement>],
     ) -> Self {
         let base_width = 3;
         let full_width = base_width + 2;
@@ -311,7 +311,7 @@ mod test_instruction {
             instruction_matrix.len() as u128,
             generator,
             order,
-            instruction_matrix.clone(),
+            &instruction_matrix,
         );
         instruction_table.pad();
         assert!(instruction_table.table.matrix.len().is_power_of_two());
@@ -355,7 +355,7 @@ mod test_instruction {
             roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
-            processor_matrix,
+            &processor_matrix,
         );
         let mut memory_table = MemoryTable::new(
             field,
@@ -363,28 +363,28 @@ mod test_instruction {
             roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
-            memory_matrix,
+            &memory_matrix,
         );
         let mut instruction_table = InstructionTable::new(
             field,
             instruction_matrix.len() as u128,
             generator,
             order,
-            instruction_matrix,
+            &instruction_matrix,
         );
         let mut input_table = IOTable::new(
             field,
             input_matrix.len() as u128,
             generator,
             order,
-            input_matrix,
+            &input_matrix,
         );
         let mut output_table = IOTable::new(
             field,
             output_matrix.len() as u128,
             generator,
             order,
-            output_matrix,
+            &output_matrix,
         );
 
         processor_table.pad();

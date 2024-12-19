@@ -75,7 +75,7 @@ impl ProcessorTable {
         height: u128,
         generator: FieldElement,
         order: u128,
-        matrix: Vec<Vec<FieldElement>>,
+        matrix: &[Vec<FieldElement>],
     ) -> Self {
         let base_width = 7;
         let full_width = base_width + 4;
@@ -442,15 +442,6 @@ impl ProcessorTable {
             Indices::OutputEvaluation as u128,
         ];
         let interpolated = self.table.clone().interpolate_columns(indices_vec.clone());
-        let next_interpolated = self.table.clone().next_interpolate_columns(interpolated.clone());
-        // let (interpolated, next_interpolated) = rayon::join(
-        //     || self.table.clone().interpolate_columns(indices_vec.clone()),
-        //     || {
-        //         self.table
-        //             .clone()
-        //             .next_interpolate_columns(indices_vec.clone())
-        //     },
-        // );
         let clk = interpolated[Indices::Cycle as usize].clone();
         let ip = interpolated[Indices::InstructionPointer as usize].clone();
         let ci = interpolated[Indices::CurrentInstruction as usize].clone();
@@ -730,7 +721,7 @@ mod test_processor {
             roundup_npow2(processor_matrix.len() as u128),
             generator,
             order,
-            processor_matrix,
+            &processor_matrix,
         );
         processor_table.pad();
         assert!(processor_table.table.matrix.len().is_power_of_two());
@@ -770,7 +761,7 @@ mod test_processor {
             roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
-            processor_matrix,
+            &processor_matrix,
         );
         let mut memory_table = MemoryTable::new(
             field,
@@ -778,28 +769,28 @@ mod test_processor {
             roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
-            memory_matrix,
+            &memory_matrix,
         );
         let mut instruction_table = InstructionTable::new(
             field,
             instruction_matrix.len() as u128,
             generator,
             order,
-            instruction_matrix,
+            &instruction_matrix,
         );
         let mut input_table = IOTable::new(
             field,
             input_matrix.len() as u128,
             generator,
             order,
-            input_matrix,
+            &input_matrix,
         );
         let mut output_table = IOTable::new(
             field,
             output_matrix.len() as u128,
             generator,
             order,
-            output_matrix,
+            &output_matrix,
         );
 
         processor_table.pad();
@@ -844,11 +835,14 @@ mod test_processor {
         let b = air[0].evaluate(omicron_domain[0]);
         assert_eq!(b, zero);
 
-        for v in 0..rt-1 {
+        for v in 0..rt - 1 {
             let t_all = air[9].evaluate(omicron_domain[v as usize]);
             assert_eq!(t_all, zero);
         }
-        println!("{},{} height", processor_table.table.height,processor_table.table.length);
+        println!(
+            "{},{} height",
+            processor_table.table.height, processor_table.table.length
+        );
 
         // assert_eq!(air[5].evaluate(omicron_domain[1]), zero);
         // assert_eq!(air[5].evaluate(omicron_domain[0]), zero);
@@ -880,7 +874,7 @@ mod test_processor {
             roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
-            processor_matrix,
+            &processor_matrix,
         );
         let mut memory_table = MemoryTable::new(
             field,
@@ -888,28 +882,28 @@ mod test_processor {
             roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
-            memory_matrix,
+            &memory_matrix,
         );
         let mut instruction_table = InstructionTable::new(
             field,
             instruction_matrix.len() as u128,
             generator,
             order,
-            instruction_matrix,
+            &instruction_matrix,
         );
         let mut input_table = IOTable::new(
             field,
             input_matrix.len() as u128,
             generator,
             order,
-            input_matrix,
+            &input_matrix,
         );
         let mut output_table = IOTable::new(
             field,
             output_matrix.len() as u128,
             generator,
             order,
-            output_matrix,
+            &output_matrix,
         );
 
         processor_table.pad();
@@ -1000,7 +994,7 @@ mod test_processor {
             roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
-            processor_matrix,
+            &processor_matrix,
         );
         let mut memory_table = MemoryTable::new(
             field,
@@ -1008,28 +1002,28 @@ mod test_processor {
             roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
-            memory_matrix,
+            &memory_matrix,
         );
         let mut instruction_table = InstructionTable::new(
             field,
             instruction_matrix.len() as u128,
             generator,
             order,
-            instruction_matrix,
+            &instruction_matrix,
         );
         let mut input_table = IOTable::new(
             field,
             input_matrix.len() as u128,
             generator,
             order,
-            input_matrix,
+            &input_matrix,
         );
         let mut output_table = IOTable::new(
             field,
             output_matrix.len() as u128,
             generator,
             order,
-            output_matrix,
+            &output_matrix,
         );
 
         processor_table.pad();

@@ -160,7 +160,7 @@ impl Table {
         polynomial
     }
 
-    pub fn next_interpolate_columns(self, interpolated:Vec<Polynomial>) -> Vec<Polynomial> {
+    pub fn next_interpolate_columns(self, interpolated: Vec<Polynomial>) -> Vec<Polynomial> {
         let mut next_interpolated: Vec<Polynomial> = Vec::new();
         // if self.height == 0 {
         //     let poly = Polynomial::new_from_coefficients(vec![FieldElement::zero(Field::new(
@@ -193,7 +193,7 @@ impl Table {
         //     // println!("poly ={:?}", poly);
         //     next_interpolated.push(poly);
         // }
-        for i in interpolated{
+        for i in interpolated {
             let next_interpolate = i.compose(self.omicron);
             next_interpolated.push(next_interpolate)
         }
@@ -322,16 +322,15 @@ mod test_operations {
         ])];
         println!("polynomials ={:?}", polynomials[0]);
         assert_eq!(polynomials[0], expected_polynomials[0]);
-        let mut  next_polynomials:Vec<Polynomial>=vec![];
-        for i in polynomials{
-            let next_polynomial =i.compose(omega);
+        let mut next_polynomials: Vec<Polynomial> = vec![];
+        for i in polynomials {
+            let next_polynomial = i.compose(omega);
             next_polynomials.push(next_polynomial);
-            
         }
-        println!("{:?}",next_polynomials[0]);
+        println!("{:?}", next_polynomials[0]);
     }
     #[test]
-    fn test_next_interpolate(){
+    fn test_next_interpolate() {
         let field = Field::new(17);
         let offset = FieldElement::new(2, field);
         let length = 4_u128;
@@ -373,7 +372,6 @@ mod test_operations {
         let column_indices = vec![0, 1, 2];
         // let polynomials = table.next_interpolate_columns(column_indices);
         // println!("polynomial_next{:?}",polynomials[0]);
-
     }
 
     #[test]

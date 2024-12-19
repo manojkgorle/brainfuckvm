@@ -13,3 +13,8 @@ rs_merkle = "1.4.2"
 sha256 = "1.5.0"
 rand="0.8"
 pprof = { version = "0.14", features = ["protobuf-codec"] }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+panic = "abort"
