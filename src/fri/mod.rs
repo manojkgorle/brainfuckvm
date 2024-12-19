@@ -168,9 +168,9 @@ pub fn next_fri_layer(
     let new_eval_domain = next_eval_domain(domain);
     let new_polynomial = next_fri_polynomial(&old_polynomial, beta);
     let new_evaluations: Vec<FieldElement> = (0..new_eval_domain.length)
-    .into_par_iter() 
-    .map(|i| new_polynomial.evaluate(new_eval_domain.omega.pow(i))) 
-    .collect();
+        .into_par_iter()
+        .map(|i| new_polynomial.evaluate(new_eval_domain.omega.pow(i)))
+        .collect();
     (new_polynomial, new_eval_domain, new_evaluations)
 }
 
