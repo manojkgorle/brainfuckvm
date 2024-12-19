@@ -2,6 +2,33 @@
 
 static CONSOLE_LOGGER: ConsoleLogger = ConsoleLogger;
 struct ConsoleLogger;
+use chrono::Local;
+use log::{Level, LevelFilter, Metadata, Record};
+
+impl log::Log for ConsoleLogger {
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        metadata.level() <= Level::Debug
+    }
+
+    fn log(&self, record: &Record) {
+        if self.enabled(record.metadata()) {
+            println!(
+                "{} [{}] {}:{} - {}",
+                Local::now().format("%Y-%m-%dT%H:%M:%S"),
+                record.level(),
+                record.module_path().unwrap(),
+                record.line().unwrap(),
+                record.args()
+            );
+        }
+    }
+
+    fn flush(&self) {}
+}
+use pprof::ProfilerGuard;
+use pprof::protos::Message;
+use std::fs::File;
+use std::io::Write;
 
 pub mod channel;
 pub mod evaluation_argument;
@@ -16,19 +43,25 @@ pub mod tables;
 pub mod univariate_polynomial;
 pub mod vm;
 
-use crate::fields::{Field, FieldElement};
-use crate::fri::FriDomain;
-use crate::stark::{prove, verify_proof};
-use crate::tables::derive_omicron;
-use crate::vm::VirtualMachine;
-
+pub use crate::fields::{Field, FieldElement};
+pub use crate::fri::FriDomain;
+pub use crate::stark::{prove, verify_proof};
+pub use crate::tables::derive_omicron;
+pub use crate::vm::VirtualMachine;
+pub use crate::tables::Table;
+use rayon::ThreadPoolBuilder;
 fn main() {
+    let guard = ProfilerGuard::new(2).unwrap();
+    // ThreadPoolBuilder::new()
+    // .thread_name(|i| format!("par-iter-{}", i))
+    // .build_global()
+    // .unwrap();
     let field = Field(18446744069414584321);
     let vm = VirtualMachine::new(field);
     let generator = field.generator().pow((1 << 32) - 1);
     let order = 1 << 32;
-    let code = "++>+-[+--]++.".to_string();
-    //let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
+    // let code = "++>+-[+--]++.".to_string();
+    let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
     let program = vm.compile(code);
 
     let (running_time, input_symbols, _output_symbols) = vm.run(&program, "112".to_string());
@@ -73,4 +106,17 @@ fn main() {
         to,
         degree_bound as usize,
     );
+    match guard.report().build() {
+        Ok(report) => {
+            let mut file = File::create("profile.pb").unwrap();
+            let profile = report.pprof().unwrap();
+    
+            let mut content = Vec::new();
+            profile.write_to_vec(&mut content).unwrap();
+            file.write_all(&content).unwrap();
+    
+            // println!("report: {:?}", &report);
+        }
+        Err(_) => {}
+    };
 }

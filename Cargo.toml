@@ -1,5 +1,5 @@
 [package]
-name = "brainfuck"
+name = "brainfuckvm"
 version = "0.1.0"
 edition = "2021"
 
@@ -12,3 +12,4 @@ rayon = "1.10.0"
 rs_merkle = "1.4.2"
 sha256 = "1.5.0"
 rand="0.8"
+pprof = { version = "0.14", features = ["protobuf-codec"] }
