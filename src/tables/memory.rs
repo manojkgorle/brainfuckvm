@@ -175,13 +175,14 @@ impl MemoryTable {
         //1. (mp+1-mp*).(mp-mp*)
         //2. (mp-mp*).mv*
         //3. (mp-mp*).(mv-mv*)
-        //4. (clk + 1 - clk*).(mv*-mv)
+        //4. (clk + 1 - clk*).(mv*-mv).(mp+1-mp*)
         //5. ppa.(d.clk + e.mp + f.mv - beta) - ppa*
         let transitionair = (mp.clone() + one.clone() - mp_next.clone())
             * (mp.clone() - mp_next.clone())
             + (mp.clone() - mp_next.clone()) * mv_next.clone()
             //+ (mp.clone() - mp_next.clone()) * (mv.clone() - mv_next.clone())
             + (clk.clone() + one.clone() - clk_next) * (mv_next.clone() - mv.clone())
+            * (mp.clone() + one.clone() - mp_next.clone())
             + ppa.clone()
                 * (clk.scalar_mul(challenges[ChallengeIndices::D as usize])
                     + mp.scalar_mul(challenges[ChallengeIndices::E as usize])
@@ -404,8 +405,8 @@ mod test_memory_table {
         let generator = FieldElement::new(1753635133440165772, field);
         // let omicron = generator.clone();
         let order = 1 << 32;
-        // let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
-        let code2 = "++>+-[+--]++.".to_string();
+        let code2 = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
+        //let code2 = "++>+-[+--]++.".to_string();
         let program = vm.compile(code2);
         println!("{:?}", program.clone());
         let (rt, _, _) = vm.run(&program, "".to_string());
@@ -464,9 +465,11 @@ mod test_memory_table {
         output_table.table.generate_omicron_domain();
         let terminal = memory_table.extend_column_ppa(1, challenges.clone());
         let terminal2 = processor_table.extend_columns(challenges.clone());
+        let mut i=0;
         println!("memory_table after extending columns");
         for row in memory_table.table.matrix.clone() {
-            println!("{:?}", row);
+            println!("{} : {:?}", i, row);
+            i+=1;
         }
         println!("tppa: {:?}", terminal[0]);
         println!("tmpa: {:?}", terminal2[1]);
