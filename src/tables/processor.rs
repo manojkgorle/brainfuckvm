@@ -3,7 +3,9 @@ use super::{derive_omicron, roundup_npow2};
 use crate::fields::{Field, FieldElement};
 use crate::fri::*;
 use crate::univariate_polynomial::*;
-
+use chrono::Local;
+use rayon::prelude::ParallelString;
+use rayon::prelude::*;
 pub struct ProcessorTable {
     pub table: Table,
 }
@@ -372,19 +374,32 @@ impl ProcessorTable {
         quotients
     }
 
+    //@todo parallelize this function
     //define a selector polynomial for a specific instruction.
     //this will return a non-zero value for instruction and zero for all other instructions
     pub fn selector_polynomial(instruction: char, ci: Polynomial, field: Field) -> Polynomial {
         let f = |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, field) };
-        let mut acc = Polynomial::constant(FieldElement::new(1, field)); // poly=1
-        for c in "[]<>,.+-".chars() {
-            if c != instruction {
-                acc *= ci.clone() - Polynomial::constant(FieldElement::new(f(c).0, field));
-            }
+        let mut acc = Polynomial::constant(FieldElement::new(1, field)); // poly = 1
+
+        // Parallelize the loop over characters
+        let partial_results: Vec<Polynomial> = "[]<>,.+-"
+            .par_chars() // `par_chars` is available through rayon for parallel iteration over characters
+            .filter(|&c| c != instruction) // Filter out the character matching `instruction`
+            .map(|c| {
+                // For each character, calculate the corresponding polynomial and multiply with the accumulator
+                Polynomial::constant(FieldElement::new(f(c).0, field))
+            })
+            .collect();
+
+        // Combine the partial results into the final polynomial
+        for poly in partial_results {
+            acc *= ci.clone() - poly; // Multiply each result with the accumulator
         }
+
         acc
     }
-    //@ I am not using this function because it because universal selector is redundant
+
+    // I am not using this function because it because universal selector is redundant
     // define a selector polynomial for a valid set if instruction from this set then it should be zero
     pub fn universal_selector(ci: Polynomial, field: Field) -> Polynomial {
         let f = |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, field) };
@@ -426,6 +441,15 @@ impl ProcessorTable {
             Indices::OutputEvaluation as u128,
         ];
         let interpolated = self.table.clone().interpolate_columns(indices_vec.clone());
+        let next_interpolated = self.table.clone().next_interpolate_columns(indices_vec);
+        // let (interpolated, next_interpolated) = rayon::join(
+        //     || self.table.clone().interpolate_columns(indices_vec.clone()),
+        //     || {
+        //         self.table
+        //             .clone()
+        //             .next_interpolate_columns(indices_vec.clone())
+        //     },
+        // );
         let clk = interpolated[Indices::Cycle as usize].clone();
         let ip = interpolated[Indices::InstructionPointer as usize].clone();
         let ci = interpolated[Indices::CurrentInstruction as usize].clone();
@@ -484,7 +508,7 @@ impl ProcessorTable {
             + (mp_next.clone() - mp.clone())
             + (mv_next.clone() - mv.clone());
         air.push(trasition_i0);
-        //ci=]
+        // ci=]
         // (ip⋆−ip−2)⋅iszero+(ip⋆−ni)⋅mv
         // mp⋆−mp
         // mv⋆−mv
@@ -530,7 +554,7 @@ impl ProcessorTable {
         let trasition_i6 =
             (ip_next.clone() - ip.clone() - poly_one.clone()) + (mp_next.clone() - mp.clone());
         air.push(trasition_i6);
-        //  ip⋆−ip−1
+        // ip⋆−ip−1
         // mp⋆−mp
         // mv⋆−mv
         //ci=.
@@ -781,7 +805,11 @@ mod test_processor {
         instruction_table.pad();
         input_table.pad();
         output_table.pad();
-
+        processor_table.table.generate_omicron_domain();
+        memory_table.table.generate_omicron_domain();
+        instruction_table.table.generate_omicron_domain();
+        input_table.table.generate_omicron_domain();
+        output_table.table.generate_omicron_domain();
         let terminal = processor_table.extend_columns(challenges.clone());
         //let terminal2 = memory_table.extend_column_ppa(1, challenges.clone());
 
@@ -816,7 +844,6 @@ mod test_processor {
 
         for v in 0..rt-1 {
             let t_all = air[9].evaluate(omicron_domain[v as usize]);
-
             assert_eq!(t_all, zero);
         }
         println!("{},{} height", processor_table.table.height,processor_table.table.length);

@@ -456,6 +456,11 @@ mod test_memory_table {
         instruction_table.pad();
         input_table.pad();
         output_table.pad();
+        processor_table.table.generate_omicron_domain();
+        memory_table.table.generate_omicron_domain();
+        instruction_table.table.generate_omicron_domain();
+        input_table.table.generate_omicron_domain();
+        output_table.table.generate_omicron_domain();
         let terminal = memory_table.extend_column_ppa(1, challenges.clone());
         let terminal2 = processor_table.extend_columns(challenges.clone());
         println!("memory_table after extending columns");
@@ -552,6 +557,11 @@ mod test_memory_table {
         instruction_table.pad();
         input_table.pad();
         output_table.pad();
+        processor_table.table.generate_omicron_domain();
+        memory_table.table.generate_omicron_domain();
+        instruction_table.table.generate_omicron_domain();
+        input_table.table.generate_omicron_domain();
+        output_table.table.generate_omicron_domain();
         let terminal = memory_table.extend_column_ppa(1, challenges.clone());
         println!("memory_table after extending columns");
         for row in memory_table.table.matrix.clone() {

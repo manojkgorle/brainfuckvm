@@ -4,6 +4,7 @@ use crate::channel::*;
 use crate::fields::*;
 use crate::merkle::*;
 use crate::univariate_polynomial::*;
+use rayon::prelude::*;
 //we can use ntt fast fns for optimization, but rn we just implement using direct evaluate and multiply functions of polynomials
 //some fns, structs and parameters are changed accordingly compared to fri.py and ntt.py, because we are not using extension fields
 
@@ -19,7 +20,6 @@ pub fn combination_polynomial(
     height: usize,
     field: Field,
 ) -> Polynomial {
-    let mut combination = Polynomial::new_from_coefficients(vec![]);
     let alpha = challenges[0];
     let beta = challenges[1];
     let x = Polynomial::new_from_coefficients(vec![
@@ -28,43 +28,87 @@ pub fn combination_polynomial(
     ]);
     let degree = height - 1;
 
-    for i in 0..processor_q.clone().len() {
-        if processor_q[i].degree() < degree {
-            let d = degree - processor_q[i].clone().degree();
-            combination += Polynomial::new_from_coefficients(vec![alpha]) * processor_q[i].clone()
-                + Polynomial::new_from_coefficients(vec![beta])
-                    * x.clone().pow(d as u128)
-                    * processor_q[i].clone();
-        } else {
-            println!("processor quotient {} degree greater than degree max", i);
-        }
-    }
+    let alpha_poly = Polynomial::new_from_coefficients(vec![alpha]);
+    let beta_poly = Polynomial::new_from_coefficients(vec![beta]);
 
-    for i in 0..memory_q.clone().len() {
-        if memory_q[i].degree() < degree {
-            let d = degree - memory_q[i].clone().degree();
-            combination += Polynomial::new_from_coefficients(vec![alpha]) * memory_q[i].clone()
-                + Polynomial::new_from_coefficients(vec![beta])
-                    * x.clone().pow(d as u128)
-                    * memory_q[i].clone();
-        } else {
-            println!("memory quotient {} degree greater than degree max", i);
-        }
-    }
+    // Compute partial results in parallel
+    let partial_results: Vec<Polynomial> = processor_q
+        .par_iter()
+        .enumerate()
+        .filter_map(|(i, q)| {
+            if q.degree() < degree {
+                let d = degree - q.degree();
+                Some(
+                    alpha_poly.clone() * q.clone()
+                        + beta_poly.clone() * x.clone().pow(d as u128) * q.clone(),
+                )
+            } else {
+                println!("processor quotient {} degree greater than degree max", i);
+                None
+            }
+        })
+        .collect();
 
-    for i in 0..instruction_q.clone().len() {
-        if instruction_q[i].degree() < degree {
-            let d = degree - instruction_q[i].clone().degree();
-            combination += Polynomial::new_from_coefficients(vec![alpha])
-                * instruction_q[i].clone()
-                + Polynomial::new_from_coefficients(vec![beta])
-                    * x.clone().pow(d as u128)
-                    * instruction_q[i].clone();
-        } else {
-            println!("instruction quotient {} degree greater than degree max", i);
-        }
-    }
+    // Combine the results sequentially
+    let mut combination = partial_results
+        .into_iter()
+        .fold(Polynomial::new_from_coefficients(vec![]), |acc, poly| {
+            acc + poly
+        });
 
+    let partial_results: Vec<Polynomial> = memory_q
+        .par_iter()
+        .enumerate()
+        .filter_map(|(i, q)| {
+            if q.degree() < degree {
+                let d = degree - q.degree();
+                Some(
+                    alpha_poly.clone() * q.clone()
+                        + beta_poly.clone() * x.clone().pow(d as u128) * q.clone(),
+                )
+            } else {
+                println!("memory quotient {} degree greater than degree max", i);
+                None
+            }
+        })
+        .collect();
+
+    // Combine the results sequentially
+    let memory_combination: Polynomial = partial_results
+        .into_iter()
+        .fold(Polynomial::new_from_coefficients(vec![]), |acc, poly| {
+            acc + poly
+        });
+
+    // Combine with the existing `combination`
+    combination += memory_combination;
+
+    let partial_results: Vec<Polynomial> = instruction_q
+        .par_iter()
+        .enumerate()
+        .filter_map(|(i, q)| {
+            if q.degree() < degree {
+                let d = degree - q.degree();
+                Some(
+                    alpha_poly.clone() * q.clone()
+                        + beta_poly.clone() * x.clone().pow(d as u128) * q.clone(),
+                )
+            } else {
+                println!("instruction quotient {} degree greater than degree max", i);
+                None
+            }
+        })
+        .collect();
+
+    // Combine the results sequentially
+    let instruction_combination: Polynomial = partial_results
+        .into_iter()
+        .fold(Polynomial::new_from_coefficients(vec![]), |acc, poly| {
+            acc + poly
+        });
+
+    // Combine with the existing `combination`
+    combination += instruction_combination;
     combination
 }
 
@@ -123,10 +167,10 @@ pub fn next_fri_layer(
 ) -> (Polynomial, FriDomain, Vec<FieldElement>) {
     let new_eval_domain = next_eval_domain(domain);
     let new_polynomial = next_fri_polynomial(&old_polynomial, beta);
-    let mut new_evaluations = vec![];
-    for i in 0..new_eval_domain.length {
-        new_evaluations.push(new_polynomial.evaluate(new_eval_domain.omega.pow(i)));
-    }
+    let new_evaluations: Vec<FieldElement> = (0..new_eval_domain.length)
+    .into_par_iter() 
+    .map(|i| new_polynomial.evaluate(new_eval_domain.omega.pow(i))) 
+    .collect();
     (new_polynomial, new_eval_domain, new_evaluations)
 }
 
@@ -349,25 +393,12 @@ impl FriDomain {
     }
 
     pub fn evaluate(&self, polynomial: Polynomial) -> Vec<FieldElement> {
+        let omega = self.omega;
         let polynomial = polynomial.scale(self.offset.0);
-        let mut result: Vec<FieldElement> = vec![];
-        // let mut  domain_gen:Vec<FieldElement>=Vec::new();
-        for i in 0..self.length {
-            // let x=self.omega.pow(i);
-            result.push(polynomial.evaluate(self.omega.pow(i)));
-            // domain_gen.push(x);
-        }
-        // println!("domain_gen ={:?}", domain_gen);
-        result
-    }
-    //needed if we use extension field
-    pub fn xevaluate(&self, polynomial: Polynomial) -> Vec<FieldElement> {
-        let polynomial = polynomial.scalar_mul(self.offset);
-        let mut result: Vec<FieldElement> = vec![];
-        for i in 0..polynomial.coefficients.len() {
-            result.push(polynomial.evaluate(self.omega.pow(i as u128)));
-        }
-        result
+        (0..self.length)
+            .into_par_iter()
+            .map(|i| polynomial.evaluate(omega.pow(i)))
+            .collect()
     }
     // interpolate with the given offset
     pub fn interpolate(&self, values: Vec<FieldElement>) -> Polynomial {
