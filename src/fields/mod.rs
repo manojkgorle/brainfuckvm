@@ -26,9 +26,11 @@ pub enum ChallengeIndices {
 }
 
 impl Field {
+    #[inline(always)]
     pub fn new(x: u128) -> Field {
         Field(x)
     }
+    #[inline(always)]
     pub fn primitive_nth_root(self, n: u128) -> FieldElement {
         if self.0 == 1 + (1 << 64) - (1 << 32) {
             assert!(
@@ -49,6 +51,7 @@ impl Field {
             panic!("Unknown field, can't return root of unity.");
         }
     }
+    #[inline(always)]
     pub fn generator(self) -> FieldElement {
         assert!(
             self.0 == 1 + (1 << 64) - (1 << 32),
@@ -59,6 +62,7 @@ impl Field {
 }
 
 impl PartialEq for Field {
+    #[inline(always)]
     fn eq(&self, other: &Field) -> bool {
         self.0 == other.0
     }
@@ -68,22 +72,27 @@ impl PartialEq for Field {
 pub struct FieldElement(pub u128, pub Field);
 
 impl FieldElement {
+    #[inline(always)]
     pub fn new(x: u128, field: Field) -> FieldElement {
         FieldElement(x % field.0, field)
     }
 
+    #[inline(always)]
     pub fn zero(field: Field) -> FieldElement {
         FieldElement(0, field)
     }
 
+    #[inline(always)]
     pub fn one(field: Field) -> FieldElement {
         FieldElement(1, field)
     }
 
+    #[inline(always)]
     pub fn modulus(&self) -> u128 {
         self.1 .0
     }
 
+    #[inline(always)]
     pub fn inverse(&self) -> FieldElement {
         let mut inv = 1;
         let mut base = self.0;
@@ -98,6 +107,7 @@ impl FieldElement {
         FieldElement(inv, self.1)
     }
 
+    #[inline(always)]
     pub fn pow(&self, exp: u128) -> FieldElement {
         let mut res = 1;
         let mut base = self.0;
@@ -112,6 +122,7 @@ impl FieldElement {
         FieldElement(res % self.1 .0, self.1)
     }
 
+    #[inline(always)]
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut e = self.0.to_be_bytes().to_vec();
         let mut f = self.1 .0.to_be_bytes().to_vec();
@@ -119,6 +130,7 @@ impl FieldElement {
         e
     }
 
+    #[inline(always)]
     pub fn from_bytes(bytes: &[u8]) -> FieldElement {
         let mut x = [0u8; 16];
         let mut y = [0u8; 16];
@@ -129,10 +141,12 @@ impl FieldElement {
             Field(u128::from_be_bytes(y)),
         )
     }
+
 }
 
 impl Add for FieldElement {
     type Output = FieldElement;
+    #[inline(always)]
     fn add(self, other: FieldElement) -> FieldElement {
         if self.1 != other.1 {
             panic!("Fields must be same");
@@ -142,6 +156,7 @@ impl Add for FieldElement {
 }
 
 impl AddAssign for FieldElement {
+    #[inline(always)]
     fn add_assign(&mut self, other: FieldElement) {
         if self.1 != other.1 {
             panic!("Fields must be same");
@@ -152,6 +167,7 @@ impl AddAssign for FieldElement {
 
 impl Sub for FieldElement {
     type Output = FieldElement;
+    #[inline(always)]
     fn sub(self, other: FieldElement) -> FieldElement {
         if self.1 != other.1 {
             panic!("Fields must be same");
@@ -165,6 +181,7 @@ impl Sub for FieldElement {
 }
 
 impl SubAssign for FieldElement {
+    #[inline(always)]
     fn sub_assign(&mut self, other: FieldElement) {
         if self.1 != other.1 {
             panic!("Fields must be same");
@@ -179,6 +196,7 @@ impl SubAssign for FieldElement {
 
 impl Mul for FieldElement {
     type Output = FieldElement;
+    #[inline(always)]
     fn mul(self, other: FieldElement) -> FieldElement {
         if self.1 != other.1 {
             panic!("Fields must be same");
@@ -188,6 +206,7 @@ impl Mul for FieldElement {
 }
 
 impl MulAssign for FieldElement {
+    #[inline(always)]
     fn mul_assign(&mut self, other: FieldElement) {
         if self.1 != other.1 {
             panic!("Fields must be same");
@@ -198,6 +217,7 @@ impl MulAssign for FieldElement {
 
 impl Div for FieldElement {
     type Output = FieldElement;
+    #[inline(always)]
     fn div(self, other: FieldElement) -> FieldElement {
         if self.1 != other.1 {
             panic!("Fields must be same");
@@ -217,6 +237,7 @@ impl Div for FieldElement {
 }
 
 impl DivAssign for FieldElement {
+    #[inline(always)]
     fn div_assign(&mut self, other: FieldElement) {
         if self.1 != other.1 {
             panic!("Fields must be same");
@@ -237,12 +258,14 @@ impl DivAssign for FieldElement {
 
 impl Neg for FieldElement {
     type Output = FieldElement;
+    #[inline(always)]
     fn neg(self) -> FieldElement {
         FieldElement(self.1 .0 - self.0, self.1)
     }
 }
 
 impl PartialEq for FieldElement {
+    #[inline(always)]
     fn eq(&self, other: &FieldElement) -> bool {
         if self.1 != other.1 {
             return false;
@@ -254,6 +277,7 @@ impl PartialEq for FieldElement {
 impl Eq for FieldElement {}
 
 impl Hash for FieldElement {
+    #[inline(always)]
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.0.hash(state);
         self.1.hash(state);
@@ -261,6 +285,7 @@ impl Hash for FieldElement {
 }
 
 impl PartialOrd for FieldElement {
+    #[inline(always)]
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         if self.1 != other.1 {
             return None;
@@ -270,6 +295,7 @@ impl PartialOrd for FieldElement {
 }
 
 impl Ord for FieldElement {
+    #[inline(always)]
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         if self.1 != other.1 {
             panic!("Fields must be same");
@@ -279,12 +305,14 @@ impl Ord for FieldElement {
 }
 
 impl Display for FieldElement {
+    #[inline(always)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
 }
 
 impl Debug for FieldElement {
+    #[inline(always)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
@@ -293,7 +321,7 @@ impl Debug for FieldElement {
 #[cfg(test)]
 mod test_field_operations {
     use std::primitive;
-
+    #[allow(arithmetic_overflow)]
     use super::*;
 
     #[test]
@@ -381,10 +409,6 @@ mod test_field_operations {
         let a = FieldElement::new(256, field);
         let b = a.to_bytes();
         let c = FieldElement::from_bytes(&b);
-        // println!("a:{}", a);
-        for i in 0..b.len() {
-            // println!("{}", b[i]);
-        }
         assert_eq!(a.0, c.0);
     }
 }
