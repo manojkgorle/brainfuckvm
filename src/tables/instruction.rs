@@ -145,13 +145,7 @@ impl InstructionTable {
         let ppa = interpolated[Indices::PermutationArg as usize].clone();
         let pea = interpolated[Indices::EvaluationArg as usize].clone();
 
-        let next_interpolated = self.table.clone().next_interpolate_columns(vec![
-            Indices::Address as u128,
-            Indices::CurrentInstruction as u128,
-            Indices::NextInstruction as u128,
-            Indices::PermutationArg as u128,
-            Indices::EvaluationArg as u128,
-        ]);
+        let next_interpolated = self.table.clone().next_interpolate_columns(interpolated);
 
         let ip_next = next_interpolated[Indices::Address as usize].clone();
         let ci_next = next_interpolated[Indices::CurrentInstruction as usize].clone();

@@ -438,7 +438,7 @@ impl ProcessorTable {
         let iea = interpolated[Indices::InputEvaluation as usize].clone();
         let oea = interpolated[Indices::OutputEvaluation as usize].clone();
 
-        let next_interpolated = self.table.clone().next_interpolate_columns(indices_vec);
+        let next_interpolated = self.table.clone().next_interpolate_columns(interpolated);
         let clk_next = next_interpolated[Indices::Cycle as usize].clone();
         let ip_next = next_interpolated[Indices::InstructionPointer as usize].clone();
         let mp_next = next_interpolated[Indices::MemoryPointer as usize].clone();
@@ -799,7 +799,7 @@ mod test_processor {
         let mut omicron_domain: Vec<FieldElement> = Vec::new();
         for i in 0..processor_table.table.height {
             omicron_domain.push(processor_table.table.omicron.pow(i));
-            if i == 4 {
+            if i == processor_table.table.length.clone() {
                 println!("omicron_domain: {:?}", omicron_domain);
             }
         }
@@ -814,11 +814,12 @@ mod test_processor {
         let b = air[0].evaluate(omicron_domain[0]);
         assert_eq!(b, zero);
 
-        for v in 0..rt - 1 {
+        for v in 0..rt-1 {
             let t_all = air[9].evaluate(omicron_domain[v as usize]);
 
             assert_eq!(t_all, zero);
         }
+        println!("{},{} height", processor_table.table.height,processor_table.table.length);
 
         // assert_eq!(air[5].evaluate(omicron_domain[1]), zero);
         // assert_eq!(air[5].evaluate(omicron_domain[0]), zero);
