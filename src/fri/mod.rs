@@ -144,9 +144,9 @@ pub fn next_fri_polynomial(old_polynomial: &Polynomial, beta: FieldElement) -> P
     // check the len of the polynomial
     let len = old_polynomial.coefficients.len();
     // h(y)
-    let mut odd_poly: Vec<FieldElement> = Vec::new();
+    let mut odd_poly: Vec<FieldElement> = Vec::with_capacity((len / 2) + 1);
     // g(y)
-    let mut even_poly: Vec<FieldElement> = Vec::new();
+    let mut even_poly: Vec<FieldElement> = Vec::with_capacity((len / 2) + 1);
     for i in 0..len {
         if i % 2 == 0 {
             even_poly.push(old_polynomial.coefficients[i]);

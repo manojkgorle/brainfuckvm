@@ -1,6 +1,7 @@
 #![allow(unused_variables)]
 use crate::fields::{Field, FieldElement};
 use crate::univariate_polynomial::*;
+use core::num;
 use std::collections::HashMap;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 #[derive(Clone, Debug)]
@@ -41,7 +42,7 @@ impl MPolynomial {
     }
 
     pub fn variables(num_variables: usize, field: Field) -> Vec<Self> {
-        let mut variables = Vec::new();
+        let mut variables = Vec::with_capacity(num_variables);
 
         for i in 0..num_variables {
             let mut exponent = vec![0; num_variables];
@@ -90,7 +91,7 @@ impl MPolynomial {
         let mut acc = MPolynomial::zero(field); // Accumulator for the result
 
         for (exp, coeff) in &self.dictionary {
-            let c = FieldElement::new(1, field);
+            let c = FieldElement(1, field);
             let mut prod = MPolynomial::constant(c); // Start with the coefficient as a constant
 
             for (i, &exp) in exp.iter().enumerate() {

@@ -116,7 +116,7 @@ impl ProcessorTable {
             // let mut new_row = vec![FieldElement::zero(self.table.field); self.table.full_width as usize];
             // Increment cycle by one for every new padded row.
             curr_row[Indices::Cycle as usize] = last_row[Indices::Cycle as usize]
-                + FieldElement::new((i + 1) as u128, field) * FieldElement::one(self.table.field);
+                + FieldElement((i + 1) as u128, field) * FieldElement::one(self.table.field);
             // keep the instruction pointer same as the last row in every padded row.
             curr_row[Indices::InstructionPointer as usize] =
                 last_row[Indices::InstructionPointer as usize];
@@ -189,7 +189,7 @@ impl ProcessorTable {
                 - challenges[ChallengeIndices::Beta as usize]);
 
         let f =
-            |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, self.table.field) };
+            |x: char| -> FieldElement { FieldElement((x as u32) as u128, self.table.field) };
         for i in 0..self.table.length - 1 {
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f(',') == ci {
@@ -213,7 +213,7 @@ impl ProcessorTable {
         }
         let tiea = iea;
         let toea = oea;
-        let mut terminal: Vec<FieldElement> = Vec::new();
+        let mut terminal: Vec<FieldElement> = Vec::with_capacity(4);
         terminal.push(tipa);
         terminal.push(tmpa);
         terminal.push(tiea);
@@ -229,7 +229,7 @@ impl ProcessorTable {
             FieldElement::one(self.table.field),
         ]);
         let f =
-            |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, self.table.field) };
+            |x: char| -> FieldElement { FieldElement((x as u32) as u128, self.table.field) };
 
         //boundary
         let boundary_zerofier =
@@ -369,7 +369,10 @@ impl ProcessorTable {
         let zerofiers = self.generate_zerofier();
 
         for i in 0..air.len() {
-            assert_eq!(air[i].clone().q_div(zerofiers[i].clone()).1, Polynomial::constant(FieldElement::zero(self.table.field)));
+            assert_eq!(
+                air[i].clone().q_div(zerofiers[i].clone()).1,
+                Polynomial::constant(FieldElement::zero(self.table.field))
+            );
             quotients.push(air[i].clone().q_div(zerofiers[i].clone()).0);
         }
         quotients
@@ -379,8 +382,8 @@ impl ProcessorTable {
     //define a selector polynomial for a specific instruction.
     //this will return a non-zero value for instruction and zero for all other instructions
     pub fn selector_polynomial(instruction: char, ci: Polynomial, field: Field) -> Polynomial {
-        let f = |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, field) };
-        let mut acc = Polynomial::constant(FieldElement::new(1, field)); // poly = 1
+        let f = |x: char| -> FieldElement { FieldElement((x as u32) as u128, field) };
+        let mut acc = Polynomial::constant(FieldElement::one(field)); // poly = 1
 
         // Parallelize the loop over characters
         let partial_results: Vec<Polynomial> = "[]<>,.+-"
@@ -403,9 +406,9 @@ impl ProcessorTable {
     // I am not using this function because it because universal selector is redundant
     // define a selector polynomial for a valid set if instruction from this set then it should be zero
     pub fn universal_selector(ci: Polynomial, field: Field) -> Polynomial {
-        let f = |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, field) };
+        let f = |x: char| -> FieldElement { FieldElement((x as u32) as u128, field) };
         // let mut deselectors = Vec::new();
-        let mut acc = Polynomial::constant(FieldElement::new(1, field));
+        let mut acc = Polynomial::constant(FieldElement::one(field));
 
         // for target_char in "[]<>,.+-".chars() {
         let target_char = ['[', ']', '<', '>', ',', '.', '+', '-'];
@@ -427,7 +430,7 @@ impl ProcessorTable {
         _eval: FieldElement,
     ) -> Vec<Polynomial> {
         let f =
-            |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, self.table.field) };
+            |x: char| -> FieldElement { FieldElement((x as u32) as u128, self.table.field) };
         let indices_vec = vec![
             Indices::Cycle as u128,
             Indices::InstructionPointer as u128,
@@ -911,6 +914,11 @@ mod test_processor {
         instruction_table.pad();
         input_table.pad();
         output_table.pad();
+        processor_table.table.generate_omicron_domain();
+        memory_table.table.generate_omicron_domain();
+        instruction_table.table.generate_omicron_domain();
+        input_table.table.generate_omicron_domain();
+        output_table.table.generate_omicron_domain();
         let terminal = processor_table.extend_columns(challenges.clone());
         println!("processor table after extending columns");
         for row in processor_table.table.matrix.clone() {
@@ -1031,10 +1039,13 @@ mod test_processor {
         instruction_table.pad();
         input_table.pad();
         output_table.pad();
+        processor_table.table.generate_omicron_domain();
+        memory_table.table.generate_omicron_domain();
+        instruction_table.table.generate_omicron_domain();
+        input_table.table.generate_omicron_domain();
+        output_table.table.generate_omicron_domain();
 
         let terminal = processor_table.extend_columns(challenges.clone());
-        //let terminal2 = input_table.extend_column_ea(1, two);
-        //let terminal3 = output_table.extend_column_ea(1, two);
 
         println!("processor table after extending columns");
         for row in processor_table.table.matrix.clone() {
@@ -1067,14 +1078,5 @@ mod test_processor {
         let f = |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, field) };
 
         println!("{} {}", f('1'), f('5'))
-
-        // let b = air[0].evaluate(omicron_domain[0]);
-        // assert_eq!(b, zero);
-
-        // for v in 0..rt - 1 {
-        //     let t_all = air[9].evaluate(omicron_domain[v as usize]);
-
-        //     assert_eq!(t_all, zero);
-        // }
     }
 }
