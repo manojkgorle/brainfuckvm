@@ -179,6 +179,7 @@ pub fn prove(
         "Interpolating instruction table, {:?}ms",
         (Local::now() - t2).num_milliseconds()
     );
+    t2 = Local::now();
     let initial_length = roundup_npow2(9 * (instruction_table.table.clone().height - 1));
 
     //all codewords are evaluated on this expanded domain that has length expanded_length
@@ -186,7 +187,7 @@ pub fn prove(
 
     log::info!(
         "Extending the domain, {:?}ms",
-        (Local::now() - t).num_milliseconds()
+        (Local::now() - t2).num_milliseconds()
     );
     t = Local::now();
     let domain = FriDomain::new(

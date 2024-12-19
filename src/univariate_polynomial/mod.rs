@@ -191,23 +191,25 @@ impl Add for Polynomial {
     fn add(self, other: Polynomial) -> Polynomial {
         let mut result = Vec::new();
         let mut i = 0;
-
-        while i < self.coefficients.len() && i < other.coefficients.len() {
-            result.push(self.coefficients[i] + other.coefficients[i]);
+        let field = Field::new(other.coefficients[0].modulus());
+        let coeff = self.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
+        let coeff2 = other.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
+        while i < coeff.len() && i < coeff2.len() {
+            result.push(coeff[i] + coeff2[i]);
             i += 1;
         }
 
-        while i < self.coefficients.len() {
-            result.push(self.coefficients[i]);
+        while i < coeff.len() {
+            result.push(coeff[i]);
             i += 1;
         }
 
-        while i < other.coefficients.len() {
-            result.push(other.coefficients[i]);
+        while i < coeff2.len() {
+            result.push(coeff2[i]);
             i += 1;
         }
-
-        Polynomial::new_from_coefficients(result)
+        let res = result.iter().map(|x| FieldElement::new(*x, field)).collect::<Vec<FieldElement>>();
+        Polynomial::new_from_coefficients(res)
     }
 }
 
@@ -215,23 +217,25 @@ impl AddAssign for Polynomial {
     fn add_assign(&mut self, other: Polynomial) {
         let mut result = Vec::new();
         let mut i = 0;
-
-        while i < self.coefficients.len() && i < other.coefficients.len() {
-            result.push(self.coefficients[i] + other.coefficients[i]);
+        let field = Field::new(self.coefficients[0].modulus());
+        let coeff = other.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
+        let coeff2 = other.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
+        while i < coeff.len() && i < coeff2.len() {
+            result.push(coeff[i] + coeff2[i]);
             i += 1;
         }
 
-        while i < self.coefficients.len() {
-            result.push(self.coefficients[i]);
+        while i < coeff.len() {
+            result.push(coeff[i]);
             i += 1;
         }
 
-        while i < other.coefficients.len() {
-            result.push(other.coefficients[i]);
+        while i < coeff2.len() {
+            result.push(coeff2[i]);
             i += 1;
         }
 
-        self.coefficients = result;
+        self.coefficients = result.iter().map(|x| FieldElement::new(*x, field)).collect::<Vec<FieldElement>>();
     }
 }
 
@@ -296,12 +300,6 @@ impl Mul for Polynomial {
         ];
         let coeff = self.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
         let coeff2 = other.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
-        // let result = karatsuba_multiply(&coeff, &coeff2).iter().map(|x| FieldElement::new(*x, field)).collect::<Vec<FieldElement>>();
-        // for i in 0..self.coefficients.len() {
-        //     for j in 0..other.coefficients.len() {
-        //         result[i + j] += self.coefficients[i] * other.coefficients[j];
-        //     }
-        // }
         for i in 0..coeff.len() {
             for j in 0..coeff2.len() {
                 result[i + j] += coeff[i] * coeff2[j];
@@ -315,18 +313,19 @@ impl Mul for Polynomial {
 impl MulAssign for Polynomial {
     fn mul_assign(&mut self, other: Polynomial) {
         if self.coefficients.len() > 0 {
-            let field = self.coefficients[0].modulus();
+            let field = Field::new(self.coefficients[0].modulus());
             let mut result = vec![
-                FieldElement::new(0, Field::new(field));
+                0;
                 self.coefficients.len() + other.coefficients.len() - 1
             ];
-
-            for i in 0..self.coefficients.len() {
-                for j in 0..other.coefficients.len() {
-                    result[i + j] += self.coefficients[i] * other.coefficients[j];
+            let coeff = self.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
+            let coeff2 = other.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
+            for i in 0..coeff.len() {
+                for j in 0..coeff2.len() {
+                    result[i + j] += coeff[i] * coeff2[j];
                 }
             }
-            self.coefficients = result
+            self.coefficients = result.iter().map(|x| FieldElement::new(*x, field)).collect::<Vec<FieldElement>>();
         }
     }
 }
