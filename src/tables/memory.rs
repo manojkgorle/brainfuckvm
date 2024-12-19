@@ -135,7 +135,7 @@ impl MemoryTable {
                     [Indices::MemoryValue as usize]
                     * challenges[ChallengeIndices::F as usize]
                 - challenges[ChallengeIndices::Beta as usize]);
-        let mut terminal: Vec<FieldElement> = Vec::new();
+        let mut terminal: Vec<FieldElement> = Vec::with_capacity(1);
         terminal.push(tppa);
         terminal
     }
@@ -247,7 +247,10 @@ impl MemoryTable {
         let zerofiers = self.generate_zerofier();
 
         for i in 0..air.len() {
-            assert_eq!(air[i].clone().q_div(zerofiers[i].clone()).1, Polynomial::constant(FieldElement::zero(self.table.field)));
+            assert_eq!(
+                air[i].clone().q_div(zerofiers[i].clone()).1,
+                Polynomial::constant(FieldElement::zero(self.table.field))
+            );
             quotients.push(air[i].clone().q_div(zerofiers[i].clone()).0);
         }
         quotients
@@ -465,26 +468,22 @@ mod test_memory_table {
         output_table.table.generate_omicron_domain();
         let terminal = memory_table.extend_column_ppa(1, challenges.clone());
         let terminal2 = processor_table.extend_columns(challenges.clone());
-        let mut i=0;
+        let mut i = 0;
         println!("memory_table after extending columns");
         for row in memory_table.table.matrix.clone() {
             println!("{} : {:?}", i, row);
-            i+=1;
+            i += 1;
         }
         println!("tppa: {:?}", terminal[0]);
         println!("tmpa: {:?}", terminal2[1]);
         let mut omicron_domain: Vec<FieldElement> = Vec::new();
         for i in 0..memory_table.table.height {
             omicron_domain.push(memory_table.table.omicron.pow(i));
-            if i == 4 {
-                println!("omicron_domain: {:?}", omicron_domain);
-            }
         }
 
         let air = memory_table.generate_air(challenges, terminal[0]);
 
         let b = air[0].evaluate(omicron_domain[0]);
-
 
         assert_eq!(b, zero);
         for v in 0..rt - 1 {
@@ -495,10 +494,9 @@ mod test_memory_table {
 
         let v = omicron_domain[4];
 
-        let t_air1 = air[2].evaluate(omicron_domain[rt as usize-1]);
+        let t_air1 = air[2].evaluate(omicron_domain[rt as usize - 1]);
         //println!("{}",t_air1);
         assert_eq!(t_air1, zero);
-
     }
 
     #[test]

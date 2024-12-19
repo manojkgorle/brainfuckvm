@@ -51,7 +51,8 @@ pub use crate::tables::Table;
 pub use crate::vm::VirtualMachine;
 use rayon::ThreadPoolBuilder;
 fn main() {
-    let guard = ProfilerGuard::new(1).unwrap();
+    env_logger::init();
+    let guard = ProfilerGuard::new(1000).unwrap();
     // ThreadPoolBuilder::new()
     // .thread_name(|i| format!("par-iter-{}", i))
     // .build_global()
@@ -65,7 +66,7 @@ fn main() {
     let program = vm.compile(code);
 
     let (running_time, input_symbols, _output_symbols) = vm.run(&program, "112".to_string());
-
+    log::info!("Running time: {}", running_time);
     let (processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix) =
         vm.simulate(&program, "112".to_string());
     assert_eq!(running_time as usize, processor_matrix.len());

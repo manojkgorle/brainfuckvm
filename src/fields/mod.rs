@@ -1,10 +1,10 @@
 #![allow(dead_code)]
 use core::hash::{Hash, Hasher};
+use core::hint::unreachable_unchecked;
 use std::cmp::{Ord, PartialOrd};
 use std::fmt::write;
 use std::fmt::{Debug, Display};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
-use core::hint::unreachable_unchecked;
 // Define a field
 // Define a field element
 // Define arithmetic operations on field elements
@@ -41,7 +41,7 @@ impl Field {
                 n <= 1 << 32 && (n & (n - 1)) == 0,
                 "Field does not have nth root of unity where n > 2^32 or not power of two."
             );
-            let mut root = FieldElement::new(1753635133440165772, self);
+            let mut root = FieldElement(1753635133440165772, self);
 
             let mut order = 1 << 32;
 
@@ -61,7 +61,7 @@ impl Field {
             self.0 == 1 + (1 << 64) - (1 << 32),
             "Do not know generator for other fields beyond 2^64 - 2^32 + 1"
         );
-        FieldElement::new(7, self)
+        FieldElement(7, self)
     }
 }
 

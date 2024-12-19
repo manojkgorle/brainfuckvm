@@ -70,7 +70,7 @@ impl InstructionTable {
     // Add padding rows to convert the matrix derived from trace to a matrix of length of a power of 2
 
     pub fn pad(&mut self) {
-        let zero = FieldElement::new(0, self.table.field);
+        let zero = FieldElement::zero(self.table.field);
         let length = self.table.length as usize;
         for i in 0..(self.table.height - self.table.length) as usize {
             let new_row = vec![
@@ -89,7 +89,7 @@ impl InstructionTable {
         _rand_field_elem: u128,
         challenges: Vec<FieldElement>,
     ) -> Vec<FieldElement> {
-        let mut terminal: Vec<FieldElement> = Vec::new();
+        let mut terminal: Vec<FieldElement> = Vec::with_capacity(2);
         let field = self.table.field;
         let mut ppa = FieldElement::one(field);
         let mut pea = self.table.matrix[(0) as usize][Indices::Address as usize]
@@ -183,7 +183,7 @@ impl InstructionTable {
         //7. (ip*-ip-1).(pea*-pea)
         //8. (ip*-ip).(pea* - pea.eta - (a.ip*+b.ci*+c.ni*))
 
-         let transitionair = (ip.clone() - ip_next.clone())
+        let transitionair = (ip.clone() - ip_next.clone())
             * (ip_next.clone() - ip.clone() - one.clone())
             + (ip.clone() - ip_next.clone()) * (ni.clone() - ci_next.clone())
             + (ip_next.clone() - ip.clone() - one.clone()) * (ci_next.clone() - ci.clone())
@@ -191,9 +191,9 @@ impl InstructionTable {
             + (ip.clone() + one.clone() - ip_next.clone())
                 * (ppa_next.clone()
                     - ppa.clone()
-                         * (ip_next
-                             .clone()
-                             .scalar_mul(challenges[ChallengeIndices::A as usize])
+                        * (ip_next
+                            .clone()
+                            .scalar_mul(challenges[ChallengeIndices::A as usize])
                             + ci_next
                                 .clone()
                                 .scalar_mul(challenges[ChallengeIndices::B as usize])
@@ -270,7 +270,10 @@ impl InstructionTable {
         let zerofiers = self.generate_zerofier();
 
         for i in 0..air.len() {
-            assert_eq!(air[i].clone().q_div(zerofiers[i].clone()).1, Polynomial::constant(FieldElement::zero(self.table.field)));
+            assert_eq!(
+                air[i].clone().q_div(zerofiers[i].clone()).1,
+                Polynomial::constant(FieldElement::zero(self.table.field))
+            );
             quotients.push(air[i].clone().q_div(zerofiers[i].clone()).0);
         }
         quotients
@@ -392,21 +395,19 @@ mod test_instruction {
         instruction_table.pad();
         input_table.pad();
         output_table.pad();
+        processor_table.table.generate_omicron_domain();
+        memory_table.table.generate_omicron_domain();
+        instruction_table.table.generate_omicron_domain();
+        input_table.table.generate_omicron_domain();
+        output_table.table.generate_omicron_domain();
 
-        // println!("instruction table before extending columns");
-        // for row in instruction_table.table.matrix.clone() {
-        //     println!("{:?}", row);
-        // }
         let terminal = instruction_table.extend_column(0, challenges.clone());
         let terminal2 = processor_table.extend_columns(challenges.clone());
         println!("instruction table after extending columns");
         for row in instruction_table.table.matrix.clone() {
             println!("{:?}", row);
         }
-        // println!("processor table after extending columns");
-        // for row in processor_table.table.matrix.clone() {
-        //     println!("{:?}", row);
-        // }
+
         println!("tppa: {:?}", terminal[0]);
         println!("tpea: {:?}", terminal[1]);
         println!("tipa: {:?}", terminal2[0]);
@@ -419,17 +420,19 @@ mod test_instruction {
             }
         }
         let air = instruction_table.generate_air(challenges, terminal[0], terminal[1]);
-        // println!("air");
-        // for row in air.clone() {
-        //     println!("{:?}", row);
-        // }
+
         let zerofiers = instruction_table.generate_zerofier();
         let b = air[0].clone().evaluate(omicron_domain[0]);
         assert_eq!(b, zero);
 
         for v in 0..instruction_table.table.length - 1 {
             let transition = air[1].clone(); //.evaluate(omicron_domain[v as usize]);
-            assert_eq!(air[1].clone().q_div(zerofiers[1].clone()).1, Polynomial::zero(field), "failed at {}", v);
+            assert_eq!(
+                air[1].clone().q_div(zerofiers[1].clone()).1,
+                Polynomial::zero(field),
+                "failed at {}",
+                v
+            );
 
             //println!("{:?}: {}: {}", transition, v, zerofiers[1].evaluate(omicron_domain[v as usize]));
             //assert_eq!(transition, zero);

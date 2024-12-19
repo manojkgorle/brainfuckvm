@@ -76,30 +76,6 @@ impl Table {
         }
     }
 
-    pub fn new_3(
-        field: Field,
-        base_width: u128,
-        full_width: u128,
-        length: u128,
-        generator: FieldElement,
-        order: u128,
-        matrix: Vec<Vec<FieldElement>>,
-    ) -> Self {
-        let height = roundup_npow2(length);
-        let omicron = derive_omicron(generator, order, height);
-        Table {
-            field,
-            base_width,
-            full_width,
-            length,
-            height,
-            omicron,
-            generator,
-            order,
-            omicron_domain: Vec::new(),
-            matrix: matrix,
-        }
-    }
     // dont know how to implement this method
     pub fn unit_distance(&self, omega_order: u128) -> u128 {
         if self.height == 0 {
@@ -121,7 +97,7 @@ impl Table {
     }
 
     pub fn generate_omicron_domain(&mut self) {
-        let mut omicron_domain: Vec<FieldElement> = Vec::new();
+        let mut omicron_domain: Vec<FieldElement> = Vec::with_capacity(self.height as usize);
         for i in 0..self.height {
             omicron_domain.push(self.omicron.pow(i));
         }
@@ -130,7 +106,7 @@ impl Table {
 
     // @todo optimize this
     pub fn interpolate_columns(self, column_indices: Vec<u128>) -> Vec<Polynomial> {
-        let mut polynomial: Vec<Polynomial> = Vec::new();
+        let mut polynomial: Vec<Polynomial> = Vec::with_capacity(column_indices.len());
         if self.height == 0 {
             let poly = Polynomial::new_from_coefficients(vec![FieldElement::zero(Field::new(
                 self.field.0,
@@ -139,10 +115,11 @@ impl Table {
             return polynomial;
         }
 
-        let mut omicron_domain: Vec<FieldElement> = Vec::new();
-        for i in 0..self.height {
-            omicron_domain.push(self.omicron.pow(i));
-        }
+        // let mut omicron_domain: Vec<FieldElement> = Vec::new();
+        // for i in 0..self.height {
+        //     omicron_domain.push(self.omicron.pow(i));
+        // }
+        let omicron_domain: Vec<FieldElement> = self.omicron_domain.clone();
 
         for c in column_indices {
             let mut trace: Vec<FieldElement> = Vec::new();
@@ -312,6 +289,7 @@ mod test_operations {
             FieldElement::new(20, field),
         ]);
         table.matrix = matrix;
+        table.generate_omicron_domain();
         let column_indices = vec![0, 1, 2];
         let polynomials = table.interpolate_columns(column_indices);
         let expected_polynomials = [Polynomial::new_from_coefficients(vec![
@@ -414,6 +392,7 @@ mod test_operations {
             FieldElement::new(20, field),
         ]);
         table.matrix = matrix;
+        table.generate_omicron_domain();
         let codewords = table.lde(domain);
 
         let expected_codewords = vec![

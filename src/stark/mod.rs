@@ -89,7 +89,6 @@ pub fn prove(
 ) {
     // log::set_logger(&CONSOLE_LOGGER).unwrap();
     // log::set_max_level(LevelFilter::Info);
-    env_logger::init();
     let start_time = Local::now();
     let generator = field.generator().pow((1 << 32) - 1);
     let order = 1 << 32;
@@ -196,7 +195,11 @@ pub fn prove(
         expanded_length,
     );
 
-    let mut basecodewords: Vec<Vec<FieldElement>> = Vec::new();
+    let mut basecodewords: Vec<Vec<FieldElement>> = Vec::with_capacity(
+        processor_interpol_columns.len()
+            + memory_interpol_columns.len()
+            + instruction_interpol_columns.len(),
+    );
 
     // basecodewords vector order:
     // processor: clk, ip, ci, ni, mp, mv, inv
@@ -209,6 +212,7 @@ pub fn prove(
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
+    // @todo make these functions rust native, by using iter.
     for i in 0..processor_interpol_columns.clone().len() {
         basecodewords.push(domain.evaluate(processor_interpol_columns[i].clone()));
     }
@@ -223,7 +227,7 @@ pub fn prove(
 
     //we are zipping all the base codewords (for each index in order) by taking their merkle root
 
-    let mut basecodeword: Vec<FieldElement> = Vec::new();
+    let mut basecodeword: Vec<FieldElement> = Vec::with_capacity(expanded_length as usize);
 
     log::info!(
         "Zipping all the codewords on the extended domain, {:?}ms",
@@ -246,24 +250,6 @@ pub fn prove(
         );
         basecodeword.push(root);
     }
-
-    // for i in 0..expanded_length as usize {
-    //     let mut x: Vec<u8> = vec![];
-    //     for j in 0..basecodewords.len() {
-    //         x.extend(basecodewords[j][i].to_bytes().iter().map(|&x| x));
-    //     }
-    //     basecodeword.push(x);
-    // }
-
-    // let mut data1 = vec![];
-
-    // for i in 0..basecodeword.len() {
-    //     // difficulty in implementing -> let n = basecodewords[0].len();
-    //     // so hardcoded the value to 32*13 = 416 -> where 13 => clk, ip, ci, ni, mp, mv, inv, clk, mp, mv, ip, ci, ni
-    //     let array: &[u8] = &basecodeword[i].to_vec();
-
-    //     data1.push(FieldElement::from_bytes(array));
-    // }
 
     // get 11 challenges array from fiat shamir
     let mut channel = Channel::new();
@@ -316,7 +302,11 @@ pub fn prove(
         .clone()
         .interpolate_columns(vec![3, 4]);
 
-    let mut extension_codewords: Vec<Vec<FieldElement>> = Vec::new();
+    let mut extension_codewords: Vec<Vec<FieldElement>> = Vec::with_capacity(
+        processor_interpol_columns_2.len()
+            + memory_interpol_columns_2.len()
+            + instruction_interpol_columns_2.len(),
+    );
 
     // extensioncodewords vector order:
     // processor: ipa, mpa, iea, oea
@@ -341,7 +331,7 @@ pub fn prove(
         extension_codewords.push(domain.evaluate(instruction_interpol_columns_2[i].clone()));
     }
 
-    let mut extension_codeword: Vec<FieldElement> = Vec::new();
+    let mut extension_codeword: Vec<FieldElement> = Vec::with_capacity(expanded_length as usize);
     log::info!(
         "Zipping all the extension codewords, {:?}ms",
         (Local::now() - t).num_milliseconds()
@@ -364,21 +354,6 @@ pub fn prove(
         extension_codeword.push(root);
     }
 
-    // for i in 0..expanded_length as usize {
-    //     let mut x: Vec<u8> = vec![];
-    //     for j in 0..extension_codewords.len() {
-    //         x.extend(extension_codewords[j][i].to_bytes().iter().map(|&x| x));
-    //     }
-    //     extension_codeword.push(x);
-    // }
-
-    // let mut data2 = vec![];
-
-    // for i in 0..extension_codeword.len() {
-    //     let array: &[u8] = &extension_codeword[i].to_vec();
-
-    //     data2.push(FieldElement::from_bytes(array));
-    // }
     log::info!(
         "Commiting the extension codewords, {:?}ms",
         (Local::now() - t).num_milliseconds()
@@ -466,10 +441,13 @@ pub fn prove(
     t = Local::now();
     let mut processor_q = vec![];
     for i in 0..processor_zerofiers.len() {
-        assert_eq!((processor_air[i]
-            .clone()
-            .q_div(processor_zerofiers[i].clone()))
-        .1, Polynomial::constant(FieldElement::zero(field)));
+        assert_eq!(
+            (processor_air[i]
+                .clone()
+                .q_div(processor_zerofiers[i].clone()))
+            .1,
+            Polynomial::constant(FieldElement::zero(field))
+        );
         processor_q.push(
             (processor_air[i]
                 .clone()
@@ -479,20 +457,27 @@ pub fn prove(
     }
     let mut memory_q = vec![];
     for i in 0..memory_zerofiers.len() {
-        assert_eq!((memory_air[i]
-            .clone()
-            .q_div(memory_zerofiers[i].clone()))
-        .1, Polynomial::constant(FieldElement::zero(field)), "Failed at memory_q: {}", i);
+        assert_eq!(
+            (memory_air[i].clone().q_div(memory_zerofiers[i].clone())).1,
+            Polynomial::constant(FieldElement::zero(field)),
+            "Failed at memory_q: {}",
+            i
+        );
         memory_q.push((memory_air[i].clone().q_div(memory_zerofiers[i].clone())).0);
     }
 
     let mut instruction_q = vec![];
 
     for i in 0..instruction_zerofiers.len() {
-        assert_eq!((instruction_air[i]
-            .clone()
-            .q_div(instruction_zerofiers[i].clone()))
-        .1, Polynomial::zero(field), "failed at {}", i);
+        assert_eq!(
+            (instruction_air[i]
+                .clone()
+                .q_div(instruction_zerofiers[i].clone()))
+            .1,
+            Polynomial::zero(field),
+            "failed at {}",
+            i
+        );
         instruction_q.push(
             (instruction_air[i]
                 .clone()
@@ -648,8 +633,7 @@ pub fn verify_proof(
     channel.send(combination_merkle_root);
 
     //commit to fri
-    let mut fri_merkle_roots: Vec<Vec<u8>> = Vec::new();
-    let mut betas: Vec<FieldElement> = Vec::new();
+
     // height should be power of 2
     // for fri_layer degree of the combination polynomial should be less then the height and the domain size will be the height*expansion_fact
     // fri.layer.len = 1+ log(height)/log2
@@ -658,6 +642,8 @@ pub fn verify_proof(
     let base = 2.0;
     let log_base_2 = (number as f64).log2();
     let fri_layer_length: usize = (log_base_2 + 1 as f64) as usize;
+    let mut fri_merkle_roots: Vec<Vec<u8>> = Vec::with_capacity(fri_layer_length - 1 as usize);
+    let mut betas: Vec<FieldElement> = Vec::with_capacity(fri_layer_length - 1 as usize);
     for i in 0..fri_layer_length - 1 as usize {
         let beta = channel.receive_random_field_element(field);
         betas.push(beta);
@@ -838,7 +824,7 @@ pub fn verify_fri_layers(
                 FieldElement::from_bytes(&compressed_proof[base_idx + 4 * (i - 1)].clone());
             let prev_sibling =
                 FieldElement::from_bytes(&compressed_proof[base_idx + 4 * (i - 1) + 2].clone());
-            let two = FieldElement::new(2, field);
+            let two = FieldElement(2, field);
             let computed_elem = (prev_elem + prev_sibling) / two
                 + (betas[i - 1] * (prev_elem - prev_sibling)
                     / (two * fri_domains[i - 1][idx % lengths[i - 1]]));
