@@ -58,7 +58,6 @@ impl Polynomial {
 
     pub fn scalar_mul(&self, scalar: FieldElement) -> Self {
         let mut result = Vec::new();
-
         for i in 0..self.coefficients.len() {
             result.push(self.coefficients[i] * scalar);
         }
@@ -218,7 +217,7 @@ impl AddAssign for Polynomial {
         let mut result = Vec::new();
         let mut i = 0;
         let field = Field::new(self.coefficients[0].modulus());
-        let coeff = other.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
+        let coeff = self.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
         let coeff2 = other.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
         while i < coeff.len() && i < coeff2.len() {
             result.push(coeff[i] + coeff2[i]);
@@ -302,7 +301,7 @@ impl Mul for Polynomial {
         let coeff2 = other.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
         for i in 0..coeff.len() {
             for j in 0..coeff2.len() {
-                result[i + j] += coeff[i] * coeff2[j];
+                result[i + j] += (coeff[i] * coeff2[j])%field.0;
             }
         }
         let res = result.iter().map(|x| FieldElement::new(*x, field)).collect::<Vec<FieldElement>>();
@@ -322,7 +321,7 @@ impl MulAssign for Polynomial {
             let coeff2 = other.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
             for i in 0..coeff.len() {
                 for j in 0..coeff2.len() {
-                    result[i + j] += coeff[i] * coeff2[j];
+                    result[i + j] += (coeff[i] * coeff2[j])%field.0;
                 }
             }
             self.coefficients = result.iter().map(|x| FieldElement::new(*x, field)).collect::<Vec<FieldElement>>();
@@ -733,6 +732,7 @@ mod test_polynomials {
             FieldElement::new(3, field),
         ];
         let result = interpolate_lagrange_polynomials(x, y);
+        println!("{:?}", result.coefficients);
         assert_eq!(result.coefficients[0].0, 5);
         assert_eq!(result.coefficients[1].0, 3);
         assert_eq!(result.coefficients[2].0, 1);
