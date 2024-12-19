@@ -19,7 +19,7 @@ impl IOTable {
         length: u128,
         generator: FieldElement,
         order: u128,
-        matrix: Vec<Vec<FieldElement>>,
+        matrix: &[Vec<FieldElement>],
     ) -> Self {
         let base_width = 1;
         let full_width = base_width + 1;
@@ -80,14 +80,14 @@ mod test_io {
             input_matrix.len() as u128,
             generator,
             order,
-            input_matrix,
+            &input_matrix,
         );
         let mut output_table = IOTable::new(
             field,
             output_matrix.len() as u128,
             generator,
             order,
-            output_matrix,
+            &output_matrix,
         );
         input_table.pad();
         output_table.pad();

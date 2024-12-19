@@ -25,8 +25,8 @@ impl log::Log for ConsoleLogger {
 
     fn flush(&self) {}
 }
-use pprof::ProfilerGuard;
 use pprof::protos::Message;
+use pprof::ProfilerGuard;
 use std::fs::File;
 use std::io::Write;
 
@@ -47,11 +47,11 @@ pub use crate::fields::{Field, FieldElement};
 pub use crate::fri::FriDomain;
 pub use crate::stark::{prove, verify_proof};
 pub use crate::tables::derive_omicron;
-pub use crate::vm::VirtualMachine;
 pub use crate::tables::Table;
+pub use crate::vm::VirtualMachine;
 use rayon::ThreadPoolBuilder;
 fn main() {
-    let guard = ProfilerGuard::new(2).unwrap();
+    let guard = ProfilerGuard::new(100).unwrap();
     // ThreadPoolBuilder::new()
     // .thread_name(|i| format!("par-iter-{}", i))
     // .build_global()
@@ -74,12 +74,12 @@ fn main() {
     let expansion_f = 1;
     let num_queries = 1;
 
-    let v = vec![
-        processor_matrix,
-        memory_matrix,
-        instruction_matrix,
-        input_matrix,
-        output_matrix,
+    let v: &[&[Vec<FieldElement>]] = &[
+        &processor_matrix,
+        &memory_matrix,
+        &instruction_matrix,
+        &input_matrix,
+        &output_matrix,
     ];
     let (degree_bound, compressed_proof, tp, tm, tins, ti, to, fri_d) =
         prove(v, input_symbols, field, offset, expansion_f, num_queries);
@@ -110,12 +110,10 @@ fn main() {
         Ok(report) => {
             let mut file = File::create("profile.pb").unwrap();
             let profile = report.pprof().unwrap();
-    
+
             let mut content = Vec::new();
             profile.write_to_vec(&mut content).unwrap();
             file.write_all(&content).unwrap();
-    
-            // println!("report: {:?}", &report);
         }
         Err(_) => {}
     };

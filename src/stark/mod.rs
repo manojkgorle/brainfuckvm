@@ -70,10 +70,8 @@ pub enum ChallengeIndices {
 // prove:
 // matrices -> processor, memory, instruction, input, output -> in this order
 
-#[warn(non_snake_case)]
-
 pub fn prove(
-    matrices: Vec<Vec<Vec<FieldElement>>>,
+    matrices: &[&[Vec<FieldElement>]],
     inputs: String,
     field: Field,
     offset: FieldElement,
@@ -99,11 +97,11 @@ pub fn prove(
     let mut t = Local::now();
     let mut processor_table = ProcessorTable::new(
         field,
-        matrices[0].clone().len() as u128,
+        matrices[0].len() as u128,
         roundup_npow2(matrices[2].len() as u128),
         generator,
         order,
-        matrices[0].clone(),
+        matrices[0],
     );
     let mut memory_table = MemoryTable::new(
         field,
@@ -111,28 +109,28 @@ pub fn prove(
         roundup_npow2(matrices[2].len() as u128),
         generator,
         order,
-        matrices[1].clone(),
+        matrices[1],
     );
     let mut instruction_table = InstructionTable::new(
         field,
         matrices[2].len() as u128,
         generator,
         order,
-        matrices[2].clone(),
+        matrices[2],
     );
     let mut input_table = IOTable::new(
         field,
         matrices[3].len() as u128,
         generator,
         order,
-        matrices[3].clone(),
+        matrices[3],
     );
     let mut output_table = IOTable::new(
         field,
         matrices[4].len() as u128,
         generator,
         order,
-        matrices[4].clone(),
+        matrices[4],
     );
 
     log::info!(
@@ -154,7 +152,7 @@ pub fn prove(
     );
     t = Local::now();
     let mut t2 = Local::now();
-    let processor_interpol_columns:Vec<Polynomial> = processor_table
+    let processor_interpol_columns: Vec<Polynomial> = processor_table
         .table
         .clone()
         .interpolate_columns(vec![0, 1, 2, 3, 4, 5, 6]);
@@ -163,21 +161,25 @@ pub fn prove(
         (Local::now() - t2).num_milliseconds()
     );
     t2 = Local::now();
-    let memory_interpol_columns:Vec<Polynomial> = memory_table
+    let memory_interpol_columns: Vec<Polynomial> = memory_table
         .table
         .clone()
         .interpolate_columns(vec![0, 1, 2]);
-    log::info!( "Interpolating memory table, {:?}ms", (Local::now() - t2).num_milliseconds());
+    log::info!(
+        "Interpolating memory table, {:?}ms",
+        (Local::now() - t2).num_milliseconds()
+    );
     t2 = Local::now();
-    let instruction_interpol_columns:Vec<Polynomial> = instruction_table
+    let instruction_interpol_columns: Vec<Polynomial> = instruction_table
         .table
         .clone()
         .interpolate_columns(vec![0, 1, 2]);
-    
+
     log::info!(
         "Interpolating instruction table, {:?}ms",
         (Local::now() - t2).num_milliseconds()
     );
+    t2 = Local::now();
     let initial_length = roundup_npow2(9 * (instruction_table.table.clone().height - 1));
 
     //all codewords are evaluated on this expanded domain that has length expanded_length
@@ -185,7 +187,7 @@ pub fn prove(
 
     log::info!(
         "Extending the domain, {:?}ms",
-        (Local::now() - t).num_milliseconds()
+        (Local::now() - t2).num_milliseconds()
     );
     t = Local::now();
     let domain = FriDomain::new(
@@ -901,15 +903,22 @@ mod stark_test {
         let expansion_f = 1;
         let num_queries = 1;
 
-        let v = vec![
-            processor_matrix,
-            memory_matrix,
-            instruction_matrix,
-            input_matrix,
-            output_matrix,
+        let v: &[&[Vec<FieldElement>]] = &[
+            &processor_matrix,
+            &memory_matrix,
+            &instruction_matrix,
+            &input_matrix,
+            &output_matrix,
         ];
-        let (degree_bound, compressed_proof, tp, tm, tins, ti, to, fri_d) =
-            prove(v, input_symbols, field, offset, expansion_f, num_queries);
+
+        let (degree_bound, compressed_proof, tp, tm, tins, ti, to, fri_d) = prove(
+            v.into(),
+            input_symbols,
+            field,
+            offset,
+            expansion_f,
+            num_queries,
+        );
 
         let maximum_random_int =
             ((degree_bound + 1) * expansion_f as u128 - expansion_f as u128) as u64;
