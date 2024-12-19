@@ -441,7 +441,7 @@ impl ProcessorTable {
             Indices::OutputEvaluation as u128,
         ];
         let interpolated = self.table.clone().interpolate_columns(indices_vec.clone());
-        let next_interpolated = self.table.clone().next_interpolate_columns(indices_vec);
+        let next_interpolated = self.table.clone().next_interpolate_columns(interpolated.clone());
         // let (interpolated, next_interpolated) = rayon::join(
         //     || self.table.clone().interpolate_columns(indices_vec.clone()),
         //     || {
