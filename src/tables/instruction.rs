@@ -426,7 +426,7 @@ mod test_instruction {
         assert_eq!(b, zero);
 
         for v in 0..instruction_table.table.length - 1 {
-            let transition = air[1].clone(); //.evaluate(omicron_domain[v as usize]);
+            // let transition = air[1].clone(); //.evaluate(omicron_domain[v as usize]);
             assert_eq!(
                 air[1].clone().q_div(zerofiers[1].clone()).1,
                 Polynomial::zero(field),

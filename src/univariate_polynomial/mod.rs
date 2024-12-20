@@ -101,10 +101,7 @@ impl Polynomial {
             return (self, Polynomial::zero(field));
         }
         if n < m {
-            return (
-                Polynomial::new_from_coefficients(vec![zero]),
-                self,
-            );
+            return (Polynomial::new_from_coefficients(vec![zero]), self);
         }
         let mut q = Vec::with_capacity(n - m + 1);
         let mut poly1_coeff = self.clone().coefficients;
@@ -142,9 +139,9 @@ impl Polynomial {
     }
     // new function added
     pub fn pow(self, exp: u128) -> Self {
-        let mut res = Polynomial::new_from_coefficients(vec![FieldElement::one(
-            Field::new(self.coefficients[0].modulus()),
-        )]);
+        let mut res = Polynomial::new_from_coefficients(vec![FieldElement::one(Field::new(
+            self.coefficients[0].modulus(),
+        ))]);
 
         // Identity polynomial (constant 1)
         let mut base = self.clone(); // Clone the base polynomial
@@ -411,10 +408,7 @@ pub fn gen_lagrange_polynomials(x: Vec<FieldElement>) -> Vec<Polynomial> {
             }
             denominator.push(x[i] - x[j]);
         }
-        let den_sum = denominator.iter().fold(
-            one,
-            |acc, x| acc * *x,
-        );
+        let den_sum = denominator.iter().fold(one, |acc, x| acc * *x);
         let lagrange_polynomial = numerator.scalar_div(den_sum);
         lagrange_polynomials.push(lagrange_polynomial);
     }

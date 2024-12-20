@@ -430,7 +430,7 @@ mod test_field_operations {
         let b = FieldElement::new(1687837, field);
         let t = Local::now();
         for _ in 0..100000000 {
-            let c = a * b;
+            let _ = a * b;
         }
         println!("Time taken: {:?}", Local::now().signed_duration_since(t));
     }

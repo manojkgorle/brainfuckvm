@@ -145,18 +145,18 @@ pub fn prove(
     processor_table.table.generate_omicron_domain();
     memory_table.table.generate_omicron_domain();
     instruction_table.table.generate_omicron_domain();
+
     log::info!(
-        "Interpolating all tables, {:?}ms",
-        (Local::now() - t).num_milliseconds()
+        "Interpolating processor table, {:?}ms", (Local::now() - t).num_milliseconds()
     );
-    t = Local::now();
+    // t = Local::now();
     let mut t2 = Local::now();
     let processor_interpol_columns: Vec<Polynomial> = processor_table
         .table
         .clone()
         .interpolate_columns(vec![0, 1, 2, 3, 4, 5, 6]);
     log::info!(
-        "Interpolating processor table, {:?}ms",
+        "Interpolating memory table, {:?}ms",
         (Local::now() - t2).num_milliseconds()
     );
     t2 = Local::now();
@@ -165,7 +165,7 @@ pub fn prove(
         .clone()
         .interpolate_columns(vec![0, 1, 2]);
     log::info!(
-        "Interpolating memory table, {:?}ms",
+        "Interpolating instruction table, {:?}ms",
         (Local::now() - t2).num_milliseconds()
     );
     t2 = Local::now();
@@ -174,20 +174,17 @@ pub fn prove(
         .clone()
         .interpolate_columns(vec![0, 1, 2]);
 
-    log::info!(
-        "Interpolating instruction table, {:?}ms",
-        (Local::now() - t2).num_milliseconds()
-    );
-    t2 = Local::now();
+        log::info!(
+            "Extending the domain, {:?}ms",
+            (Local::now() - t2).num_milliseconds()
+        );
+    // t2 = Local::now();
     let initial_length = roundup_npow2(9 * (instruction_table.table.clone().height - 1));
 
     //all codewords are evaluated on this expanded domain that has length expanded_length
     let expanded_length = initial_length * (expansion_f as u128);
 
-    log::info!(
-        "Extending the domain, {:?}ms",
-        (Local::now() - t2).num_milliseconds()
-    );
+
     t = Local::now();
     let domain = FriDomain::new(
         offset,

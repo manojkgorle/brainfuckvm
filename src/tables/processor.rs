@@ -188,8 +188,7 @@ impl ProcessorTable {
                     * challenges[ChallengeIndices::F as usize]
                 - challenges[ChallengeIndices::Beta as usize]);
 
-        let f =
-            |x: char| -> FieldElement { FieldElement((x as u32) as u128, self.table.field) };
+        let f = |x: char| -> FieldElement { FieldElement((x as u32) as u128, self.table.field) };
         for i in 0..self.table.length - 1 {
             let ci = self.table.matrix[i as usize][Indices::CurrentInstruction as usize];
             if f(',') == ci {
@@ -228,8 +227,7 @@ impl ProcessorTable {
             FieldElement::zero(self.table.field),
             FieldElement::one(self.table.field),
         ]);
-        let f =
-            |x: char| -> FieldElement { FieldElement((x as u32) as u128, self.table.field) };
+        let f = |x: char| -> FieldElement { FieldElement((x as u32) as u128, self.table.field) };
 
         //boundary
         let boundary_zerofier =
@@ -429,8 +427,7 @@ impl ProcessorTable {
         toea: FieldElement,
         _eval: FieldElement,
     ) -> Vec<Polynomial> {
-        let f =
-            |x: char| -> FieldElement { FieldElement((x as u32) as u128, self.table.field) };
+        let f = |x: char| -> FieldElement { FieldElement((x as u32) as u128, self.table.field) };
         let indices_vec = vec![
             Indices::Cycle as u128,
             Indices::InstructionPointer as u128,
