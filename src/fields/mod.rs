@@ -135,6 +135,10 @@ impl FieldElement {
             Field(u128::from_be_bytes(y)),
         )
     }
+
+    pub fn is_zero(&self) -> bool {
+        self.0 == 0
+    }
 }
 
 impl Add for FieldElement {
@@ -196,9 +200,6 @@ impl Mul for FieldElement {
 impl MulAssign for FieldElement {
     #[inline(always)]
     fn mul_assign(&mut self, other: FieldElement) {
-        // if self.1 != other.1 {
-        //     panic!("Fields must be same");
-        // }
         let r = self.0 * other.0;
         if r >= self.1 .0 {
             self.0 = r % self.1 .0;
@@ -212,9 +213,6 @@ impl Div for FieldElement {
     type Output = FieldElement;
     #[inline(always)]
     fn div(self, other: FieldElement) -> FieldElement {
-        // if self.1 != other.1 {
-        //     panic!("Fields must be same");
-        // }
         let mut inv = 1;
         let mut base = other.0;
         let mut exp = self.1 .0 - 2;
@@ -232,9 +230,6 @@ impl Div for FieldElement {
 impl DivAssign for FieldElement {
     #[inline(always)]
     fn div_assign(&mut self, other: FieldElement) {
-        // if self.1 != other.1 {
-        //     panic!("Fields must be same");
-        // }
         let mut inv = 1;
         let mut base = other.0;
         let mut exp = self.1 .0 - 2;
@@ -370,16 +365,6 @@ mod test_field_operations {
         let b = a.pow(3);
         assert_eq!(b.0, 1);
     }
-
-    // #[test]
-    // #[should_panic]
-    // fn test_diff_field() {
-    //     let field1 = Field::new(7);
-    //     let field2 = Field::new(8);
-    //     let a = FieldElement::new(1, field1);
-    //     let b = FieldElement::new(2, field2);
-    //     let _ = a + b;
-    // }
 
     #[test]
     fn test_negative_number() {

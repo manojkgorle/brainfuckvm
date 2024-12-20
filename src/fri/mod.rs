@@ -28,7 +28,7 @@ pub fn combination_polynomial(
     ]);
     let degree = height - 1;
 
-    let alpha_poly = Polynomial::new_from_coefficients(vec![alpha]);
+    let alpha_poly = &Polynomial::new_from_coefficients(vec![alpha]);
     let beta_poly = Polynomial::new_from_coefficients(vec![beta]);
 
     // Compute partial results in parallel
@@ -234,7 +234,6 @@ pub fn decommit_fri_layers(
 ) {
     log::debug!("Decommitting on fri layers for query {}", idx);
     // we dont send authentication path for element in last layer, as all elements are equal, regardless of query, as they are evaluations of a constant polynomial
-    //println!("frilayer len: {}", fri_layers.len());
     for (layer, merkle) in fri_layers[..fri_layers.len() - 1]
         .iter()
         .zip(fri_merkle[..fri_merkle.len() - 1].iter())
@@ -250,7 +249,6 @@ pub fn decommit_fri_layers(
         channel.send(layer[sibling_idx].to_bytes());
         let sibling_proof = merkle.get_authentication_path(sibling_idx);
         channel.send(sibling_proof);
-        //println!("4 vec sent to compressed proof");
     }
 
     // send the last layer element.
@@ -280,13 +278,7 @@ pub fn decommit_on_query(
     let _base_x_auth = f_merkle[0].get_authentication_path(idx).clone();
 
     channel.send(f_merkle[0].get_authentication_path(idx)); // merkle proof for basecodeword[idx] or f(x)
-                                                            // for i in 0..base_x_auth.len(){
-                                                            //     print!("{} ", base_x_auth[i]);
-                                                            // } println!("\n base_x_auth of prover");
-                                                            // println!("{} of prover",idx);
-                                                            // for i in 0..base_x.len(){
-                                                            //     print!("{}  ", base_x[i]);
-                                                            // } println!("\nbase_x of prover");
+
     channel.send(f_eval[0][idx + blow_up_factor].to_bytes()); //basecodeword[idx+blowupfactor] or f(g*x)
     channel.send(f_merkle[0].get_authentication_path(idx + blow_up_factor)); // merkle proof for basecodeword[idx+blowupfactor] or f(g*x)
 
@@ -392,6 +384,7 @@ impl FriDomain {
         list
     }
 
+    // @todo optimize computing pow here.
     pub fn evaluate(&self, polynomial: Polynomial) -> Vec<FieldElement> {
         let omega = self.omega;
         let polynomial = polynomial.scale(self.offset.0);

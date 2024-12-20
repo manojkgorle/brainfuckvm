@@ -2,7 +2,7 @@ use chrono::Local;
 
 use crate::fields::{Field, FieldElement};
 use crate::fields::{NEG_ORDER, P};
-use rayon::prelude::*;
+use rayon::{prelude::*, result};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 // How should we be interpolating polynomials?
 // -> lagrange interpolation
@@ -35,6 +35,7 @@ impl Polynomial {
         }
     }
 
+    //@todo optimize calcualting pow here.
     pub fn evaluate(&self, x: FieldElement) -> FieldElement {
         let mut result = FieldElement::zero(Field::new(x.modulus()));
 
@@ -57,12 +58,9 @@ impl Polynomial {
         self.coefficients.len() - 1
     }
 
+    #[inline]
     pub fn scalar_mul(&self, scalar: FieldElement) -> Self {
-        let len = self.coefficients.len();
-        let mut result = Vec::with_capacity(len);
-        for i in 0..len {
-            result.push(self.coefficients[i] * scalar);
-        }
+        let result = self.coefficients.iter().map(|x| *x * scalar).collect::<Vec<FieldElement>>();
         Polynomial::new_from_coefficients(result)
     }
 
@@ -74,7 +72,7 @@ impl Polynomial {
         }
         true
     }
-
+    
     pub fn scalar_div(&self, scalar: FieldElement) -> Self {
         let len = self.coefficients.len();
         let mut result = Vec::with_capacity(len);
@@ -82,54 +80,102 @@ impl Polynomial {
         for i in 0..len {
             result.push(self.coefficients[i] / scalar);
         }
-        // self.coefficients = result.clone();
         Polynomial::new_from_coefficients(result)
     }
     pub fn zero(field: Field) -> Self {
-        Polynomial::new_from_coefficients(vec![FieldElement::zero(Field::new(field.0))])
+        Polynomial::new_from_coefficients(vec![FieldElement::zero(field)])
     }
 
-    // @todo optimize this.
+    // // @todo optimize this.
+    // pub fn q_div(self, poly2: Self) -> (Self, Self) {
+    //     let field = Field::new(self.coefficients[0].modulus());
+    //     let n = self.coefficients.len();
+    //     let m = poly2.coefficients.len();
+    //     let zero = FieldElement::zero(field);
+    //     if m == 0 || n == 0{
+    //         return (self, Polynomial::zero(field));
+    //     }
+    //     if n < m {
+    //         return (Polynomial::new_from_coefficients(vec![zero]), self);
+    //     }
+    //     let mut q = Vec::with_capacity(n - m + 1);
+    //     let mut poly1_coeff = self.clone().coefficients;
+    //     let mut poly2_coeff = poly2.clone().coefficients;
+    //     poly1_coeff.reverse();
+    //     poly2_coeff.reverse();
+    //     for i in 0..n - m + 1 {
+    //         let mut other_coeff = poly2_coeff.clone();
+    //         other_coeff.append(&mut vec![zero; n - m - i]);
+    //         let q_temp = poly1_coeff[0] / other_coeff[0];
+    //         let other_poly = Polynomial::new_from_coefficients(other_coeff).scalar_mul(q_temp);
+    //         poly1_coeff = (Polynomial::new_from_coefficients(poly1_coeff) - other_poly.clone())
+    //             .coefficients[1..]
+    //             .to_vec();
+    //         q.push(q_temp);
+    //     }
+    //     q.reverse();
+    //     poly1_coeff.reverse();
+    //     let poly1 = Polynomial::new_from_coefficients(poly1_coeff);
+    //     if poly1.is_all_zeros() {
+    //         (
+    //             Polynomial::new_from_coefficients(q),
+    //             Polynomial::new_from_coefficients(vec![zero]),
+    //         )
+    //     } else {
+    //         (Polynomial::new_from_coefficients(q), poly1)
+    //     }
+    // }
+
     pub fn q_div(self, poly2: Self) -> (Self, Self) {
         let field = Field::new(self.coefficients[0].modulus());
         let n = self.coefficients.len();
         let m = poly2.coefficients.len();
-        let zero = FieldElement::zero(field);
-        if m == 0 {
-            return (self, Polynomial::zero(field));
-        }
-        if n == 0 {
+
+        if m == 0 || n == 0 {
             return (self, Polynomial::zero(field));
         }
         if n < m {
-            return (Polynomial::new_from_coefficients(vec![zero]), self);
+            return (
+                Polynomial::zero(field),
+                self
+            );
         }
-        let mut q = Vec::with_capacity(n - m + 1);
-        let mut poly1_coeff = self.clone().coefficients;
-        let mut poly2_coeff = poly2.clone().coefficients;
-        poly1_coeff.reverse();
-        poly2_coeff.reverse();
-        for i in 0..n - m + 1 {
-            let mut other_coeff = poly2_coeff.clone();
-            other_coeff.append(&mut vec![zero; n - m - i]);
-            let q_temp = poly1_coeff[0] / other_coeff[0];
-            let other_poly = Polynomial::new_from_coefficients(other_coeff).scalar_mul(q_temp);
-            poly1_coeff = (Polynomial::new_from_coefficients(poly1_coeff) - other_poly.clone())
-                .coefficients[1..]
-                .to_vec();
-            q.push(q_temp);
+
+        let mut quotient = Vec::with_capacity(n - m + 1);
+        let mut remainder = self.coefficients.clone();
+        let divisor = &poly2.coefficients;
+
+        let leading_divisor = divisor[m - 1];
+
+        for i in (0..=(n - m)).rev() {
+            let current_coeff = remainder[i + m - 1];
+            
+            if current_coeff.is_zero() {
+                quotient.push(FieldElement::zero(field));
+                continue;
+            }
+
+            let q_coeff = current_coeff / leading_divisor;
+            quotient.push(q_coeff);
+
+            for j in 0..m {
+                let subtrahend = q_coeff * divisor[j];
+                remainder[i + j] -= subtrahend;
+            }
         }
-        q.reverse();
-        poly1_coeff.reverse();
-        let poly1 = Polynomial::new_from_coefficients(poly1_coeff);
-        if poly1.is_all_zeros() {
-            (
-                Polynomial::new_from_coefficients(q),
-                Polynomial::new_from_coefficients(vec![zero]),
-            )
-        } else {
-            (Polynomial::new_from_coefficients(q), poly1)
+        if m != 1 {
+            remainder.truncate(m - 1);
         }
+        
+
+        while remainder.len() > 1 && remainder[remainder.len() - 1].is_zero() {
+            remainder.pop();
+        }
+        quotient.reverse();
+        (
+            Polynomial::new_from_coefficients(quotient),
+            Polynomial::new_from_coefficients(remainder)
+        )
     }
 
     pub fn compose(mut self, mono: FieldElement) -> Self {
@@ -187,6 +233,7 @@ impl Polynomial {
 impl Add for Polynomial {
     type Output = Polynomial;
 
+    #[inline]
     fn add(self, other: Polynomial) -> Polynomial {
         let mut i = 0;
         let field = Field::new(other.coefficients[0].modulus());
@@ -221,6 +268,7 @@ impl Add for Polynomial {
 }
 
 impl AddAssign for Polynomial {
+    #[inline]
     fn add_assign(&mut self, other: Polynomial) {
         let mut i = 0;
         let field = Field::new(self.coefficients[0].modulus());
@@ -257,58 +305,93 @@ impl AddAssign for Polynomial {
 impl Sub for Polynomial {
     type Output = Polynomial;
 
+    #[inline]
     fn sub(self, other: Polynomial) -> Polynomial {
+        let mut i = 0;
+        let modulo = self.coefficients[0].modulus();
+        let field = Field::new(modulo);
+        let coeff = self.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
+        let coeff2 = other
+            .coefficients
+            .iter()
+            .map(|x| x.0)
+            .collect::<Vec<u128>>();
         let len = self.coefficients.len().max(other.coefficients.len());
         let mut result = Vec::with_capacity(len);
-        let mut i = 0;
-
-        while i < self.coefficients.len() && i < other.coefficients.len() {
-            result.push(self.coefficients[i] - other.coefficients[i]);
+    
+        while i < coeff.len() && i < coeff2.len() {
+            let c2 = coeff2[i];
+            let c1 = coeff[i];
+            if c2 > c1 {
+                result.push(modulo - c2 + c1);
+            } else {
+                result.push(c1 - c2);
+            }
             i += 1;
         }
 
-        while i < self.coefficients.len() {
-            result.push(self.coefficients[i]);
+        while i < coeff.len() {
+            result.push(coeff[i]);
             i += 1;
         }
 
-        while i < other.coefficients.len() {
-            result.push(-other.coefficients[i]);
+        while i < coeff2.len() {
+            result.push(modulo - coeff2[i]);
             i += 1;
         }
-
-        Polynomial::new_from_coefficients(result)
+        let res = result
+        .iter()
+        .map(|x| FieldElement::new(*x, field))
+        .collect::<Vec<FieldElement>>();
+    Polynomial::new_from_coefficients(res)
     }
 }
 
 impl SubAssign for Polynomial {
+    #[inline]
     fn sub_assign(&mut self, other: Polynomial) {
+        let mut i = 0;
+        let modulo = self.coefficients[0].modulus();
+        let field = Field::new(modulo);
+        let coeff = self.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
+        let coeff2 = other
+            .coefficients
+            .iter()
+            .map(|x| x.0)
+            .collect::<Vec<u128>>();
         let len = self.coefficients.len().max(other.coefficients.len());
         let mut result = Vec::with_capacity(len);
-        let mut i = 0;
-
-        while i < self.coefficients.len() && i < other.coefficients.len() {
-            result.push(self.coefficients[i] - other.coefficients[i]);
+    
+        while i < coeff.len() && i < coeff2.len() {
+            let c2 = coeff2[i];
+            let c1 = coeff[i];
+            if c2 > c1 {
+                result.push(modulo - c2 + c1);
+            } else {
+                result.push(c1 - c2);
+            }
             i += 1;
         }
 
-        while i < self.coefficients.len() {
-            result.push(self.coefficients[i]);
+        while i < coeff.len() {
+            result.push(coeff[i]);
             i += 1;
         }
 
-        while i < other.coefficients.len() {
-            result.push(-other.coefficients[i]);
+        while i < coeff2.len() {
+            result.push(modulo - coeff2[i]);
             i += 1;
         }
-
-        self.coefficients = result;
+        self.coefficients = result
+        .iter()
+        .map(|x| FieldElement::new(*x, field))
+        .collect::<Vec<FieldElement>>();
     }
 }
 
 impl Mul for Polynomial {
     type Output = Polynomial;
-
+    #[inline]
     fn mul(self, other: Polynomial) -> Polynomial {
         let field = Field::new(self.coefficients[0].modulus());
         let coeff = self.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
@@ -333,6 +416,7 @@ impl Mul for Polynomial {
 }
 
 impl MulAssign for Polynomial {
+    #[inline]
     fn mul_assign(&mut self, other: Polynomial) {
         if self.coefficients.len() > 0 {
             let field = Field::new(self.coefficients[0].modulus());
@@ -359,7 +443,7 @@ impl MulAssign for Polynomial {
 
 impl Div for Polynomial {
     type Output = Polynomial;
-
+    #[inline]
     fn div(self, other: Polynomial) -> Polynomial {
         let (q, r) = self.q_div(other);
         if r.is_all_zeros() {
@@ -371,6 +455,7 @@ impl Div for Polynomial {
 }
 
 impl DivAssign for Polynomial {
+    #[inline]
     fn div_assign(&mut self, other: Polynomial) {
         let (q, r) = self.clone().q_div(other);
         if r.is_all_zeros() {
@@ -396,7 +481,7 @@ pub fn gen_polynomial_from_roots(roots: &[FieldElement]) -> Polynomial {
     Polynomial::new_from_coefficients(result[..roots.len() + 1].to_vec())
 }
 
-pub fn gen_lagrange_polynomials(x: Vec<FieldElement>) -> Vec<Polynomial> {
+pub fn gen_lagrange_polynomials(x: &[FieldElement]) -> Vec<Polynomial> {
     let n = x.len();
     let mut lagrange_polynomials = Vec::with_capacity(n);
     let one = FieldElement::one(x[0].1);
@@ -419,29 +504,37 @@ pub fn gen_lagrange_polynomials(x: Vec<FieldElement>) -> Vec<Polynomial> {
     lagrange_polynomials
 }
 
-pub fn gen_lagrange_polynomials_parallel(x: Vec<FieldElement>) -> Vec<Polynomial> {
+pub fn gen_lagrange_polynomials_parallel(x: &[FieldElement]) -> Vec<Polynomial> {
     let n = x.len();
     let big_poly = gen_polynomial_from_roots(&x);
-    let one = FieldElement::one(x[0].1);
+    let modulus = x[0].modulus();
+    let field = Field::new(modulus);
+    let one = FieldElement::one(field);
+    let mx = x.into_iter().map(|k| k.0).collect::<Vec<u128>>();
     let lagrange_polynomials = (0..n)
         .into_par_iter()
         .map(|i| {
-            let mut denominator = Vec::with_capacity(n);
-
             let numerator = big_poly.clone()/Polynomial::new_from_coefficients(vec![-x[i], one]);
-            for j in 0..n {
-                if i == j {
-                    continue;
+            // let mut denominator = Vec::with_capacity(n);
+
+            let t = Local::now();
+            let den = (0..n).into_par_iter().filter(|j| i != *j).map(|j| 
+                if mx[i] < mx[j] {
+                    modulus + mx[i] - mx[j]
+                }else{
+                    mx[i] - mx[j]
                 }
-                denominator.push(x[i] - x[j]);
-            }
+            ).collect::<Vec<u128>>();
+            let denominator = den.into_iter().map(|k| FieldElement::new(k, field)).collect::<Vec<FieldElement>>();
 
             let den_sum = denominator.iter().fold(
-                FieldElement::new(1, Field::new(x[i].modulus())),
+                one,
                 |acc, x| acc * *x,
             );
 
-            numerator.scalar_div(den_sum)
+            let r = numerator.scalar_div(den_sum);
+            log::debug!("Time taken to generate lagrange polynomial: {:?}ms", (Local::now() - t).num_milliseconds());
+            r
         })
         .collect();
 
@@ -451,7 +544,7 @@ pub fn gen_lagrange_polynomials_parallel(x: Vec<FieldElement>) -> Vec<Polynomial
 pub fn interpolate_lagrange_polynomials(x: Vec<FieldElement>, y: Vec<FieldElement>) -> Polynomial {
     let n = x.len();
 
-    let lagrange_polynomials = gen_lagrange_polynomials_parallel(x.clone());
+    let lagrange_polynomials = gen_lagrange_polynomials_parallel(&x);
     let field = Field::new(x[0].modulus());
     let mut result = Polynomial::new_from_coefficients(vec![FieldElement::new(0, field); n]);
 
@@ -463,6 +556,7 @@ pub fn interpolate_lagrange_polynomials(x: Vec<FieldElement>, y: Vec<FieldElemen
 }
 
 impl PartialEq for Polynomial {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         if self.coefficients.len() != other.coefficients.len() {
             return false;
@@ -640,7 +734,7 @@ mod test_polynomials {
             FieldElement::new(3, field),
             FieldElement::new(5, field),
         ];
-        let lagrange_polynomials = gen_lagrange_polynomials(x);
+        let lagrange_polynomials = gen_lagrange_polynomials(&x);
         assert_eq!(lagrange_polynomials.len(), 3);
         assert_eq!(lagrange_polynomials[0].coefficients[0].0, 5);
         assert_eq!(lagrange_polynomials[0].coefficients[1].0, 2);
@@ -662,7 +756,7 @@ mod test_polynomials {
             FieldElement::new(5, field),
             FieldElement::new(6, field),
         ];
-        let lagrange_polynomials = gen_lagrange_polynomials(x);
+        let lagrange_polynomials = gen_lagrange_polynomials(&x);
         assert_eq!(lagrange_polynomials.len(), 4);
         assert_eq!(lagrange_polynomials[0].coefficients[0].0, 4);
         assert_eq!(lagrange_polynomials[0].coefficients[1].0, 0);
@@ -749,7 +843,6 @@ mod test_polynomials {
         let polynomial1 = Polynomial::new_from_coefficients(coefficients1);
         let polynomial2 = Polynomial::new_from_coefficients(coefficients2);
         let (q, r) = polynomial1.q_div(polynomial2);
-
         assert_eq!(r.coefficients.len(), 3);
         assert_eq!(q.coefficients.len(), 2);
         assert_eq!(r.coefficients[0].0, 2);
