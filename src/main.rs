@@ -52,7 +52,7 @@ pub use crate::vm::VirtualMachine;
 use rayon::ThreadPoolBuilder;
 fn main() {
     env_logger::init();
-    let guard = ProfilerGuard::new(1000).unwrap();
+    let guard = ProfilerGuard::new(100000).unwrap();
     // ThreadPoolBuilder::new()
     // .thread_name(|i| format!("par-iter-{}", i))
     // .build_global()
@@ -62,13 +62,15 @@ fn main() {
     let generator = field.generator().pow((1 << 32) - 1);
     let order = 1 << 32;
     // let code = "++>+-[+--]++.".to_string();
-    let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
+    // let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
+    let code =  "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.".to_string();
     let program = vm.compile(code);
 
-    let (running_time, input_symbols, _output_symbols) = vm.run(&program, "112".to_string());
+    let (running_time, input_symbols, _output_symbols) =
+        vm.run(&program, "1121231241223".to_string());
     log::info!("Running time: {}", running_time);
     let (processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix) =
-        vm.simulate(&program, "112".to_string());
+        vm.simulate(&program, "1121231241223".to_string());
     assert_eq!(running_time as usize, processor_matrix.len());
 
     let offset = FieldElement::one(field);
