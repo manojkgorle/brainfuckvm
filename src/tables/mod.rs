@@ -1,6 +1,5 @@
 use crate::fields::{Field, FieldElement};
 use crate::fri::*;
-use crate::multivariate_polynomial::*;
 use crate::ntt::*;
 use crate::univariate_polynomial::{interpolate_lagrange_polynomials, Polynomial};
 use chrono::Local;
