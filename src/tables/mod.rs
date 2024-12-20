@@ -7,7 +7,7 @@ use rand::*;
 pub mod instruction;
 pub mod io;
 pub mod memory;
-use rayon::prelude::*;
+use rayon::{prelude::*, vec};
 pub mod processor;
 #[derive(Debug, Clone)]
 // we are not going to use the randomizers in the table
@@ -105,70 +105,32 @@ impl Table {
 
     // @todo optimize this
     pub fn interpolate_columns(self, column_indices: Vec<u128>) -> Vec<Polynomial> {
-        let mut polynomial: Vec<Polynomial> = Vec::with_capacity(column_indices.len());
+        let t = Local::now();
         if self.height == 0 {
-            let poly = Polynomial::new_from_coefficients(vec![FieldElement::zero(Field::new(
-                self.field.0,
-            ))]);
-            polynomial.push(poly);
-            return polynomial;
+            let poly = Polynomial::new_from_coefficients(vec![FieldElement::zero(self.field)]);
+            return vec![poly];
         }
 
-        // let mut omicron_domain: Vec<FieldElement> = Vec::new();
-        // for i in 0..self.height {
-        //     omicron_domain.push(self.omicron.pow(i));
-        // }
-        let omicron_domain: Vec<FieldElement> = self.omicron_domain.clone();
-
-        for c in column_indices {
+        let polynomial = column_indices.par_iter().map(|c| {
             let mut trace: Vec<FieldElement> = Vec::new();
+            let omicron_domain: Vec<FieldElement> = self.omicron_domain.clone();
             for row in self.matrix.iter() {
-                trace.push(row[c as usize]);
+                trace.push(row[*c as usize]);
             }
-            let values: Vec<FieldElement> = trace.clone();
-            if values.len() != omicron_domain.len() {
+            if trace.len() != omicron_domain.len() {
                 panic!("length of domain and values are unequal");
             };
-            let poly = interpolate_lagrange_polynomials(omicron_domain.clone(), values);
-            // println!("poly ={:?}", poly);
-            polynomial.push(poly);
-        }
+            let t2 = Local::now();
+            let poly = interpolate_lagrange_polynomials(omicron_domain, trace);
+            log::info!("Interpolating lagrange polynomials took: {}ms", (Local::now() - t2).num_milliseconds());
+            poly
+        }).collect();
+        log::info!("Interpolating columns took: {}ms", (Local::now() - t).num_milliseconds());
         polynomial
     }
 
     pub fn next_interpolate_columns(self, interpolated: Vec<Polynomial>) -> Vec<Polynomial> {
         let mut next_interpolated: Vec<Polynomial> = Vec::new();
-        // if self.height == 0 {
-        //     let poly = Polynomial::new_from_coefficients(vec![FieldElement::zero(Field::new(
-        //         self.field.0,
-        //     ))]);
-        //     next_interpolated.push(poly);
-        //     return next_interpolated;
-        // }
-
-        // let mut omicron_domain: Vec<FieldElement> = Vec::new();
-        // omicron_domain.push(self.omicron.pow(self.height - 1));
-        // for i in 0..self.height - 1 {
-        //     omicron_domain.push(self.omicron.pow(i));
-        // }
-
-        // for c in 0..self.matrix[0].len() {
-        //     let mut trace: Vec<FieldElement> = Vec::new();
-        //     for row in self.matrix.iter() {
-        //         trace.push(row[c]);
-        //     }
-        //     let values = trace.clone();
-
-        //     if values.len() != omicron_domain.len() {
-        //         panic!("length of domain and values are unequal");
-        //     };
-        //     // println!("domain ={:?}", omicron_domain);
-        //     // println!("values ={:?}", values);
-
-        //     let poly = interpolate_lagrange_polynomials(omicron_domain.clone(), values);
-        //     // println!("poly ={:?}", poly);
-        //     next_interpolated.push(poly);
-        // }
         for i in interpolated {
             let next_interpolate = i.compose(self.omicron);
             next_interpolated.push(next_interpolate)
