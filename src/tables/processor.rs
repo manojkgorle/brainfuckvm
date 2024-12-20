@@ -567,6 +567,7 @@ impl ProcessorTable {
         // we are changing mv to mv*
         // selector(,)(ci) . (iea.gamma + mv* - iea*) + (ci -  “,”) . (iea - iea*)
         // selector(.)(ci) . (oea.delta + mv - oea*) + (ci -  “.”) . (oea - oea*)
+        // @todo optimzie this code
         let trasition_all = (clk_next.clone() - clk.clone() - poly_one.clone())
             + (inv_mv.clone() * (mv_is_zero.clone()))
             + ci.clone()
