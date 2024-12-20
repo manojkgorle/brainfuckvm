@@ -1,6 +1,6 @@
 use chrono::Local;
 
-use crate::fields::{Field, FieldElement};
+use crate::fields::FieldElement;
 use crate::fields::{NEG_ORDER, P};
 use rayon::prelude::*;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
@@ -36,10 +36,10 @@ impl Polynomial {
     }
 
     pub fn evaluate(&self, x: FieldElement) -> FieldElement {
-        let mut result = FieldElement::zero(Field::new(x.modulus()));
+        let mut result = FieldElement::ZERO;
 
         for i in 0..self.coefficients.len() {
-            result += self.coefficients[i] * x.pow(i as u128);
+            result += self.coefficients[i] * x.pow(i as u64);
         }
         result
     }
@@ -68,7 +68,7 @@ impl Polynomial {
 
     pub fn is_all_zeros(&self) -> bool {
         for i in 0..self.coefficients.len() {
-            if self.coefficients[i].0 != 0 {
+            if self.coefficients[i].as_canonical_u64() != 0 {
                 return false;
             }
         }
@@ -84,20 +84,19 @@ impl Polynomial {
         }
         Polynomial::new_from_coefficients(result)
     }
-    pub fn zero(field: Field) -> Self {
-        Polynomial::new_from_coefficients(vec![FieldElement::zero(Field::new(field.0))])
+    pub fn zero() -> Self {
+        Polynomial::new_from_coefficients(vec![FieldElement::ZERO])
     }
 
     pub fn q_div(self, poly2: Self) -> (Self, Self) {
-        let field = Field::new(self.coefficients[0].modulus());
         let n = self.coefficients.len();
         let m = poly2.coefficients.len();
-        let zero = FieldElement::zero(field);
+        let zero = FieldElement::ZERO;
         if m == 0 {
-            return (self, Polynomial::zero(field));
+            return (self, Polynomial::zero());
         }
         if n == 0 {
-            return (self, Polynomial::zero(field));
+            return (self, Polynomial::zero());
         }
         if n < m {
             return (Polynomial::new_from_coefficients(vec![zero]), self);
@@ -132,15 +131,13 @@ impl Polynomial {
 
     pub fn compose(mut self, mono: FieldElement) -> Self {
         for i in 0..self.coefficients.len() {
-            self.coefficients[i] *= mono.pow(i as u128);
+            self.coefficients[i] *= mono.pow(i as u64);
         }
         self
     }
     // new function added
-    pub fn pow(self, exp: u128) -> Self {
-        let mut res = Polynomial::new_from_coefficients(vec![FieldElement::one(Field::new(
-            self.coefficients[0].modulus(),
-        ))]);
+    pub fn pow(self, exp: u64) -> Self {
+        let mut res = Polynomial::new_from_coefficients(vec![FieldElement::ONE]);
 
         // Identity polynomial (constant 1)
         let mut base = self.clone(); // Clone the base polynomial
@@ -158,19 +155,18 @@ impl Polynomial {
         res
     }
     // new function added
-    pub fn scale(&self, factor: u128) -> Self {
+    pub fn scale(&self, factor: u64) -> Self {
         let len = self.coefficients.len();
         let mut result = Vec::with_capacity(len);
 
         for i in 0..len {
             result.push(FieldElement::new(
-                self.coefficients[i].0 * factor.pow(i as u32),
-                self.coefficients[i].1,
+                self.coefficients[i].as_canonical_u64() * factor.pow(i as u32),
             ));
         }
         Polynomial::new_from_coefficients(result)
     }
-    // new function added
+
     pub fn collinearity(evaluation_form: Vec<(FieldElement, FieldElement)>) -> bool {
         let input: Vec<FieldElement> = evaluation_form.iter().map(|(x, _)| *x).collect();
         let output: Vec<FieldElement> = evaluation_form.iter().map(|(_, y)| *y).collect();
@@ -187,13 +183,8 @@ impl Add for Polynomial {
 
     fn add(self, other: Polynomial) -> Polynomial {
         let mut i = 0;
-        let field = Field::new(other.coefficients[0].modulus());
-        let coeff = self.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
-        let coeff2 = other
-            .coefficients
-            .iter()
-            .map(|x| x.0)
-            .collect::<Vec<u128>>();
+        let coeff = self.coefficients.iter().map(|x| x.as_canonical_u64()).collect::<Vec<u64>>();
+        let coeff2 = other.coefficients.iter().map(|x| x.as_canonical_u64()).collect::<Vec<u64>>();
         let len = coeff.len().max(coeff2.len());
         let mut result = Vec::with_capacity(len);
         while i < coeff.len() && i < coeff2.len() {
@@ -212,7 +203,7 @@ impl Add for Polynomial {
         }
         let res = result
             .iter()
-            .map(|x| FieldElement::new(*x, field))
+            .map(|x| FieldElement::new(*x))
             .collect::<Vec<FieldElement>>();
         Polynomial::new_from_coefficients(res)
     }
@@ -221,13 +212,8 @@ impl Add for Polynomial {
 impl AddAssign for Polynomial {
     fn add_assign(&mut self, other: Polynomial) {
         let mut i = 0;
-        let field = Field::new(self.coefficients[0].modulus());
-        let coeff = self.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
-        let coeff2 = other
-            .coefficients
-            .iter()
-            .map(|x| x.0)
-            .collect::<Vec<u128>>();
+        let coeff = self.coefficients.iter().map(|x| x.as_canonical_u64()).collect::<Vec<u64>>();
+        let coeff2 = other.coefficients.iter().map(|x| x.as_canonical_u64()).collect::<Vec<u64>>();
         let len = coeff.len().max(coeff2.len());
         let mut result = Vec::with_capacity(len);
         while i < coeff.len() && i < coeff2.len() {
@@ -247,7 +233,7 @@ impl AddAssign for Polynomial {
 
         self.coefficients = result
             .iter()
-            .map(|x| FieldElement::new(*x, field))
+            .map(|x| FieldElement::new(*x))
             .collect::<Vec<FieldElement>>();
     }
 }
@@ -308,22 +294,25 @@ impl Mul for Polynomial {
     type Output = Polynomial;
 
     fn mul(self, other: Polynomial) -> Polynomial {
-        let field = Field::new(self.coefficients[0].modulus());
         let mut result = vec![0; self.coefficients.len() + other.coefficients.len() - 1];
-        let coeff = self.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
+        let coeff = self
+            .coefficients
+            .iter()
+            .map(|x| x.as_canonical_u64())
+            .collect::<Vec<u64>>();
         let coeff2 = other
             .coefficients
             .iter()
-            .map(|x| x.0)
-            .collect::<Vec<u128>>();
+            .map(|x| x.as_canonical_u64())
+            .collect::<Vec<u64>>();
         for i in 0..coeff.len() {
             for j in 0..coeff2.len() {
-                result[i + j] += (coeff[i] * coeff2[j]) % field.0;
+                result[i + j] += coeff[i] * coeff2[j];
             }
         }
         let res = result
             .iter()
-            .map(|x| FieldElement::new(*x, field))
+            .map(|x| FieldElement::new(*x))
             .collect::<Vec<FieldElement>>();
         Polynomial::new_from_coefficients(res)
     }
@@ -332,22 +321,25 @@ impl Mul for Polynomial {
 impl MulAssign for Polynomial {
     fn mul_assign(&mut self, other: Polynomial) {
         if self.coefficients.len() > 0 {
-            let field = Field::new(self.coefficients[0].modulus());
             let mut result = vec![0; self.coefficients.len() + other.coefficients.len() - 1];
-            let coeff = self.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
+            let coeff = self
+                .coefficients
+                .iter()
+                .map(|x| x.as_canonical_u64())
+                .collect::<Vec<u64>>();
             let coeff2 = other
                 .coefficients
                 .iter()
-                .map(|x| x.0)
-                .collect::<Vec<u128>>();
+                .map(|x| x.as_canonical_u64())
+                .collect::<Vec<u64>>();
             for i in 0..coeff.len() {
                 for j in 0..coeff2.len() {
-                    result[i + j] += (coeff[i] * coeff2[j]) % field.0;
+                    result[i + j] += coeff[i] * coeff2[j];
                 }
             }
             self.coefficients = result
                 .iter()
-                .map(|x| FieldElement::new(*x, field))
+                .map(|x| FieldElement::new(*x))
                 .collect::<Vec<FieldElement>>();
         }
     }
@@ -376,25 +368,23 @@ impl DivAssign for Polynomial {
         }
     }
 }
-// zerofier domain
+
 pub fn gen_polynomial_from_roots(roots: Vec<FieldElement>) -> Polynomial {
-    let field = Field::new(roots[0].modulus());
-    let mut result = vec![FieldElement::new(1, field); 1];
+    let mut result = vec![FieldElement::ONE; 1];
     for i in 0..roots.len() {
-        let mut new_result = vec![FieldElement::new(0, field); 2];
+        let mut new_result = vec![FieldElement::ZERO; 2];
         new_result[0] = -roots[i];
-        new_result[1] = FieldElement::new(1, field);
+        new_result[1] = FieldElement::ONE;
         let new_polynomial = Polynomial::new_from_coefficients(new_result);
         result = (Polynomial::new_from_coefficients(result) * new_polynomial).coefficients;
     }
     Polynomial::new_from_coefficients(result[..roots.len() + 1].to_vec())
 }
-//interpolate_domain
 
 pub fn gen_lagrange_polynomials(x: Vec<FieldElement>) -> Vec<Polynomial> {
     let n = x.len();
     let mut lagrange_polynomials = Vec::with_capacity(n);
-    let one = FieldElement::one(x[0].1);
+    let one = FieldElement::ONE;
     for i in 0..n {
         let mut denominator = Vec::with_capacity(n);
 
@@ -433,10 +423,9 @@ pub fn gen_lagrange_polynomials_parallel(x: Vec<FieldElement>) -> Vec<Polynomial
                 denominator.push(x[i] - x[j]);
             }
 
-            let den_sum = denominator.iter().fold(
-                FieldElement::new(1, Field::new(x[i].modulus())),
-                |acc, x| acc * *x,
-            );
+            let den_sum = denominator
+                .iter()
+                .fold(FieldElement::ONE, |acc, x| acc * *x);
 
             numerator.scalar_div(den_sum)
         })
@@ -449,8 +438,7 @@ pub fn interpolate_lagrange_polynomials(x: Vec<FieldElement>, y: Vec<FieldElemen
     let n = x.len();
 
     let lagrange_polynomials = gen_lagrange_polynomials_parallel(x.clone());
-    let field = Field::new(x[0].modulus());
-    let mut result = Polynomial::new_from_coefficients(vec![FieldElement::new(0, field); n]);
+    let mut result = Polynomial::new_from_coefficients(vec![FieldElement::ZERO; n]);
 
     for i in 0..n {
         result += lagrange_polynomials[i].scalar_mul(y[i]);
@@ -479,268 +467,255 @@ mod test_polynomials {
 
     #[test]
     fn test_evaluate() {
-        let field = Field::new(7);
-        let coefficients = vec![FieldElement::new(1, field), FieldElement::new(2, field)];
+        let coefficients = vec![FieldElement::new(1), FieldElement::new(2)];
         let polynomial = Polynomial::new_from_coefficients(coefficients);
-        let x = FieldElement::new(4, field);
+        let x = FieldElement::new(4);
         let result = polynomial.evaluate(x);
-        assert_eq!(result.0, 2);
+        assert_eq!(result.as_canonical_u64(), 9);
     }
 
     #[test]
     fn test_add() {
-        let field = Field::new(7);
-        let coefficients1 = vec![FieldElement::new(1, field), FieldElement::new(2, field)];
-        let coefficients2 = vec![FieldElement::new(3, field), FieldElement::new(4, field)];
+        let coefficients1 = vec![FieldElement::new(1), FieldElement::new(2)];
+        let coefficients2 = vec![FieldElement::new(3), FieldElement::new(4)];
         let polynomial1 = Polynomial::new_from_coefficients(coefficients1);
         let polynomial2 = Polynomial::new_from_coefficients(coefficients2);
         let result = polynomial1 + polynomial2;
-        assert_eq!(result.coefficients[0].0, 4);
-        assert_eq!(result.coefficients[1].0, 6);
+        assert_eq!(result.coefficients[0].as_canonical_u64(), 4);
+        assert_eq!(result.coefficients[1].as_canonical_u64(), 6);
     }
 
     #[test]
     fn test_add_poly2_larger() {
-        let field = Field::new(7);
-        let coefficients1 = vec![FieldElement::new(1, field), FieldElement::new(2, field)];
+        let coefficients1 = vec![FieldElement::new(1), FieldElement::new(2)];
         let coefficients2 = vec![
-            FieldElement::new(3, field),
-            FieldElement::new(4, field),
-            FieldElement::new(5, field),
+            FieldElement::new(3),
+            FieldElement::new(4),
+            FieldElement::new(5),
         ];
         let polynomial1 = Polynomial::new_from_coefficients(coefficients1);
         let polynomial2 = Polynomial::new_from_coefficients(coefficients2);
         let result = polynomial1 + polynomial2;
-        assert_eq!(result.coefficients[0].0, 4);
-        assert_eq!(result.coefficients[1].0, 6);
-        assert_eq!(result.coefficients[2].0, 5);
+        assert_eq!(result.coefficients[0].as_canonical_u64(), 4);
+        assert_eq!(result.coefficients[1].as_canonical_u64(), 6);
+        assert_eq!(result.coefficients[2].as_canonical_u64(), 5);
     }
 
     #[test]
     fn test_add_poly1_larger() {
-        let field = Field::new(7);
         let coefficients1 = vec![
-            FieldElement::new(1, field),
-            FieldElement::new(4, field),
-            FieldElement::new(3, field),
+            FieldElement::new(1),
+            FieldElement::new(4),
+            FieldElement::new(3),
         ];
-        let coefficients2 = vec![FieldElement::new(3, field), FieldElement::new(4, field)];
+        let coefficients2 = vec![FieldElement::new(3), FieldElement::new(4)];
         let polynomial1 = Polynomial::new_from_coefficients(coefficients1);
         let polynomial2 = Polynomial::new_from_coefficients(coefficients2);
         let result = polynomial1 + polynomial2;
-        assert_eq!(result.coefficients[0].0, 4);
-        assert_eq!(result.coefficients[1].0, 1);
-        assert_eq!(result.coefficients[2].0, 3);
+        assert_eq!(result.coefficients[0].as_canonical_u64(), 4);
+        assert_eq!(result.coefficients[1].as_canonical_u64(), 8);
+        assert_eq!(result.coefficients[2].as_canonical_u64(), 3);
     }
 
     #[test]
     fn test_sub() {
-        let field = Field::new(7);
-        let coefficients1 = vec![FieldElement::new(1, field), FieldElement::new(2, field)];
-        let coefficients2 = vec![FieldElement::new(3, field), FieldElement::new(4, field)];
+        let coefficients1 = vec![FieldElement::new(1), FieldElement::new(2)];
+        let coefficients2 = vec![FieldElement::new(3), FieldElement::new(4)];
         let polynomial1 = Polynomial::new_from_coefficients(coefficients1);
         let polynomial2 = Polynomial::new_from_coefficients(coefficients2);
         let result = polynomial1 - polynomial2;
-        assert_eq!(result.coefficients[0].0, 5);
-        assert_eq!(result.coefficients[1].0, 5);
+        let r = FieldElement::from_canonical_u64(FieldElement::ORDER_U64 - 2);
+        assert_eq!(result.coefficients[0].as_canonical_u64(), r.as_canonical_u64());
+        assert_eq!(result.coefficients[1].as_canonical_u64(), r.as_canonical_u64());
     }
 
     #[test]
     fn test_sub_poly2_larger() {
-        let field = Field::new(7);
-        let coefficients1 = vec![FieldElement::new(1, field), FieldElement::new(2, field)];
+        let coefficients1 = vec![FieldElement::new(1), FieldElement::new(2)];
         let coefficients2 = vec![
-            FieldElement::new(3, field),
-            FieldElement::new(4, field),
-            FieldElement::new(5, field),
+            FieldElement::new(3),
+            FieldElement::new(4),
+            FieldElement::new(5),
         ];
         let polynomial1 = Polynomial::new_from_coefficients(coefficients1);
         let polynomial2 = Polynomial::new_from_coefficients(coefficients2);
         let result = polynomial1 - polynomial2;
-        assert_eq!(result.coefficients[0].0, 5);
-        assert_eq!(result.coefficients[1].0, 5);
-        assert_eq!(result.coefficients[2].0, 2);
+        let r = FieldElement::from_canonical_u64(FieldElement::ORDER_U64 - 2);
+        assert_eq!(result.coefficients[0], r);
+        assert_eq!(result.coefficients[1], r);
+        assert_eq!(result.coefficients[2].as_canonical_u64(), FieldElement::ORDER_U64 - 5);
     }
 
     #[test]
     fn test_sub_poly1_larger() {
-        let field = Field::new(7);
         let coefficients1 = vec![
-            FieldElement::new(1, field),
-            FieldElement::new(4, field),
-            FieldElement::new(3, field),
+            FieldElement::new(1),
+            FieldElement::new(4),
+            FieldElement::new(3),
         ];
-        let coefficients2 = vec![FieldElement::new(3, field), FieldElement::new(4, field)];
+        let coefficients2 = vec![FieldElement::new(3), FieldElement::new(4)];
         let polynomial1 = Polynomial::new_from_coefficients(coefficients1);
         let polynomial2 = Polynomial::new_from_coefficients(coefficients2);
         let result = polynomial1 - polynomial2;
-        assert_eq!(result.coefficients[0].0, 5);
-        assert_eq!(result.coefficients[1].0, 0);
-        assert_eq!(result.coefficients[2].0, 3);
+        let r = FieldElement::from_canonical_u64(FieldElement::ORDER_U64 - 2);
+        assert_eq!(result.coefficients[0], r);
+        assert_eq!(result.coefficients[1].as_canonical_u64(), 0);
+        assert_eq!(result.coefficients[2].as_canonical_u64(), 3);
     }
 
     #[test]
     fn test_mul() {
-        let field = Field::new(7);
-        let coefficients1 = vec![FieldElement::new(1, field), FieldElement::new(2, field)];
-        let coefficients2 = vec![FieldElement::new(3, field), FieldElement::new(4, field)];
+        let coefficients1 = vec![FieldElement::new(1), FieldElement::new(2)];
+        let coefficients2 = vec![FieldElement::new(3), FieldElement::new(4)];
         let polynomial1 = Polynomial::new_from_coefficients(coefficients1);
         let polynomial2 = Polynomial::new_from_coefficients(coefficients2);
         let result = polynomial1 * polynomial2;
-        assert_eq!(result.coefficients[0].0, 3);
-        assert_eq!(result.coefficients[1].0, 3);
-        assert_eq!(result.coefficients[2].0, 1);
+        assert_eq!(result.coefficients[0].as_canonical_u64(), 3);
+        assert_eq!(result.coefficients[1].as_canonical_u64(), 10);
+        assert_eq!(result.coefficients[2].as_canonical_u64(), 8);
     }
 
     #[test]
     fn test_scalar_mul() {
-        let field = Field::new(7);
-        let coefficients = vec![FieldElement::new(1, field), FieldElement::new(2, field)];
+        let coefficients = vec![FieldElement::new(1), FieldElement::new(2)];
         let polynomial = Polynomial::new_from_coefficients(coefficients);
-        let scalar = FieldElement::new(3, field);
+        let scalar = FieldElement::new(3);
         let result = polynomial.scalar_mul(scalar);
-        assert_eq!(result.coefficients[0].0, 3);
-        assert_eq!(result.coefficients[1].0, 6);
+        assert_eq!(result.coefficients[0].as_canonical_u64(), 3);
+        assert_eq!(result.coefficients[1].as_canonical_u64(), 6);
     }
 
     #[test]
     fn test_scalar_div() {
-        let field = Field::new(7);
-        let coefficients = vec![FieldElement::new(1, field), FieldElement::new(2, field)];
+        let coefficients = vec![FieldElement::new(1), FieldElement::new(2)];
         let polynomial = Polynomial::new_from_coefficients(coefficients);
-        let scalar = FieldElement::new(4, field);
+        let scalar = FieldElement::new(4);
         let result = polynomial.scalar_div(scalar);
-        assert_eq!(result.coefficients[0].0, 2);
-        assert_eq!(result.coefficients[1].0, 4);
+        let inv = scalar.inverse();
+        assert_eq!(result.coefficients[0], FieldElement::new(1)*inv);
+        assert_eq!(result.coefficients[1], FieldElement::new(2)*inv);
     }
 
     #[test]
     fn test_polynomial_from_roots() {
-        let field = Field::new(7);
         let roots = vec![
-            FieldElement::new(1, field),
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
+            FieldElement::new(1),
+            FieldElement::new(2),
+            FieldElement::new(3),
         ];
         let polynomial = gen_polynomial_from_roots(roots);
-        assert_eq!(polynomial.coefficients[0].0, 1);
-        assert_eq!(polynomial.coefficients[1].0, 4);
-        assert_eq!(polynomial.coefficients[2].0, 1);
-        assert_eq!(polynomial.coefficients[3].0, 1);
+        assert_eq!(polynomial.coefficients[0].as_canonical_u64(), 1);
+        assert_eq!(polynomial.coefficients[1].as_canonical_u64(), 4);
+        assert_eq!(polynomial.coefficients[2].as_canonical_u64(), 1);
+        assert_eq!(polynomial.coefficients[3].as_canonical_u64(), 1);
     }
 
     #[test]
     fn test_gen_lagrange_poly() {
-        let field = Field::new(7);
         let x = vec![
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
-            FieldElement::new(5, field),
+            FieldElement::new(2),
+            FieldElement::new(3),
+            FieldElement::new(5),
         ];
         let lagrange_polynomials = gen_lagrange_polynomials(x);
         assert_eq!(lagrange_polynomials.len(), 3);
-        assert_eq!(lagrange_polynomials[0].coefficients[0].0, 5);
-        assert_eq!(lagrange_polynomials[0].coefficients[1].0, 2);
-        assert_eq!(lagrange_polynomials[0].coefficients[2].0, 5);
-        assert_eq!(lagrange_polynomials[1].coefficients[0].0, 2);
-        assert_eq!(lagrange_polynomials[1].coefficients[1].0, 0);
-        assert_eq!(lagrange_polynomials[1].coefficients[2].0, 3);
-        assert_eq!(lagrange_polynomials[2].coefficients[0].0, 1);
-        assert_eq!(lagrange_polynomials[2].coefficients[1].0, 5);
-        assert_eq!(lagrange_polynomials[2].coefficients[2].0, 6);
+        assert_eq!(lagrange_polynomials[0].coefficients[0].as_canonical_u64(), 5);
+        assert_eq!(lagrange_polynomials[0].coefficients[1].as_canonical_u64(), 2);
+        assert_eq!(lagrange_polynomials[0].coefficients[2].as_canonical_u64(), 5);
+        assert_eq!(lagrange_polynomials[1].coefficients[0].as_canonical_u64(), 2);
+        assert_eq!(lagrange_polynomials[1].coefficients[1].as_canonical_u64(), 0);
+        assert_eq!(lagrange_polynomials[1].coefficients[2].as_canonical_u64(), 3);
+        assert_eq!(lagrange_polynomials[2].coefficients[0].as_canonical_u64(), 1);
+        assert_eq!(lagrange_polynomials[2].coefficients[1].as_canonical_u64(), 5);
+        assert_eq!(lagrange_polynomials[2].coefficients[2].as_canonical_u64(), 6);
     }
 
     #[test]
     fn test_gen_lagrange_poly2() {
-        let field = Field::new(7);
         let x = vec![
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
-            FieldElement::new(5, field),
-            FieldElement::new(6, field),
+            FieldElement::new(2),
+            FieldElement::new(3),
+            FieldElement::new(5),
+            FieldElement::new(6),
         ];
         let lagrange_polynomials = gen_lagrange_polynomials(x);
         assert_eq!(lagrange_polynomials.len(), 4);
-        assert_eq!(lagrange_polynomials[0].coefficients[0].0, 4);
-        assert_eq!(lagrange_polynomials[0].coefficients[1].0, 0);
-        assert_eq!(lagrange_polynomials[0].coefficients[2].0, 0);
-        assert_eq!(lagrange_polynomials[0].coefficients[3].0, 4);
-        assert_eq!(lagrange_polynomials[1].coefficients[0].0, 4);
-        assert_eq!(lagrange_polynomials[1].coefficients[1].0, 4);
-        assert_eq!(lagrange_polynomials[1].coefficients[2].0, 6);
-        assert_eq!(lagrange_polynomials[1].coefficients[3].0, 6);
-        assert_eq!(lagrange_polynomials[2].coefficients[0].0, 6);
-        assert_eq!(lagrange_polynomials[2].coefficients[1].0, 1);
-        assert_eq!(lagrange_polynomials[2].coefficients[2].0, 3);
-        assert_eq!(lagrange_polynomials[2].coefficients[3].0, 1);
-        assert_eq!(lagrange_polynomials[3].coefficients[0].0, 1);
-        assert_eq!(lagrange_polynomials[3].coefficients[1].0, 2);
-        assert_eq!(lagrange_polynomials[3].coefficients[2].0, 5);
-        assert_eq!(lagrange_polynomials[3].coefficients[3].0, 3);
+        assert_eq!(lagrange_polynomials[0].coefficients[0].as_canonical_u64(), 4);
+        assert_eq!(lagrange_polynomials[0].coefficients[1].as_canonical_u64(), 0);
+        assert_eq!(lagrange_polynomials[0].coefficients[2].as_canonical_u64(), 0);
+        assert_eq!(lagrange_polynomials[0].coefficients[3].as_canonical_u64(), 4);
+        assert_eq!(lagrange_polynomials[1].coefficients[0].as_canonical_u64(), 4);
+        assert_eq!(lagrange_polynomials[1].coefficients[1].as_canonical_u64(), 4);
+        assert_eq!(lagrange_polynomials[1].coefficients[2].as_canonical_u64(), 6);
+        assert_eq!(lagrange_polynomials[1].coefficients[3].as_canonical_u64(), 6);
+        assert_eq!(lagrange_polynomials[2].coefficients[0].as_canonical_u64(), 6);
+        assert_eq!(lagrange_polynomials[2].coefficients[1].as_canonical_u64(), 1);
+        assert_eq!(lagrange_polynomials[2].coefficients[2].as_canonical_u64(), 3);
+        assert_eq!(lagrange_polynomials[2].coefficients[3].as_canonical_u64(), 1);
+        assert_eq!(lagrange_polynomials[3].coefficients[0].as_canonical_u64(), 1);
+        assert_eq!(lagrange_polynomials[3].coefficients[1].as_canonical_u64(), 2);
+        assert_eq!(lagrange_polynomials[3].coefficients[2].as_canonical_u64(), 5);
+        assert_eq!(lagrange_polynomials[3].coefficients[3].as_canonical_u64(), 3);
     }
 
     #[test]
     fn test_interpolate_lagrange_polynomials() {
-        let field = Field::new(7);
         let x = vec![
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
-            FieldElement::new(5, field),
+            FieldElement::new(2),
+            FieldElement::new(3),
+            FieldElement::new(5),
         ];
         let y = vec![
-            FieldElement::new(1, field),
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
+            FieldElement::new(1),
+            FieldElement::new(2),
+            FieldElement::new(3),
         ];
         let result = interpolate_lagrange_polynomials(x, y);
         println!("{:?}", result.coefficients);
-        assert_eq!(result.coefficients[0].0, 5);
-        assert_eq!(result.coefficients[1].0, 3);
-        assert_eq!(result.coefficients[2].0, 1);
+        assert_eq!(result.coefficients[0].as_canonical_u64(), 5);
+        assert_eq!(result.coefficients[1].as_canonical_u64(), 3);
+        assert_eq!(result.coefficients[2].as_canonical_u64(), 1);
     }
 
     #[test]
     fn test_qdiv() {
-        let field = Field::new(7);
         let coefficients1 = vec![
-            FieldElement::new(1, field),
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
-            FieldElement::new(4, field),
+            FieldElement::new(1),
+            FieldElement::new(2),
+            FieldElement::new(3),
+            FieldElement::new(4),
         ];
         let coefficients2 = vec![
-            FieldElement::new(1, field),
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
+            FieldElement::new(1),
+            FieldElement::new(2),
+            FieldElement::new(3),
         ];
         let polynomial1 = Polynomial::new_from_coefficients(coefficients1);
         let polynomial2 = Polynomial::new_from_coefficients(coefficients2);
         let (q, r) = polynomial1.q_div(polynomial2);
         assert_eq!(q.coefficients.len(), 2);
         assert_eq!(r.coefficients.len(), 2);
-        assert_eq!(q.coefficients[0].0, 4);
-        assert_eq!(q.coefficients[1].0, 6);
-        assert_eq!(r.coefficients[0].0, 4);
-        assert_eq!(r.coefficients[1].0, 2);
+        assert_eq!(q.coefficients[0].as_canonical_u64(), 4);
+        assert_eq!(q.coefficients[1].as_canonical_u64(), 6);
+        assert_eq!(r.coefficients[0].as_canonical_u64(), 4);
+        assert_eq!(r.coefficients[1].as_canonical_u64(), 2);
     }
 
     #[test]
     fn test_qdiv2() {
-        let field = Field::new(7);
-
         let coefficients1 = vec![
-            FieldElement::new(2, field),
-            FieldElement::new(1, field),
-            FieldElement::new(3, field),
-            FieldElement::new(0, field),
-            FieldElement::new(6, field),
+            FieldElement::new(2),
+            FieldElement::new(1),
+            FieldElement::new(3),
+            FieldElement::new(0),
+            FieldElement::new(6),
         ];
 
         let coefficients2 = vec![
-            FieldElement::new(3, field),
-            FieldElement::new(5, field),
-            FieldElement::new(0, field),
-            FieldElement::new(4, field),
+            FieldElement::new(3),
+            FieldElement::new(5),
+            FieldElement::new(0),
+            FieldElement::new(4),
         ];
 
         let polynomial1 = Polynomial::new_from_coefficients(coefficients1);
@@ -749,25 +724,24 @@ mod test_polynomials {
 
         assert_eq!(r.coefficients.len(), 3);
         assert_eq!(q.coefficients.len(), 2);
-        assert_eq!(r.coefficients[0].0, 2);
-        assert_eq!(r.coefficients[1].0, 0);
-        assert_eq!(r.coefficients[2].0, 6);
-        assert_eq!(q.coefficients[0].0, 0);
-        assert_eq!(q.coefficients[1].0, 5);
+        assert_eq!(r.coefficients[0].as_canonical_u64(), 2);
+        assert_eq!(r.coefficients[1].as_canonical_u64(), 0);
+        assert_eq!(r.coefficients[2].as_canonical_u64(), 6);
+        assert_eq!(q.coefficients[0].as_canonical_u64(), 0);
+        assert_eq!(q.coefficients[1].as_canonical_u64(), 5);
     }
 
     #[test]
     fn test_qdiv_same_n_m() {
-        let field = Field::new(7);
         let coefficients1 = vec![
-            FieldElement::new(1, field),
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
+            FieldElement::new(1),
+            FieldElement::new(2),
+            FieldElement::new(3),
         ];
         let coefficients2 = vec![
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
-            FieldElement::new(4, field),
+            FieldElement::new(2),
+            FieldElement::new(3),
+            FieldElement::new(4),
         ];
 
         let polynomial1 = Polynomial::new_from_coefficients(coefficients1);
@@ -776,24 +750,23 @@ mod test_polynomials {
         let (q, r) = polynomial1.q_div(polynomial2);
         assert_eq!(q.coefficients.len(), 1);
         assert_eq!(r.coefficients.len(), 2);
-        assert_eq!(q.coefficients[0].0, 6);
-        assert_eq!(r.coefficients[0].0, 3);
-        assert_eq!(r.coefficients[1].0, 5);
+        assert_eq!(q.coefficients[0].as_canonical_u64(), 6);
+        assert_eq!(r.coefficients[0].as_canonical_u64(), 3);
+        assert_eq!(r.coefficients[1].as_canonical_u64(), 5);
     }
 
     #[test]
     fn test_qdiv_m_larger_than_n() {
-        let field = Field::new(7);
         let coefficients1 = vec![
-            FieldElement::new(1, field),
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
+            FieldElement::new(1),
+            FieldElement::new(2),
+            FieldElement::new(3),
         ];
         let coefficients2 = vec![
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
-            FieldElement::new(4, field),
-            FieldElement::new(5, field),
+            FieldElement::new(2),
+            FieldElement::new(3),
+            FieldElement::new(4),
+            FieldElement::new(5),
         ];
 
         let polynomial1 = Polynomial::new_from_coefficients(coefficients1);
@@ -802,26 +775,24 @@ mod test_polynomials {
         let (q, r) = polynomial1.q_div(polynomial2);
         assert_eq!(q.coefficients.len(), 1);
         assert_eq!(r.coefficients.len(), 3);
-        assert_eq!(q.coefficients[0].0, 0);
-        assert_eq!(r.coefficients[0].0, 1);
-        assert_eq!(r.coefficients[1].0, 2);
-        assert_eq!(r.coefficients[2].0, 3);
+        assert_eq!(q.coefficients[0].as_canonical_u64(), 0);
+        assert_eq!(r.coefficients[0].as_canonical_u64(), 1);
+        assert_eq!(r.coefficients[1].as_canonical_u64(), 2);
+        assert_eq!(r.coefficients[2].as_canonical_u64(), 3);
     }
 
     #[test]
     fn test_qdiv_no_remainder() {
-        let field = Field::new(7);
-
         let coefficients1 = vec![
-            FieldElement::new(1, field),
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
+            FieldElement::new(1),
+            FieldElement::new(2),
+            FieldElement::new(3),
         ];
 
         let coefficients2 = vec![
-            FieldElement::new(1, field),
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
+            FieldElement::new(1),
+            FieldElement::new(2),
+            FieldElement::new(3),
         ];
 
         let polynomial1 = Polynomial::new_from_coefficients(coefficients1);
@@ -831,24 +802,22 @@ mod test_polynomials {
 
         assert_eq!(q.coefficients.len(), 1);
         assert_eq!(r.coefficients.len(), 1);
-        assert_eq!(q.coefficients[0].0, 1);
-        assert_eq!(r.coefficients[0].0, 0);
+        assert_eq!(q.coefficients[0].as_canonical_u64(), 1);
+        assert_eq!(r.coefficients[0].as_canonical_u64(), 0);
     }
 
     #[test]
     fn test_div() {
-        let field = Field::new(7);
-
         let coefficients1 = vec![
-            FieldElement::new(1, field),
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
+            FieldElement::new(1),
+            FieldElement::new(2),
+            FieldElement::new(3),
         ];
 
         let coefficients2 = vec![
-            FieldElement::new(1, field),
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
+            FieldElement::new(1),
+            FieldElement::new(2),
+            FieldElement::new(3),
         ];
 
         let polynomial1 = Polynomial::new_from_coefficients(coefficients1);
@@ -857,24 +826,22 @@ mod test_polynomials {
         let result = polynomial1 / polynomial2;
 
         assert_eq!(result.coefficients.len(), 1);
-        assert_eq!(result.coefficients[0].0, 1);
+        assert_eq!(result.coefficients[0].as_canonical_u64(), 1);
     }
 
     #[test]
     #[should_panic]
     fn test_div_not_possible() {
-        let field = Field::new(7);
-
         let coefficients1 = vec![
-            FieldElement::new(1, field),
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
+            FieldElement::new(1),
+            FieldElement::new(2),
+            FieldElement::new(3),
         ];
 
         let coefficients2 = vec![
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
-            FieldElement::new(4, field),
+            FieldElement::new(2),
+            FieldElement::new(3),
+            FieldElement::new(4),
         ];
 
         let polynomial1 = Polynomial::new_from_coefficients(coefficients1);
@@ -885,18 +852,16 @@ mod test_polynomials {
 
     #[test]
     fn test_div_assign() {
-        let field = Field::new(7);
-
         let coefficients1 = vec![
-            FieldElement::new(1, field),
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
+            FieldElement::new(1),
+            FieldElement::new(2),
+            FieldElement::new(3),
         ];
 
         let coefficients2 = vec![
-            FieldElement::new(1, field),
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
+            FieldElement::new(1),
+            FieldElement::new(2),
+            FieldElement::new(3),
         ];
 
         let mut polynomial1 = Polynomial::new_from_coefficients(coefficients1);
@@ -905,24 +870,22 @@ mod test_polynomials {
         polynomial1 /= polynomial2;
 
         assert_eq!(polynomial1.coefficients.len(), 1);
-        assert_eq!(polynomial1.coefficients[0].0, 1);
+        assert_eq!(polynomial1.coefficients[0].as_canonical_u64(), 1);
     }
 
     #[test]
     #[should_panic]
     fn test_div_assign_not_possible() {
-        let field = Field::new(7);
-
         let coefficients1 = vec![
-            FieldElement::new(1, field),
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
+            FieldElement::new(1),
+            FieldElement::new(2),
+            FieldElement::new(3),
         ];
 
         let coefficients2 = vec![
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
-            FieldElement::new(4, field),
+            FieldElement::new(2),
+            FieldElement::new(3),
+            FieldElement::new(4),
         ];
 
         let mut polynomial1 = Polynomial::new_from_coefficients(coefficients1);
@@ -933,71 +896,65 @@ mod test_polynomials {
 
     #[test]
     fn test_mono_compose() {
-        let field = Field::new(7);
-
         let coefficients = vec![
-            FieldElement::new(1, field),
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
+            FieldElement::new(1),
+            FieldElement::new(2),
+            FieldElement::new(3),
         ];
 
         let polynomial = Polynomial::new_from_coefficients(coefficients);
 
-        let mono = FieldElement::new(4, field);
+        let mono = FieldElement::new(4);
 
         let polynomial = polynomial.compose(mono);
 
-        assert_eq!(polynomial.coefficients[0].0, 1);
-        assert_eq!(polynomial.coefficients[1].0, 1);
-        assert_eq!(polynomial.coefficients[2].0, 6);
+        assert_eq!(polynomial.coefficients[0].as_canonical_u64(), 1);
+        assert_eq!(polynomial.coefficients[1].as_canonical_u64(), 1);
+        assert_eq!(polynomial.coefficients[2].as_canonical_u64(), 6);
     }
     #[test]
     fn test_pow() {
-        let field = Field::new(7);
         let coefficients = vec![
-            FieldElement::new(1, field),
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
+            FieldElement::new(1),
+            FieldElement::new(2),
+            FieldElement::new(3),
         ];
         let polynomial = Polynomial::new_from_coefficients(coefficients);
         let result = polynomial.pow(2);
-        assert_eq!(result.coefficients[0].0, 1);
-        assert_eq!(result.coefficients[1].0, 4);
-        assert_eq!(result.coefficients[2].0, 3);
-        assert_eq!(result.coefficients[3].0, 5);
-        assert_eq!(result.coefficients[4].0, 2);
+        assert_eq!(result.coefficients[0].as_canonical_u64(), 1);
+        assert_eq!(result.coefficients[1].as_canonical_u64(), 4);
+        assert_eq!(result.coefficients[2].as_canonical_u64(), 3);
+        assert_eq!(result.coefficients[3].as_canonical_u64(), 5);
+        assert_eq!(result.coefficients[4].as_canonical_u64(), 2);
     }
     #[test]
     fn test_scale() {
-        let field = Field::new(7);
         let coefficients = vec![
-            FieldElement::new(1, field),
-            FieldElement::new(2, field),
-            FieldElement::new(3, field),
+            FieldElement::new(1),
+            FieldElement::new(2),
+            FieldElement::new(3),
         ];
         let polynomial = Polynomial::new_from_coefficients(coefficients);
         let result = polynomial.scale(2);
-        assert_eq!(result.coefficients[0].0, 1);
-        assert_eq!(result.coefficients[1].0, 4);
-        assert_eq!(result.coefficients[2].0, 5);
+        assert_eq!(result.coefficients[0].as_canonical_u64(), 1);
+        assert_eq!(result.coefficients[1].as_canonical_u64(), 4);
+        assert_eq!(result.coefficients[2].as_canonical_u64(), 5);
     }
     #[test]
     fn test_collinearity() {
-        let field = Field::new(7);
         let evaluation_form = vec![
-            (FieldElement::new(1, field), FieldElement::new(1, field)),
-            (FieldElement::new(2, field), FieldElement::new(2, field)),
-            (FieldElement::new(3, field), FieldElement::new(3, field)),
+            (FieldElement::new(1), FieldElement::new(1)),
+            (FieldElement::new(2), FieldElement::new(2)),
+            (FieldElement::new(3), FieldElement::new(3)),
         ];
         let result = Polynomial::collinearity(evaluation_form);
         assert!(!result);
     }
     #[test]
     fn test_collinearity2() {
-        let field = Field::new(7);
         let evaluation_form = vec![
-            (FieldElement::new(1, field), FieldElement::new(1, field)),
-            (FieldElement::new(2, field), FieldElement::new(2, field)),
+            (FieldElement::new(1), FieldElement::new(1)),
+            (FieldElement::new(2), FieldElement::new(2)),
         ];
         let result = Polynomial::collinearity(evaluation_form);
         assert!(result);

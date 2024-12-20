@@ -376,14 +376,12 @@ impl ProcessorTable {
         quotients
     }
 
-    //@todo parallelize this function
     //define a selector polynomial for a specific instruction.
     //this will return a non-zero value for instruction and zero for all other instructions
     pub fn selector_polynomial(instruction: char, ci: Polynomial, field: Field) -> Polynomial {
         let f = |x: char| -> FieldElement { FieldElement((x as u32) as u128, field) };
         let mut acc = Polynomial::constant(FieldElement::one(field)); // poly = 1
 
-        // Parallelize the loop over characters
         let partial_results: Vec<Polynomial> = "[]<>,.+-"
             .par_chars() // `par_chars` is available through rayon for parallel iteration over characters
             .filter(|&c| c != instruction) // Filter out the character matching `instruction`
@@ -401,14 +399,11 @@ impl ProcessorTable {
         acc
     }
 
-    // I am not using this function because it because universal selector is redundant
-    // define a selector polynomial for a valid set if instruction from this set then it should be zero
     pub fn universal_selector(ci: Polynomial, field: Field) -> Polynomial {
         let f = |x: char| -> FieldElement { FieldElement((x as u32) as u128, field) };
         // let mut deselectors = Vec::new();
         let mut acc = Polynomial::constant(FieldElement::one(field));
 
-        // for target_char in "[]<>,.+-".chars() {
         let target_char = ['[', ']', '<', '>', ',', '.', '+', '-'];
 
         for c in target_char.iter() {
