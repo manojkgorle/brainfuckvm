@@ -50,11 +50,7 @@ pub use crate::vm::VirtualMachine;
 use rayon::ThreadPoolBuilder;
 fn main() {
     env_logger::init();
-    let guard = ProfilerGuard::new(100000).unwrap();
-    // ThreadPoolBuilder::new()
-    // .thread_name(|i| format!("par-iter-{}", i))
-    // .build_global()
-    // .unwrap();
+    let guard = ProfilerGuard::new(1000).unwrap();
     let field = Field(18446744069414584321);
     let vm = VirtualMachine::new(field);
     let generator = field.generator().pow((1 << 32) - 1);
@@ -73,7 +69,7 @@ fn main() {
 
     let offset = FieldElement::one(field);
     let expansion_f = 1;
-    let num_queries = 1;
+    let num_queries = 64;
 
     let v: &[&[Vec<FieldElement>]] = &[
         &processor_matrix,

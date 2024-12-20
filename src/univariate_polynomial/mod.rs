@@ -89,6 +89,7 @@ impl Polynomial {
         Polynomial::new_from_coefficients(vec![FieldElement::zero(Field::new(field.0))])
     }
 
+    // @todo optimize this.
     pub fn q_div(self, poly2: Self) -> (Self, Self) {
         let field = Field::new(self.coefficients[0].modulus());
         let n = self.coefficients.len();
@@ -310,16 +311,17 @@ impl Mul for Polynomial {
 
     fn mul(self, other: Polynomial) -> Polynomial {
         let field = Field::new(self.coefficients[0].modulus());
-        let mut result = vec![0; self.coefficients.len() + other.coefficients.len() - 1];
         let coeff = self.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
         let coeff2 = other
             .coefficients
             .iter()
             .map(|x| x.0)
             .collect::<Vec<u128>>();
+        let mut result = vec![0; self.coefficients.len() + other.coefficients.len() - 1];
         for i in 0..coeff.len() {
             for j in 0..coeff2.len() {
-                result[i + j] += (coeff[i] * coeff2[j]) % field.0;
+                let r = coeff[i] * coeff2[j];
+                result[i + j] += if r >= field.0 { r % field.0 } else { r };
             }
         }
         let res = result
@@ -343,7 +345,8 @@ impl MulAssign for Polynomial {
                 .collect::<Vec<u128>>();
             for i in 0..coeff.len() {
                 for j in 0..coeff2.len() {
-                    result[i + j] += (coeff[i] * coeff2[j]) % field.0;
+                    let r = coeff[i] * coeff2[j];
+                    result[i + j] += if r >= field.0 { r % field.0 } else { r };
                 }
             }
             self.coefficients = result
@@ -377,8 +380,9 @@ impl DivAssign for Polynomial {
         }
     }
 }
-// zerofier domain
-pub fn gen_polynomial_from_roots(roots: Vec<FieldElement>) -> Polynomial {
+
+pub fn gen_polynomial_from_roots(roots: &[FieldElement]) -> Polynomial {
+    let t = Local::now();
     let field = Field::new(roots[0].modulus());
     let mut result = vec![FieldElement::new(1, field); 1];
     for i in 0..roots.len() {
@@ -388,20 +392,19 @@ pub fn gen_polynomial_from_roots(roots: Vec<FieldElement>) -> Polynomial {
         let new_polynomial = Polynomial::new_from_coefficients(new_result);
         result = (Polynomial::new_from_coefficients(result) * new_polynomial).coefficients;
     }
+    log::debug!("Time taken to generate polynomial from roots: {:?}ms", (Local::now() - t).num_milliseconds());
     Polynomial::new_from_coefficients(result[..roots.len() + 1].to_vec())
 }
-//interpolate_domain
 
 pub fn gen_lagrange_polynomials(x: Vec<FieldElement>) -> Vec<Polynomial> {
     let n = x.len();
     let mut lagrange_polynomials = Vec::with_capacity(n);
     let one = FieldElement::one(x[0].1);
+    let big_poly = gen_polynomial_from_roots(&x);
     for i in 0..n {
         let mut denominator = Vec::with_capacity(n);
 
-        let roots = &x[..i];
-
-        let numerator = gen_polynomial_from_roots([roots, &x[i + 1..]].concat());
+        let numerator = big_poly.clone()/Polynomial::new_from_coefficients(vec![-x[i], one]);
         for j in 0..n {
             if i == j {
                 continue;
@@ -418,15 +421,14 @@ pub fn gen_lagrange_polynomials(x: Vec<FieldElement>) -> Vec<Polynomial> {
 
 pub fn gen_lagrange_polynomials_parallel(x: Vec<FieldElement>) -> Vec<Polynomial> {
     let n = x.len();
+    let big_poly = gen_polynomial_from_roots(&x);
+    let one = FieldElement::one(x[0].1);
     let lagrange_polynomials = (0..n)
         .into_par_iter()
         .map(|i| {
             let mut denominator = Vec::with_capacity(n);
 
-            let roots = &x[..i];
-
-            let numerator: Polynomial = gen_polynomial_from_roots([roots, &x[i + 1..]].concat());
-
+            let numerator = big_poly.clone()/Polynomial::new_from_coefficients(vec![-x[i], one]);
             for j in 0..n {
                 if i == j {
                     continue;
@@ -473,67 +475,6 @@ impl PartialEq for Polynomial {
         true
     }
 }
-
-// fn karatsuba_multiply(a: &[u128], b: &[u128]) -> Vec<u128> {
-//     let n = a.len();
-//     let m = b.len();
-
-//     // Base case: if the polynomials are small, use the naive multiplication
-//     if n < 32 || m < 32 {
-//         return naive_multiply(a, b);
-//     }
-
-//     // Ensure both polynomials have the same length by padding with zeros
-//     let max_len = n.max(m);
-//     let mut a_padded = vec![0; max_len];
-//     let mut b_padded = vec![0; max_len];
-//     a_padded[..n].copy_from_slice(a);
-//     b_padded[..m].copy_from_slice(b);
-
-//     // Split the polynomials into two halves
-//     let mid = max_len / 2;
-//     let (a_low, a_high) = a_padded.split_at(mid);
-//     let (b_low, b_high) = b_padded.split_at(mid);
-
-//     // Recursive calls to Karatsuba
-//     let z0 = karatsuba_multiply(a_low, b_low);
-//     let z1 = karatsuba_multiply(&vec_add(a_low, a_high), &vec_add(b_low, b_high));
-//     let z2 = karatsuba_multiply(a_high, b_high);
-
-//     // Combine the results
-//     let mut result = vec![0; 2 * max_len - 1];
-//     for (i, &val) in z0.iter().enumerate() {
-//         result[i] += val;
-//     }
-//     for (i, &val) in z1.iter().enumerate() {
-//         result[i + mid] += val - z0[i] - z2[i];
-//     }
-//     for (i, &val) in z2.iter().enumerate() {
-//         result[i + 2 * mid] += val;
-//     }
-
-//     result
-// }
-
-// // Helper function to add two vectors element-wise
-// fn vec_add(a: &[u128], b: &[u128]) -> Vec<u128> {
-//     a.iter().zip(b.iter()).map(|(&x, &y)| x + y).collect()
-// }
-
-// // Naive polynomial multiplication (for small inputs)
-// fn naive_multiply(a: &[u128], b: &[u128]) -> Vec<u128> {
-//     let n = a.len();
-//     let m = b.len();
-//     let mut result = vec![0; n + m - 1];
-
-//     for i in 0..n {
-//         for j in 0..m {
-//             result[i + j] += a[i] * b[j];
-//         }
-//     }
-
-//     result
-// }
 
 #[cfg(test)]
 mod test_polynomials {
@@ -684,7 +625,7 @@ mod test_polynomials {
             FieldElement::new(2, field),
             FieldElement::new(3, field),
         ];
-        let polynomial = gen_polynomial_from_roots(roots);
+        let polynomial = gen_polynomial_from_roots(&roots);
         assert_eq!(polynomial.coefficients[0].0, 1);
         assert_eq!(polynomial.coefficients[1].0, 4);
         assert_eq!(polynomial.coefficients[2].0, 1);

@@ -11,20 +11,6 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssi
 #[allow(clippy::derived_hash_with_manual_eq)]
 #[derive(Debug, Clone, Copy, Hash)]
 pub struct Field(pub u128);
-
-pub enum ChallengeIndices {
-    A,
-    B,
-    C,
-    D,
-    E,
-    F,
-    Alpha,
-    Beta,
-    Delta,
-    Gamma,
-    Eta,
-}
 /// The Goldilocks prime
 pub const P: u64 = 0xFFFF_FFFF_0000_0001;
 /// Two's complement of `ORDER`, i.e. `2^64 - ORDER = 2^32 - 1`.
@@ -78,7 +64,11 @@ pub struct FieldElement(pub u128, pub Field);
 impl FieldElement {
     #[inline(always)]
     pub fn new(x: u128, field: Field) -> FieldElement {
-        FieldElement(x % field.0, field)
+        if x >= field.0 {
+            FieldElement(x % field.0, field)
+        } else {
+            FieldElement(x, field)
+        }
     }
 
     #[inline(always)]
@@ -151,9 +141,6 @@ impl Add for FieldElement {
     type Output = FieldElement;
     #[inline(always)]
     fn add(self, other: FieldElement) -> FieldElement {
-        if self.1 != other.1 {
-            panic!("Fields must be same");
-        }
         FieldElement((self.0 + other.0) % self.1 .0, self.1)
     }
 }
@@ -161,10 +148,12 @@ impl Add for FieldElement {
 impl AddAssign for FieldElement {
     #[inline(always)]
     fn add_assign(&mut self, other: FieldElement) {
-        if self.1 != other.1 {
-            panic!("Fields must be same");
+        let r = self.0 + other.0;
+        if r >= self.1 .0 {
+            self.0 = r - self.1 .0;
+        } else {
+            self.0 = r;
         }
-        self.0 = (self.0 + other.0) % self.1 .0;
     }
 }
 
@@ -172,9 +161,6 @@ impl Sub for FieldElement {
     type Output = FieldElement;
     #[inline(always)]
     fn sub(self, other: FieldElement) -> FieldElement {
-        if self.1 != other.1 {
-            panic!("Fields must be same");
-        }
         if self.0 < other.0 {
             FieldElement((self.0 + self.1 .0 - other.0) % self.1 .0, self.1)
         } else {
@@ -186,9 +172,6 @@ impl Sub for FieldElement {
 impl SubAssign for FieldElement {
     #[inline(always)]
     fn sub_assign(&mut self, other: FieldElement) {
-        if self.1 != other.1 {
-            panic!("Fields must be same");
-        }
         if self.0 < other.0 {
             self.0 = (self.0 + self.1 .0 - other.0) % self.1 .0;
         } else {
@@ -201,20 +184,27 @@ impl Mul for FieldElement {
     type Output = FieldElement;
     #[inline(always)]
     fn mul(self, other: FieldElement) -> FieldElement {
-        if self.1 != other.1 {
-            panic!("Fields must be same");
+        let r = self.0 * other.0;
+        if r >= self.1 .0 {
+            FieldElement(r % self.1 .0, self.1)
+        } else {
+            FieldElement(r, self.1)
         }
-        FieldElement((self.0 * other.0) % self.1 .0, self.1)
     }
 }
 
 impl MulAssign for FieldElement {
     #[inline(always)]
     fn mul_assign(&mut self, other: FieldElement) {
-        if self.1 != other.1 {
-            panic!("Fields must be same");
+        // if self.1 != other.1 {
+        //     panic!("Fields must be same");
+        // }
+        let r = self.0 * other.0;
+        if r >= self.1 .0 {
+            self.0 = r % self.1 .0;
+        } else {
+            self.0 = r;
         }
-        self.0 = (self.0 * other.0) % self.1 .0;
     }
 }
 
@@ -222,9 +212,9 @@ impl Div for FieldElement {
     type Output = FieldElement;
     #[inline(always)]
     fn div(self, other: FieldElement) -> FieldElement {
-        if self.1 != other.1 {
-            panic!("Fields must be same");
-        }
+        // if self.1 != other.1 {
+        //     panic!("Fields must be same");
+        // }
         let mut inv = 1;
         let mut base = other.0;
         let mut exp = self.1 .0 - 2;
@@ -242,9 +232,9 @@ impl Div for FieldElement {
 impl DivAssign for FieldElement {
     #[inline(always)]
     fn div_assign(&mut self, other: FieldElement) {
-        if self.1 != other.1 {
-            panic!("Fields must be same");
-        }
+        // if self.1 != other.1 {
+        //     panic!("Fields must be same");
+        // }
         let mut inv = 1;
         let mut base = other.0;
         let mut exp = self.1 .0 - 2;
@@ -300,9 +290,9 @@ impl PartialOrd for FieldElement {
 impl Ord for FieldElement {
     #[inline(always)]
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        if self.1 != other.1 {
-            panic!("Fields must be same");
-        }
+        // if self.1 != other.1 {
+        //     panic!("Fields must be same");
+        // }
         self.0.cmp(&other.0)
     }
 }
@@ -381,15 +371,15 @@ mod test_field_operations {
         assert_eq!(b.0, 1);
     }
 
-    #[test]
-    #[should_panic]
-    fn test_diff_field() {
-        let field1 = Field::new(7);
-        let field2 = Field::new(8);
-        let a = FieldElement::new(1, field1);
-        let b = FieldElement::new(2, field2);
-        let _ = a + b;
-    }
+    // #[test]
+    // #[should_panic]
+    // fn test_diff_field() {
+    //     let field1 = Field::new(7);
+    //     let field2 = Field::new(8);
+    //     let a = FieldElement::new(1, field1);
+    //     let b = FieldElement::new(2, field2);
+    //     let _ = a + b;
+    // }
 
     #[test]
     fn test_negative_number() {
