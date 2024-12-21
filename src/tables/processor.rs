@@ -395,7 +395,7 @@ impl ProcessorTable {
                     .fold(one.clone(), |acc, poly| acc * (ci.clone() - poly.clone()))
             })
             .reduce(|| one.clone(), |acc, chunk_result| acc * chunk_result);
-        log::debug!(
+        log::info!(
             "Time taken for selector polynomial inner loop: {:?}ms",
             (Local::now() - t2).num_milliseconds()
         );
@@ -489,70 +489,74 @@ impl ProcessorTable {
         // Transition_all,
         let poly_one = Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)]);
         let mv_is_zero = poly_one.clone() - mv.clone() * inv_mv.clone();
+        let ip_next_ip_poly_one = ip_next.clone() - ip.clone() - poly_one.clone();
+        let ip_next_ip_poly_two = ip_next_ip_poly_one.clone() - poly_one.clone();
+        let mp_next_mp = mp_next.clone() - mp.clone();
+        let mv_next_mv = mv_next.clone() - mv.clone();
         //ci=[
         //(ip⋆−ip−2)⋅mv+(ip⋆−ni)⋅iszero
-        // mp⋆−mp
+        // mp⋆−mp 
         // mv⋆−mv
-        let trasition_i0 = (mv.clone() * (ip_next.clone() - ip.clone() - poly_two.clone())
+        let trasition_i0 = (mv.clone() * (ip_next_ip_poly_two.clone())
             + mv_is_zero.clone() * (ip_next.clone() - ni.clone()))
-            + (mp_next.clone() - mp.clone())
-            + (mv_next.clone() - mv.clone());
+            + mp_next_mp.clone()
+            + mv_next_mv.clone();
         air.push(trasition_i0);
         // ci=]
         // (ip⋆−ip−2)⋅iszero+(ip⋆−ni)⋅mv
         // mp⋆−mp
         // mv⋆−mv
-        let trasition_i1 = mv_is_zero.clone() * (ip_next.clone() - ip.clone() - poly_two.clone())
+        let trasition_i1 = mv_is_zero.clone() * (ip_next_ip_poly_two.clone())
             + (ip_next.clone() - ni.clone()) * mv.clone()
-            + (mv_next.clone() - mv.clone())
-            + (mp_next.clone() - mp.clone());
+            + (mv_next_mv.clone())
+            + (mp_next_mp.clone());
         air.push(trasition_i1);
         //ci =<
         // ip⋆−ip−1
         // mp⋆−mp+1
-        let trasition_i2 = (ip_next.clone() - ip.clone() - poly_one.clone()) * poly_two.clone()
-            + (mp_next.clone() - mp.clone() + poly_one.clone());
+        let trasition_i2 = (ip_next_ip_poly_one.clone()) * poly_two.clone()
+            + (mp_next_mp.clone() + poly_one.clone());
         air.push(trasition_i2);
         //ci=>
         // ip⋆−ip−1
         // mp⋆−mp-1
-        let trasition_i3 = (ip_next.clone() - ip.clone() - poly_one.clone())
-            + (mp_next.clone() - mp.clone() - poly_one.clone());
+        let trasition_i3 = (ip_next_ip_poly_one.clone())
+            + (mp_next_mp.clone() - poly_one.clone());
         air.push(trasition_i3);
 
         // ip⋆−ip−1
         // mp⋆−mp
         // mv⋆−mv−1
         // ci = +
-        let trasition_i4 = (ip_next.clone() - ip.clone() - poly_one.clone())
-            + (mp_next.clone() - mp.clone())
-            + (mv_next.clone() - mv.clone() - poly_one.clone());
+        let trasition_i4 = (ip_next_ip_poly_one.clone())
+            + (mp_next_mp.clone())
+            + (mv_next_mv.clone() - poly_one.clone());
         air.push(trasition_i4);
 
         // ip⋆−ip−1
         // mp⋆−mp
         // mv⋆−mv+1
         // ci = -
-        let trasition_i5 = (ip_next.clone() - ip.clone() - poly_one.clone()) * poly_two.clone()
-            + (mp_next.clone() - mp.clone())
-            + (mv_next.clone() - mv.clone() + poly_one.clone());
+        let trasition_i5 = (ip_next_ip_poly_one.clone()) * poly_two.clone()
+            + (mp_next_mp.clone())
+            + (mv_next_mv.clone() + poly_one.clone());
         air.push(trasition_i5);
 
         // ip⋆−ip−1
         // mp⋆−mp
         //ci=,
         let trasition_i6 =
-            (ip_next.clone() - ip.clone() - poly_one.clone()) + (mp_next.clone() - mp.clone());
+            (ip_next_ip_poly_one.clone()) + (mp_next_mp.clone());
         air.push(trasition_i6);
         // ip⋆−ip−1
         // mp⋆−mp
         // mv⋆−mv
         //ci=.
-        let trasition_i7 = (ip_next.clone() - ip.clone() - poly_one.clone())
-            + (mp_next.clone() - mp.clone())
-            + (mv_next.clone() - mv.clone());
+        let trasition_i7 = (ip_next_ip_poly_one.clone())
+            + (mp_next_mp.clone())
+            + (mv_next_mv.clone());
         air.push(trasition_i7);
-        log::debug!(
+        log::info!(
             "Time taken for transition constraints: {:?}ms",
             (Local::now() - t).num_milliseconds()
         );
@@ -571,6 +575,7 @@ impl ProcessorTable {
         // selector(.)(ci) . (oea.delta + mv - oea*) + (ci -  “.”) . (oea - oea*)
 
         // @todo optimzie this code
+        let t = Local::now();
         let trasition_all = (clk_next.clone() - clk.clone() - poly_one.clone())
             + (inv_mv.clone() * (mv_is_zero.clone()))
             + ci.clone()
@@ -603,13 +608,17 @@ impl ProcessorTable {
                     - oea_next.clone())
             + (ci.clone() - Polynomial::constant(f('.'))) * (oea.clone() - oea_next.clone());
         air.push(trasition_all);
-
+        log::info!(
+            "Time taken for all constraints: {:?}ms",
+            (Local::now() - t).num_milliseconds()
+        );
         // Terminal constraints
         // tipa, tmpa- last row not accumulated so:
         // 1.ipa.(a.ip+ b.ci+c.ni-alpha)-tipa
         // 2.mpa.(d.clk+e.mp+f.mv-beta)-tmpa
         // tiea, toea- last element identical to terminal
         // 3.iea-tiea   4. oea-toea
+        let t = Local::now();
         let terminal_air1 = ipa.clone() - Polynomial::constant(tipa);
 
         let terminal_air2 = mpa.clone()
@@ -627,6 +636,10 @@ impl ProcessorTable {
             + terminal_air3.clone()
             + terminal_air4.clone();
         air.push(terminal);
+        log::info!(
+            "Time taken for terminal constraints: {:?}ms",
+            (Local::now() - t).num_milliseconds()
+        );
         air
     }
 }
