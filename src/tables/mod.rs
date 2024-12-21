@@ -1,6 +1,5 @@
 use crate::fields::{Field, FieldElement};
 use crate::fri::*;
-use crate::ntt::*;
 use crate::univariate_polynomial::{interpolate_lagrange_polynomials, Polynomial};
 use chrono::Local;
 use rand::*;
@@ -73,14 +72,6 @@ impl Table {
             omicron_domain: Vec::new(),
             matrix: Vec::new(), // Initialize as empty
         }
-    }
-
-    // dont know how to implement this method
-    pub fn unit_distance(&self, omega_order: u128) -> u128 {
-        if self.height == 0 {
-            return 0;
-        }
-        omega_order / self.height
     }
 
     pub fn get_interpolating_domain_length(&self) -> u128 {
@@ -399,7 +390,6 @@ mod test_operations {
         let order = 1 << 32;
         let target_order = 8;
         let omicron = derive_omicron(generator, order, target_order);
-        println!("omicron ={:?}", omicron);
         // let expected_omicron = FieldElement::new(49, field);
         // assert_eq!(omicron, expected_omicron);
     }

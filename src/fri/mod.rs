@@ -5,10 +5,8 @@ use crate::fields::*;
 use crate::merkle::*;
 use crate::univariate_polynomial::*;
 use rayon::prelude::*;
-//we can use ntt fast fns for optimization, but rn we just implement using direct evaluate and multiply functions of polynomials
-//some fns, structs and parameters are changed accordingly compared to fri.py and ntt.py, because we are not using extension fields
 
-//pass difference quotient polynomial as a parameter too if using random secret initials
+//Note: pass difference quotient polynomial as a parameter too if using random secret initials
 //challenges = [alpha, beta], given by fiat shamir
 //boundary_q includes boundary constraints for all tables together, similarly for others
 
@@ -136,7 +134,6 @@ pub fn next_eval_domain(eval_domain: FriDomain) -> FriDomain {
 /// beta is a field element(random) given by verifier.
 pub fn next_fri_polynomial(old_polynomial: &Polynomial, beta: FieldElement) -> Polynomial {
     //old_polynomial = g(x^2) + x * h(x^2);
-
     // check the len of the polynomial
     let len = old_polynomial.coefficients.len();
     // h(y)
@@ -264,25 +261,28 @@ pub fn decommit_on_query(
     channel: &mut Channel,
 ) {
     log::debug!("Decommitting on query {}", idx);
-    //we need basecodewords zipped and extension codewords zipped evaluations at x and gx, which will be separated by blowupfactor
-    // at x -> clk, ip, ci, ni, mp, mv, inv: (in zipped basecodeword); ipa, mpa, iea, oea: (in zipped extension codeword)
-    // at gx -> clk*, ip*, ci*, ni*, mp*, mv*, inv*: (""); ipa*, mpa*, iea*, oea*: ("")
+    // basecodewords zipped and extension codewords zipped evaluations at x and gx, will be separated by blowupfactor.
+    // at x -> clk, ip, ci, ni, mp, mv, inv: (in zipped basecodeword); ipa, mpa, iea, oea: (in zipped extension codeword).
+    // at gx -> clk*, ip*, ci*, ni*, mp*, mv*, inv*: (""); ipa*, mpa*, iea*, oea*: ("").
     // get basecodeword[idx], basecodewords[idx+blowupfactor] and extensioncodeword[idx], extensioncodeword[idx+blowupfactor] and send them over the channel, along with the merkle proofs.
     assert!(idx + blow_up_factor < f_eval[0].len());
     let _base_x = f_eval[0][idx].to_bytes().clone();
-    channel.send(f_eval[0][idx].to_bytes()); //basecodeword[idx] or f(x)
-    let _base_x_auth = f_merkle[0].get_authentication_path(idx).clone();
-
-    channel.send(f_merkle[0].get_authentication_path(idx)); // merkle proof for basecodeword[idx] or f(x)
-
-    channel.send(f_eval[0][idx + blow_up_factor].to_bytes()); //basecodeword[idx+blowupfactor] or f(g*x)
-    channel.send(f_merkle[0].get_authentication_path(idx + blow_up_factor)); // merkle proof for basecodeword[idx+blowupfactor] or f(g*x)
-
-    channel.send(f_eval[1][idx].to_bytes()); //extensioncodeword[idx] or f(x)
-    channel.send(f_merkle[1].get_authentication_path(idx)); // merkle proof for extensioncodeword[idx] or f(x)
-    channel.send(f_eval[1][idx + blow_up_factor].to_bytes()); //extensioncodeword[idx+blowupfactor] or f(g*x)
-    channel.send(f_merkle[1].get_authentication_path(idx + blow_up_factor)); // merkle proof for extensioncodeword[idx+blowupfactor] or f(g*x)
-                                                                             //println!("8 vec sent to compressed proof");
+    //basecodeword[idx] or f(x)
+    channel.send(f_eval[0][idx].to_bytes());
+    // merkle proof for basecodeword[idx] or f(x)
+    channel.send(f_merkle[0].get_authentication_path(idx));
+    //basecodeword[idx+blowupfactor] or f(g*x)
+    channel.send(f_eval[0][idx + blow_up_factor].to_bytes());
+    // merkle proof for basecodeword[idx+blowupfactor] or f(g*x)
+    channel.send(f_merkle[0].get_authentication_path(idx + blow_up_factor));
+    //extensioncodeword[idx] or f(x)
+    channel.send(f_eval[1][idx].to_bytes());
+    // merkle proof for extensioncodeword[idx] or f(x)
+    channel.send(f_merkle[1].get_authentication_path(idx));
+    //extensioncodeword[idx+blowupfactor] or f(g*x)
+    channel.send(f_eval[1][idx + blow_up_factor].to_bytes());
+    // merkle proof for extensioncodeword[idx+blowupfactor] or f(g*x)
+    channel.send(f_merkle[1].get_authentication_path(idx + blow_up_factor));
     decommit_fri_layers(idx, fri_layers, fri_merkle, channel)
 }
 
@@ -463,7 +463,6 @@ mod test_fri_domain {
         let offset = FieldElement::new(2, field);
         let length = 4_u128;
         let omega = FieldElement::new(13, field);
-        println!("omega ={:?}", omega);
         let domain = FriDomain::new(offset, omega, length);
         let polynomial = Polynomial::new_from_coefficients(vec![
             FieldElement::new(1, field),
@@ -484,7 +483,6 @@ mod test_fri_domain {
         let offset = FieldElement::new(2, field);
         let length = 4_u128;
         let omega = FieldElement::new(13, field);
-        println!("omega ={:?}", omega);
         let domain = FriDomain::new(offset, omega, length);
         let polynomial = Polynomial::new_from_coefficients(vec![
             FieldElement::new(1, field),

@@ -16,31 +16,9 @@ use crate::fri::*;
 use crate::merkle::*;
 use crate::tables::*;
 use crate::univariate_polynomial::*;
-static CONSOLE_LOGGER: ConsoleLogger = ConsoleLogger;
 use chrono::Local;
 use log::{info, Level, LevelFilter, Metadata, Record};
 use rayon::prelude::*;
-struct ConsoleLogger;
-
-impl log::Log for ConsoleLogger {
-    fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= Level::Debug
-    }
-
-    fn log(&self, record: &Record) {
-        if self.enabled(record.metadata()) {
-            println!(
-                "{} [{}] {}:{} - {}",
-                Local::now().format("%Y-%m-%dT%H:%M:%S"),
-                record.level(),
-                record.module_path().unwrap(),
-                record.line().unwrap(),
-                record.args()
-            );
-        }
-    }
-    fn flush(&self) {}
-}
 
 pub struct Stark<'a> {
     pub running_time: i32,
@@ -92,7 +70,6 @@ pub fn prove(
     let start_time = Local::now();
     let generator = field.generator().pow((1 << 32) - 1);
     let order = 1 << 32;
-    log::info!("Generating tables");
     let mut t = Local::now();
     let mut processor_table = ProcessorTable::new(
         field,
@@ -131,11 +108,7 @@ pub fn prove(
         order,
         matrices[4],
     );
-
-    log::info!(
-        "Padding all tables {:?}ms",
-        (Local::now() - t).num_milliseconds()
-    );
+    log::info!("Generating tables took {:?}ms", (Local::now() - t).num_milliseconds());
     t = Local::now();
     processor_table.pad();
     memory_table.pad();
@@ -146,71 +119,69 @@ pub fn prove(
     memory_table.table.generate_omicron_domain();
     instruction_table.table.generate_omicron_domain();
 
-    //let f = |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, field) };
-
     log::info!(
-        "Interpolating processor table, {:?}ms",
+        "Padding all tables took {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
-    // t = Local::now();
-    let mut t2 = Local::now();
+
+    t = Local::now();
     let processor_interpol_columns: Vec<Polynomial> = processor_table
         .table
         .clone()
         .interpolate_columns(vec![0, 1, 2, 3, 4, 5, 6]);
     log::info!(
-        "Interpolating memory table, {:?}ms",
-        (Local::now() - t2).num_milliseconds()
+        "interpolating processor table took {:?}ms",
+        (Local::now() - t).num_milliseconds()
     );
-    t2 = Local::now();
+
+    t = Local::now();
     let memory_interpol_columns: Vec<Polynomial> = memory_table
         .table
         .clone()
         .interpolate_columns(vec![0, 1, 2]);
-    log::info!(
-        "Interpolating instruction table, {:?}ms",
-        (Local::now() - t2).num_milliseconds()
-    );
-    t2 = Local::now();
+
+        log::info!(
+            "Interpolating memory table took {:?}ms",
+            (Local::now() - t).num_milliseconds()
+        );
+    t = Local::now();
     let instruction_interpol_columns: Vec<Polynomial> = instruction_table
         .table
         .clone()
         .interpolate_columns(vec![0, 1, 2]);
-
     log::info!(
-        "Extending the domain, {:?}ms",
-        (Local::now() - t2).num_milliseconds()
+        "Interpolating instruction table took {:?}ms",
+        (Local::now() - t).num_milliseconds()
     );
-    // t2 = Local::now();
-    let initial_length = roundup_npow2(9 * (instruction_table.table.clone().height - 1));
-
-    //all codewords are evaluated on this expanded domain that has length expanded_length
-    let expanded_length = initial_length * (expansion_f as u128);
 
     t = Local::now();
+    let initial_length = roundup_npow2(9 * (instruction_table.table.clone().height - 1));
+
+    // all codewords are evaluated on this expanded domain that has length expanded_length
+    let expanded_length = initial_length * (expansion_f as u128);
+
     let domain = FriDomain::new(
         offset,
         derive_omicron(generator, order, expanded_length),
         expanded_length,
     );
 
+    log::info!(
+        "Extending the domain took {:?}ms",
+        (Local::now() - t).num_milliseconds()
+    );
+    t = Local::now();
+    // basecodewords vector order:
+    // processor: clk, ip, ci, ni, mp, mv, inv
+    // memory: clk, mp, mv
+    // instruction: ip, ci, ni
+    // input and output tables are public, we dont commit to those, we only check their terminal extensions after extending
     let mut basecodewords: Vec<Vec<FieldElement>> = Vec::with_capacity(
         processor_interpol_columns.len()
             + memory_interpol_columns.len()
             + instruction_interpol_columns.len(),
     );
 
-    // basecodewords vector order:
-    // processor: clk, ip, ci, ni, mp, mv, inv
-    // memory: clk, mp, mv
-    // instruction: ip, ci, ni
-    // input and output tables are public, we dont commit to those, we only check their terminal extensions after extending
-
-    log::info!(
-        "Evaluating on the extended domain, {:?}ms",
-        (Local::now() - t).num_milliseconds()
-    );
-    t = Local::now();
     // @todo make these functions rust native, by using iter.
     for i in 0..processor_interpol_columns.clone().len() {
         basecodewords.push(domain.evaluate(processor_interpol_columns[i].clone()));
@@ -224,15 +195,15 @@ pub fn prove(
         basecodewords.push(domain.evaluate(instruction_interpol_columns[i].clone()));
     }
 
-    //we are zipping all the base codewords (for each index in order) by taking their merkle root
-
-    let mut basecodeword: Vec<FieldElement> = Vec::with_capacity(expanded_length as usize);
-
     log::info!(
-        "Zipping all the codewords on the extended domain, {:?}ms",
+        "Evaluating on the extended domain took {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
+
+    // zipping all the base codewords (for each index in order) by taking their merkle root
+    let mut basecodeword: Vec<FieldElement> = Vec::with_capacity(expanded_length as usize);
+
     for i in 0..expanded_length as usize {
         let mut x: Vec<FieldElement> = vec![];
         for j in 0..basecodewords.len() {
@@ -249,31 +220,29 @@ pub fn prove(
         );
         basecodeword.push(root);
     }
-
-    // get 11 challenges array from fiat shamir
-    let mut channel = Channel::new();
     log::info!(
-        "Commiting the base codewords, {:?}ms",
+        "Zipping all the codewords on the extended domain took {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
+
+    // get 11 challenges array from fiat shamir
+    let mut channel = Channel::new();
     let merkle1 = MerkleTree::new(&basecodeword);
     channel.send(merkle1.inner.root().unwrap().to_vec());
+    log::info!(
+        "Commiting the base codewords took {:?}ms",
+        (Local::now() - t).num_milliseconds()
+    );
 
     let mut challenges_extension = vec![];
 
-    for i in 0..10 {
+    for _ in 0..=10 {
         let x = channel.receive_random_field_element(field);
         challenges_extension.push(x);
-        // channel.send(x.to_bytes());
     }
-    challenges_extension.push(channel.receive_random_field_element(field));
 
     // use extend column function on tables -> extends the base columns to extension columns
-    log::info!(
-        "Generating the extension column using the fiat-shamir challenges, {:?}ms",
-        (Local::now() - t).num_milliseconds()
-    );
     t = Local::now();
     let terminal_processor = processor_table.extend_columns(challenges_extension.clone());
     let terminal_memory = memory_table.extend_column_ppa(1, challenges_extension.clone());
@@ -284,13 +253,13 @@ pub fn prove(
     let terminal_output = output_table
         .extend_column_ea(0, challenges_extension[ChallengeIndices::Delta as usize])
         .clone();
-
-    //These contain polynomials for interpolation of extension columns
     log::info!(
-        "Interpolating the extension columns, {:?}ms",
+        "Generating the extension column using the fiat-shamir challenges took {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
+
+    //These contain polynomials for interpolation of extension columns
     let processor_interpol_columns_2 = processor_table
         .table
         .clone()
@@ -306,23 +275,17 @@ pub fn prove(
             + memory_interpol_columns_2.len()
             + instruction_interpol_columns_2.len(),
     );
-
-    println!("processor table after extending columns");
-    for row in processor_table.table.matrix.clone() {
-      println!("{:?}", row);
-    }
+    log::info!(
+        "Interpolating the extension columns took {:?}ms",
+        (Local::now() - t).num_milliseconds()
+    );
+    t = Local::now();
 
     // extensioncodewords vector order:
     // processor: ipa, mpa, iea, oea
     // memory: ppa
     // instruction: ppa, pea
     // input and output tables are public, we dont commit to those, we only check their terminal extensions after extending
-    log::info!(
-        "Evaluating the extension columns on the extended domain, {:?}ms",
-        (Local::now() - t).num_milliseconds()
-    );
-    t = Local::now();
-
     for i in 0..processor_interpol_columns_2.clone().len() {
         extension_codewords.push(domain.evaluate(processor_interpol_columns_2[i].clone()));
     }
@@ -335,12 +298,13 @@ pub fn prove(
         extension_codewords.push(domain.evaluate(instruction_interpol_columns_2[i].clone()));
     }
 
-    let mut extension_codeword: Vec<FieldElement> = Vec::with_capacity(expanded_length as usize);
     log::info!(
-        "Zipping all the extension codewords, {:?}ms",
+        "Evaluating the extension columns on the extended domain took {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
+
+    let mut extension_codeword: Vec<FieldElement> = Vec::with_capacity(expanded_length as usize);
     for i in 0..expanded_length as usize {
         let mut x: Vec<FieldElement> = vec![];
         for j in 0..extension_codewords.len() {
@@ -357,36 +321,34 @@ pub fn prove(
         );
         extension_codeword.push(root);
     }
-
     log::info!(
-        "Commiting the extension codewords, {:?}ms",
+        "Zipping all the extension codewords took {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
-    let merkle2 = MerkleTree::new(&extension_codeword);
 
+    let merkle2 = MerkleTree::new(&extension_codeword);
     channel.send(merkle2.inner.root().unwrap().to_vec());
 
     log::info!(
-        "receiving challenges for the combination polynomial, {:?}ms",
+        "Commiting the extension codewords took {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
+
     let mut challenges_combination = vec![];
     let x = channel.receive_random_field_element(field);
     challenges_combination.push(x);
 
-    // channel.send(x.to_bytes());
     challenges_combination.push(channel.receive_random_field_element(field));
     let eval = FieldElement::zero(field);
 
     log::info!(
-        "generating the processor AIR, {:?}ms",
+        "receiving challenges for the combination polynomial took {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
 
-    // processor_table.table.generate_omicron_domain();
     let processor_air = processor_table.generate_air(
         challenges_extension.clone(),
         terminal_processor[0],
@@ -397,53 +359,53 @@ pub fn prove(
     );
 
     log::info!(
-        "generating the memory AIR, {:?}ms",
+        "generating the processor AIR took {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
-    // memory_table.table.generate_omicron_domain();
-    let memory_air = memory_table.generate_air(challenges_extension.clone(), terminal_memory[0]);
 
+    let memory_air = memory_table.generate_air(challenges_extension.clone(), terminal_memory[0]);
     log::info!(
-        "generating the instruction AIR, {:?}ms",
+        "generating the memory AIR took {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
+
     let instruction_air = instruction_table.generate_air(
         challenges_extension.clone(),
         terminal_instruction[0],
         terminal_instruction[1],
     );
-
-    // form zerofiers
     log::info!(
-        "generating the processor zerofiers, {:?}ms",
+        "generating the instruction AIR took {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
+
+    // Generate zerofiers
+
     let processor_zerofiers = processor_table.generate_zerofier();
-
     log::info!(
-        "generating the memory zerofiers, {:?}ms",
+        "generating the processor zerofiers took {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
+
     let memory_zerofiers = memory_table.generate_zerofier();
-
     log::info!(
-        "generating the instruction zerofiers, {:?}ms",
+        "generating the memory zerofiers took {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
+
     let instruction_zerofiers = instruction_table.generate_zerofier();
-
     log::info!(
-        "generating the quotient polynomial of all the Tables, {:?}ms",
+        "generating the instruction zerofiers took {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
+
     let zero = FieldElement::zero(field);
-    // @todo optimize this.
     let processor_q = (0..processor_zerofiers.len())
         .into_par_iter()
         .map(|i| {
@@ -475,16 +437,16 @@ pub fn prove(
             c.0
         })
         .collect();
+    log::info!(
+        "generating the quotient polynomial of all tables took {:?}ms",
+        (Local::now() - t).num_milliseconds()
+    );
+    t = Local::now();
 
     // form combination polynomial
     // 9 is the maximum factor in AIR degree
     let degree_bound = roundup_npow2(9 * (instruction_table.table.height - 1)) - 1;
 
-    log::info!(
-        "generating the combination polynomial, {:?}ms",
-        (Local::now() - t).num_milliseconds()
-    );
-    t = Local::now();
     //@todo optimize this
     let combination = combination_polynomial(
         processor_q,
@@ -495,37 +457,35 @@ pub fn prove(
         field,
     );
     log::info!(
-        "evaluating the combination polynomial, {:?}ms",
+        "generating the combination polynomial took {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
     let combination_codeword = domain.evaluate(combination.clone());
     log::info!(
-        "commiting the combination codewords, {:?}ms",
+        "evaluating the combination polynomial took {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
     let merkle_combination = MerkleTree::new(&combination_codeword);
     channel.send(merkle_combination.inner.root().unwrap().to_vec());
-
     log::info!(
-        "generating and commiting the Fri_layer, {:?}ms",
+        "commiting the combination codewords took {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
-    let (fri_polys, fri_domains, fri_layers, fri_merkles) = fri_commit(
+    let (_fri_polys, fri_domains, fri_layers, fri_merkles) = fri_commit(
         combination.clone(),
         domain,
         combination_codeword,
         merkle_combination,
         &mut channel,
     );
-
     log::info!(
-        "decommiting the Fri_layer, {:?}ms",
+        "generating and commiting the Fri_layer took {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
-    // t = Local::now();
+    t = Local::now();
     let no_of_queries = num_queries;
     decommit_fri(
         no_of_queries,
@@ -537,14 +497,16 @@ pub fn prove(
         &fri_merkles,
         &mut channel,
     );
-
+    log::info!(
+        "decommiting the Fri_layer took {:?}ms",
+        (Local::now() - t).num_milliseconds()
+    );
     let mut fri_eval_domains = vec![];
     for i in 0..fri_domains.len() {
         fri_eval_domains.push(fri_domains[i].list());
     }
 
     let x = channel.compressed_proof.clone();
-    // println!("compressed proof length: {}", x.len());
     log::info!(
         "proof generation complete, time taken: {}ms, proof size: {} bytes, compressed proof size: {} bytes",
         (Local::now() - start_time).num_milliseconds(),
@@ -601,7 +563,7 @@ pub fn verify_proof(
     // get challenges for the extension columns
     let mut challenges_extension = vec![];
 
-    for i in 0..10 {
+    for _ in 0..10 {
         let x = channel.receive_random_field_element(field);
         challenges_extension.push(x);
     }
@@ -615,9 +577,7 @@ pub fn verify_proof(
     let x = channel.receive_random_field_element(field);
     challenges_combination.push(x);
 
-    // channel.send(x.to_bytes());
     challenges_combination.push(channel.receive_random_field_element(field));
-    let eval = FieldElement::zero(field);
 
     let combination_merkle_root = compressed_proof[2].clone();
 
@@ -630,7 +590,6 @@ pub fn verify_proof(
     // fri.layer.len = 1+ log(height)/log2
 
     let number = degree_bound + 1_usize;
-    let base = 2.0;
     let log_base_2 = (number as f64).log2();
     let fri_layer_length: usize = (log_base_2 + 1_f64) as usize;
     let mut fri_merkle_roots: Vec<Vec<u8>> = Vec::with_capacity(fri_layer_length - 1_usize);
@@ -670,8 +629,6 @@ pub fn verify_proof(
             degree_bound,
             fri_layer_length,
         );
-        // why 46 ??// here 46 is consistence acc to stark101 6 commitment of the f(x), f(gx), f(g^2x) for it's elem and the authentication path and other 41 for the fri layer 4 for all 10 layers and 1 for the last layer the constant term
-        // in our case it will be 8 (for the base_x , base_gx,extenion_x, extension_gx) + 4*(fri_layer_length -1)+1 for the constant term
         base_idx += 8 + (4 * (fri_layer_length - 1));
     }
     log::info!(
@@ -679,7 +636,8 @@ pub fn verify_proof(
         (Local::now() - start).num_microseconds().unwrap()
     );
 }
-//pub fn verify_queries{verify queries on the zipped value of base codewords and the extension codeowrds and also the terminal values }
+
+/// verify queries on the zipped value of base codewords and the extension codeowrds and also the terminal values
 pub fn verify_queries(
     base_idx: usize,
     idx: usize,
@@ -762,8 +720,6 @@ pub fn verify_queries(
         assert_eq!(terminal_processor[3], terminal_output[0]); //Toea = Tea output
     }
 
-    //@todo let this be for now sinze program evaluation has not been evaluated from program:- assert_eq!(Terminal_instruction[1], Tpea); //Tpea = program evaluation
-
     verify_fri_layers(
         base_idx + 8,
         idx,
@@ -778,7 +734,7 @@ pub fn verify_queries(
     );
 }
 
-//pub fn verify_frilayer {verify the consistency of all the fri_layers with the given betas}
+/// verify the consistency of all the fri_layers with the given betas
 pub fn verify_fri_layers(
     base_idx: usize,
     idx: usize,
@@ -793,8 +749,6 @@ pub fn verify_fri_layers(
 ) {
     let mut lengths: Vec<usize> = vec![0_usize; fri_layer_length - 1_usize];
     for i in 0..fri_layer_length - 1_usize {
-        // let len_value = intial_length/2_usize.pow(i as u32);
-        // length.push(len_value);
         lengths[i] = intial_length / 2_usize.pow(i as u32);
     }
     for i in 0..fri_layer_length - 1_usize {
@@ -841,16 +795,10 @@ pub fn verify_fri_layers(
             sibling.clone(),
             length,
         ));
-
-        //
     }
     let last_elem = compressed_proof[base_idx + 4 * (fri_layer_length - 1)].clone();
     channel.send(last_elem);
-
-    let x = channel.compressed_proof.clone();
 }
-
-impl Stark<'_> {}
 
 #[cfg(test)]
 mod stark_test {
@@ -863,15 +811,13 @@ mod stark_test {
     fn test_proving() {
         let field = Field(18446744069414584321);
         let vm = VirtualMachine::new(field);
-        let generator = field.generator().pow((1 << 32) - 1);
-        let order = 1 << 32;
         //let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
         //let code = ",++>+-[+--]++.".to_string();
         let code = "++++++>+>+<<--[>>[>+<<+>-]<[>+<-]>>[<<+>>-]<<<-]>>.".to_string();
         //let code = "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.".to_string();
         let program = vm.compile(code);
 
-        let (running_time, input_symbols, output_symbols) = vm.run(&program, "4".to_string());
+        let (running_time, input_symbols, _output_symbols) = vm.run(&program, "4".to_string());
 
         let (processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix) =
             vm.simulate(&program, "4".to_string());
@@ -900,12 +846,6 @@ mod stark_test {
 
         let maximum_random_int =
             ((degree_bound + 1) * expansion_f as u128 - expansion_f as u128) as u64;
-
-        let domain = FriDomain::new(
-            offset,
-            derive_omicron(generator, order, (degree_bound + 1) * expansion_f as u128),
-            (degree_bound + 1) * expansion_f as u128,
-        );
         verify_proof(
             num_queries as usize,
             maximum_random_int,

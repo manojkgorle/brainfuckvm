@@ -1,10 +1,29 @@
 #![allow(dead_code, unused_imports)]
-
-static CONSOLE_LOGGER: ConsoleLogger = ConsoleLogger;
 struct ConsoleLogger;
 use chrono::Local;
-use log::{Level, LevelFilter, Metadata, Record};
+use log::{Level,Metadata, Record};
+use pprof::protos::Message;
+use pprof::ProfilerGuard;
+use std::fs::File;
+use std::io::Write;
 
+pub mod channel;
+pub mod fields;
+pub mod fri;
+pub mod merkle;
+pub mod stark;
+pub mod tables;
+pub mod univariate_polynomial;
+pub mod vm;
+
+pub use crate::fields::{Field, FieldElement};
+pub use crate::fri::FriDomain;
+pub use crate::stark::{prove, verify_proof};
+pub use crate::tables::derive_omicron;
+pub use crate::tables::Table;
+pub use crate::vm::VirtualMachine;
+
+static CONSOLE_LOGGER: ConsoleLogger = ConsoleLogger;
 impl log::Log for ConsoleLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
         metadata.level() <= Level::Debug
@@ -25,33 +44,10 @@ impl log::Log for ConsoleLogger {
 
     fn flush(&self) {}
 }
-use pprof::protos::Message;
-use pprof::ProfilerGuard;
-use std::fs::File;
-use std::io::Write;
-
-pub mod channel;
-pub mod evaluation_argument;
-pub mod fields;
-pub mod fri;
-pub mod merkle;
-pub mod ntt;
-pub mod stark;
-pub mod tables;
-pub mod univariate_polynomial;
-pub mod vm;
-
-pub use crate::fields::{Field, FieldElement};
-pub use crate::fri::FriDomain;
-pub use crate::stark::{prove, verify_proof};
-pub use crate::tables::derive_omicron;
-pub use crate::tables::Table;
-pub use crate::vm::VirtualMachine;
-use rayon::ThreadPoolBuilder;
 fn main() {
     // std::env::set_var("RAYON_NUM_THREADS", "1024");
     env_logger::init();
-    let guard = ProfilerGuard::new(1000).unwrap();
+    let guard = ProfilerGuard::new(1).unwrap();
     let field = Field(18446744069414584321);
     let vm = VirtualMachine::new(field);
     let generator = field.generator().pow((1 << 32) - 1);

@@ -11,8 +11,6 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 // -> Normal evaluation
 // -> NTT Number Theoretic Transformation
 
-// @todo time to redefine algebra?
-
 /// a_0 + a_1 * x + a_2 * x^2 + a_3 * x^3 + ... + a_n * x^n
 #[derive(Debug, Clone)]
 pub struct Polynomial {
@@ -35,6 +33,7 @@ impl Polynomial {
         }
     }
 
+    // @todo parallelize.
     pub fn evaluate(&self, x: FieldElement) -> FieldElement {
         let mut result: u128 = 0;
         let mut xpow: u128 = 1;
@@ -1067,24 +1066,4 @@ mod test_polynomials {
         let result = Polynomial::collinearity(evaluation_form);
         assert!(result);
     }
-
-    // #[test]
-    // fn bench_mul() {
-    //     let field = Field::new(P as u128);
-    //     let a = vec![1, 2, 3, 4, 5,6, 7, 8, 0, 1, 2, 3, 4, 5,6, 7, 8, 0, 1, 2, 3, 4, 5,6, 7, 8, 0,1, 2, 3, 4, 5,6, 7, 8, 9];
-    //     let b  = vec![1, 2, 3, 4, 5,6, 7, 8, 0, 1, 2, 3, 4, 5,6, 7, 8, 0, 1, 2, 3, 4, 5,6, 7, 8, 0,1, 2, 3, 4, 5,6, 7, 8, 9];
-    //     let t = Local::now();
-    //     let poly = Polynomial::new_from_coefficients(a.iter().map(|x| FieldElement::new(*x, field)).collect());
-    //     let poly2 = Polynomial::new_from_coefficients(b.iter().map(|x| FieldElement::new(*x, field)).collect());
-    //     for _ in 0..100 {
-    //         karatsuba_multiply(&a, &b);
-    //     }
-    //     println!("Time: {:?}", Local::now().signed_duration_since(t));
-    //     let t = Local::now();
-    //     for _ in 0..100 {
-    //        let _ = poly.clone() * poly2.clone();
-    //     }
-    //     println!("Time: {:?}", Local::now().signed_duration_since(t));
-
-    // }
 }

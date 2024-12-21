@@ -82,7 +82,6 @@ impl VirtualMachine {
         let zero = FieldElement::zero(field);
         let one = FieldElement::one(field);
         let f = |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, field) };
-
         // intialize the registers and state.
         let mut instruction_pointer = 0;
         let mut memory_pointer = FieldElement::zero(field);
@@ -250,7 +249,7 @@ impl VirtualMachine {
                 if input_counter < input_data.len() {
                     let c = input_data.chars().nth(input_counter).unwrap();
                     input_counter += 1;
-                    memory.insert(register.memory_pointer, f(c)-FieldElement::new(48, field));
+                    memory.insert(register.memory_pointer, f(c) - FieldElement::new(48, field));
                     input_matrix.push(vec![*memory.get(&register.memory_pointer).unwrap_or(&zero)]);
                 } else {
                     // TODO: implement getch handler?
@@ -350,7 +349,11 @@ mod tests {
         let code2 = ">>[++-]<".to_string();
         let code3 = "+++++++++++>+>>>>++++++++++++++++++++++++++++++++++++++++++++>++++++++++++++++++++++++++++++++<<<<<<[>[>>>>>>+>+<<<<<<<-]>>>>>>>[<<<<<<<+>>>>>>>-]<[>++++++++++[-<-[>>+>+<<<-]>>>[<<<+>>>-]+<[>[-]<[-]]>[<<[>>>+<<<-]>>[-]]<<]>>>[>>+>+<<<-]>>>[<<<+>>>-]+<[>[-]<[-]]>[<<+>>[-]]<<<<<<<]>>>>>[++++++++++++++++++++++++++++++++++++++++++++++++.[-]]++++++++++<[->-<]>++++++++++++++++++++++++++++++++++++++++++++++++.[-]<<<<<<<<<<<<[>>>+>+<<<<-]>>>>[<<<<+>>>>-]<-[>>.>.<<<[-]]<<[>>+>+<<<-]>>>[<<<+>>>-]<<[<+>-]>[<+>-]<<<-]".to_string();
         let code4 = ",>+>+<<--[>>[>+<<+>-]<[>+<-]>>[<<+>>-]<<<-]>>.".to_string();
-        let (running_time, input_data, output_data) = vm.execute(code4);
+        let code5 = "++++>+>+<<--[>>[>+<<+>-]<[>+<-]>>[<<+>>-]<<<-]>>.".to_string();
+        // let (running_time, input_data, output_data) = vm.execute(code4);
+        let prog = vm.compile(code4);
+        let c = char::from_u32(2).unwrap();
+        let (running_time, input_data, output_data) = vm.run(&prog, c.to_string());
         println!("running time: {}", running_time);
         println!("input data: {}", input_data);
         println!("output data: {}", output_data);

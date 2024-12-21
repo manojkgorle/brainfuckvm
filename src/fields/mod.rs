@@ -1,10 +1,10 @@
-#![allow(dead_code)]
 use core::hash::{Hash, Hasher};
 use core::hint::unreachable_unchecked;
 use std::cmp::{Ord, PartialOrd};
 use std::fmt::write;
 use std::fmt::{Debug, Display};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+
 // Define a field
 // Define a field element
 // Define arithmetic operations on field elements
@@ -15,6 +15,7 @@ pub struct Field(pub u128);
 pub const P: u64 = 0xFFFF_FFFF_0000_0001;
 /// Two's complement of `ORDER`, i.e. `2^64 - ORDER = 2^32 - 1`.
 pub const NEG_ORDER: u64 = P.wrapping_neg();
+
 impl Field {
     #[inline(always)]
     pub fn new(x: u128) -> Field {
@@ -32,8 +33,8 @@ impl Field {
             let mut order = 1 << 32;
 
             while order != n {
-                root = root.pow(2); // Square the root
-                order /= 2; // Halve the order
+                root = root.pow(2);
+                order /= 2;
             }
 
             root
@@ -295,9 +296,6 @@ impl PartialOrd for FieldElement {
 impl Ord for FieldElement {
     #[inline(always)]
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // if self.1 != other.1 {
-        //     panic!("Fields must be same");
-        // }
         self.0.cmp(&other.0)
     }
 }

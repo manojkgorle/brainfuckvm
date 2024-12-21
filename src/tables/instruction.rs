@@ -66,9 +66,8 @@ impl InstructionTable {
         &self.table
     }
 
-    // Note: Before padding initiate the matrix in table.
-    // Add padding rows to convert the matrix derived from trace to a matrix of length of a power of 2
-
+    /// Note: Before padding initiate the matrix in table.
+    /// Add padding rows to convert the matrix derived from trace to a matrix of length of a power of 2
     pub fn pad(&mut self) {
         let zero = FieldElement::zero(self.table.field);
         let length = self.table.length as usize;
@@ -83,7 +82,7 @@ impl InstructionTable {
             self.table.matrix[self.table.length as usize + i] = new_row;
         }
     }
-    #[warn(unused_variables)]
+
     pub fn extend_column(
         &mut self,
         _rand_field_elem: u128,

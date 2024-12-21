@@ -79,12 +79,12 @@ mod test_merkle_implementation {
             6
         ));
         assert_eq!(merkle_root, root);
-        for i in 0..root.len() {
-            print!("{}", root[i]);
-        }
-        println!("{}", 0);
-        for i in 0..merkle_root.len() {
-            print!("{}", merkle_root[i]);
-        }
+        // for i in 0..root.len() {
+        //     print!("{}", root[i]);
+        // }
+        // println!("{}", 0);
+        // for i in 0..merkle_root.len() {
+        //     print!("{}", merkle_root[i]);
+        // }
     }
 }
