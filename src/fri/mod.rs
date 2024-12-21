@@ -28,9 +28,8 @@ pub fn combination_polynomial(
     ]);
     let degree = height - 1;
 
-    let alpha_poly = &Polynomial::new_from_coefficients(vec![alpha]);
+    let alpha_poly = Polynomial::new_from_coefficients(vec![alpha]);
     let beta_poly = Polynomial::new_from_coefficients(vec![beta]);
-
     // Compute partial results in parallel
     let partial_results: Vec<Polynomial> = processor_q
         .par_iter()
@@ -39,8 +38,7 @@ pub fn combination_polynomial(
             if q.degree() < degree {
                 let d = degree - q.degree();
                 Some(
-                    alpha_poly.clone() * q.clone()
-                        + beta_poly.clone() * x.clone().pow(d as u128) * q.clone(),
+                    (alpha_poly.clone() + beta_poly.clone() * x.clone().pow(d as u128)) * q.clone(),
                 )
             } else {
                 println!("processor quotient {} degree greater than degree max", i);
@@ -63,8 +61,7 @@ pub fn combination_polynomial(
             if q.degree() < degree {
                 let d = degree - q.degree();
                 Some(
-                    alpha_poly.clone() * q.clone()
-                        + beta_poly.clone() * x.clone().pow(d as u128) * q.clone(),
+                    (alpha_poly.clone() + beta_poly.clone() * x.clone().pow(d as u128)) * q.clone(),
                 )
             } else {
                 println!("memory quotient {} degree greater than degree max", i);
@@ -90,8 +87,7 @@ pub fn combination_polynomial(
             if q.degree() < degree {
                 let d = degree - q.degree();
                 Some(
-                    alpha_poly.clone() * q.clone()
-                        + beta_poly.clone() * x.clone().pow(d as u128) * q.clone(),
+                    (alpha_poly.clone() + beta_poly.clone() * x.clone().pow(d as u128)) * q.clone(),
                 )
             } else {
                 println!("instruction quotient {} degree greater than degree max", i);
@@ -388,14 +384,14 @@ impl FriDomain {
     pub fn evaluate(&self, polynomial: Polynomial) -> Vec<FieldElement> {
         let omega = self.omega;
         let omega_val = omega.0;
-        let modulus = omega.1.0;
+        let modulus = omega.1 .0;
         let polynomial = polynomial.scale(self.offset.0);
         let mut opow = FieldElement::one(omega.1);
         let powers: Vec<_> = (0..self.length)
             .map(|_| {
                 let p = opow;
                 let n = opow.0 * omega_val;
-                opow.0 = if n >= modulus{n % modulus} else {n};
+                opow.0 = if n >= modulus { n % modulus } else { n };
                 p
             })
             .collect();
@@ -404,6 +400,7 @@ impl FriDomain {
             .map(|opow_i| polynomial.evaluate(opow_i))
             .collect()
     }
+
     // interpolate with the given offset
     pub fn interpolate(&self, values: Vec<FieldElement>) -> Polynomial {
         let mut list: Vec<FieldElement> = vec![];

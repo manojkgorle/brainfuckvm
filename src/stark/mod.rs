@@ -402,7 +402,6 @@ pub fn prove(
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
-    // instruction_table.table.generate_omicron_domain();
     let instruction_air = instruction_table.generate_air(
         challenges_extension.clone(),
         terminal_instruction[0],

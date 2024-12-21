@@ -167,7 +167,7 @@ impl Polynomial {
                 res *= base.clone(); // Multiply res by base polynomial if current bit is 1
             }
 
-            base = base.clone() * base; // Square the base polynomial
+            base *= base.clone(); // Square the base polynomial
             exp /= 2; // Right shift the exponent (equivalent to dividing by 2)
         }
 
