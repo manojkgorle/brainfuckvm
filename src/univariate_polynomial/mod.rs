@@ -362,6 +362,7 @@ impl Mul for Polynomial {
     #[inline]
     fn mul(self, other: Polynomial) -> Polynomial {
         let field = Field::new(self.coefficients[0].modulus());
+        let modulus = field.0;
         let coeff = self.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
         let coeff2 = other
             .coefficients
@@ -369,10 +370,14 @@ impl Mul for Polynomial {
             .map(|x| x.0)
             .collect::<Vec<u128>>();
         let mut result = vec![0; self.coefficients.len() + other.coefficients.len() - 1];
-        for i in 0..coeff.len() {
-            for j in 0..coeff2.len() {
-                let r = coeff[i] * coeff2[j];
-                result[i + j] += if r >= field.0 { r % field.0 } else { r };
+        for (i, &c1) in coeff.iter().enumerate() {
+            for (j, &c2) in coeff2.iter().enumerate() {
+                let r = c1 * c2;
+                result[i + j] += if r >= modulus {
+                    r - ((r / modulus) * modulus) 
+                } else {
+                    r
+                };
             }
         }
         let res = result
@@ -388,6 +393,7 @@ impl MulAssign for Polynomial {
     fn mul_assign(&mut self, other: Polynomial) {
         if !self.coefficients.is_empty() {
             let field = Field::new(self.coefficients[0].modulus());
+            let modulus = field.0;
             let mut result = vec![0; self.coefficients.len() + other.coefficients.len() - 1];
             let coeff = self.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
             let coeff2 = other
@@ -395,10 +401,14 @@ impl MulAssign for Polynomial {
                 .iter()
                 .map(|x| x.0)
                 .collect::<Vec<u128>>();
-            for i in 0..coeff.len() {
-                for j in 0..coeff2.len() {
-                    let r = coeff[i] * coeff2[j];
-                    result[i + j] += if r >= field.0 { r % field.0 } else { r };
+            for (i, &c1) in coeff.iter().enumerate() {
+                for (j, &c2) in coeff2.iter().enumerate() {
+                    let r = c1 * c2;
+                    result[i + j] += if r >= modulus {
+                        r - ((r / modulus) * modulus) 
+                    } else {
+                        r
+                    };
                 }
             }
             self.coefficients = result
@@ -481,7 +491,6 @@ pub fn gen_lagrange_polynomials_parallel(x: &[FieldElement]) -> Vec<Polynomial> 
     let modulus = x[0].modulus();
     let field = Field::new(modulus);
     let one = FieldElement::one(field);
-    
 
     (0..n)
         .into_par_iter()
@@ -507,12 +516,10 @@ pub fn interpolate_lagrange_polynomials(x: Vec<FieldElement>, y: Vec<FieldElemen
     let field = Field::new(x[0].modulus());
     // let mut result = Polynomial::new_from_coefficients(vec![FieldElement::new(0, field); n]);
     let zero = Polynomial::new_from_coefficients(vec![FieldElement::zero(field)]);
-    (0..n).into_par_iter()
+    (0..n)
+        .into_par_iter()
         .map(|i| lagrange_polynomials[i].scalar_mul(y[i]))
-        .reduce(
-            || zero.clone(),
-            |a, b| a + b
-        )
+        .reduce(|| zero.clone(), |a, b| a + b)
 
     // result
 }
