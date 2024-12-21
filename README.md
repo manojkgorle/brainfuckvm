@@ -23,7 +23,7 @@ We have made some modifications to the [Brainstark](https://aszepieniec.github.i
 - [Brainstark part 1](https://aszepieniec.github.io/stark-brainfuck/engine)
 - [Brainstark part 2](https://aszepieniec.github.io/stark-brainfuck/brainfuck)
 - [Brainstark part 3](https://aszepieniec.github.io/stark-brainfuck/arithmetization)
-- [Brainfuck ISA](https://en.wikipedia.org/wiki/Brainfuck#:~:text=The%20language%20takes%20its%20name,the%20boundaries%20of%20computer%20programming.)
+- [Brainfuck ISA](https://en.wikipedia.org/wiki/Brainfuck)
 - [Writing your own VM](https://www.jmeiners.com/lc3-vm/#:registers)
 - [How to code fri from scratch](https://blog.lambdaclass.com/how-to-code-fri-from-scratch/)
 - [A summary on the fri low degree testing](https://eprint.iacr.org/2022/1216.pdf)
