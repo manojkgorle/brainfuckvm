@@ -610,8 +610,7 @@ impl ProcessorTable {
         // 2.mpa.(d.clk+e.mp+f.mv-beta)-tmpa
         // tiea, toea- last element identical to terminal
         // 3.iea-tiea   4. oea-toea
-        let terminal_air1 = ipa.clone()
-            - Polynomial::constant(tipa);
+        let terminal_air1 = ipa.clone() - Polynomial::constant(tipa);
 
         let terminal_air2 = mpa.clone()
             * (clk.scalar_mul(challenges[ChallengeIndices::D as usize])
