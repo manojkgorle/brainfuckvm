@@ -70,10 +70,8 @@ pub enum ChallengeIndices {
 // prove:
 // matrices -> processor, memory, instruction, input, output -> in this order
 
-#[warn(non_snake_case)]
-
 pub fn prove(
-    matrices: Vec<Vec<Vec<FieldElement>>>,
+    matrices: &[&[Vec<FieldElement>]],
     inputs: String,
     field: Field,
     offset: FieldElement,
@@ -91,7 +89,6 @@ pub fn prove(
 ) {
     // log::set_logger(&CONSOLE_LOGGER).unwrap();
     // log::set_max_level(LevelFilter::Info);
-    env_logger::init();
     let start_time = Local::now();
     let generator = field.generator().pow((1 << 32) - 1);
     let order = 1 << 32;
@@ -99,11 +96,11 @@ pub fn prove(
     let mut t = Local::now();
     let mut processor_table = ProcessorTable::new(
         field,
-        matrices[0].clone().len() as u128,
+        matrices[0].len() as u128,
         roundup_npow2(matrices[2].len() as u128),
         generator,
         order,
-        matrices[0].clone(),
+        matrices[0],
     );
     let mut memory_table = MemoryTable::new(
         field,
@@ -111,28 +108,28 @@ pub fn prove(
         roundup_npow2(matrices[2].len() as u128),
         generator,
         order,
-        matrices[1].clone(),
+        matrices[1],
     );
     let mut instruction_table = InstructionTable::new(
         field,
         matrices[2].len() as u128,
         generator,
         order,
-        matrices[2].clone(),
+        matrices[2],
     );
     let mut input_table = IOTable::new(
         field,
         matrices[3].len() as u128,
         generator,
         order,
-        matrices[3].clone(),
+        matrices[3],
     );
     let mut output_table = IOTable::new(
         field,
         matrices[4].len() as u128,
         generator,
         order,
-        matrices[4].clone(),
+        matrices[4],
     );
 
     log::info!(
@@ -148,45 +145,46 @@ pub fn prove(
     processor_table.table.generate_omicron_domain();
     memory_table.table.generate_omicron_domain();
     instruction_table.table.generate_omicron_domain();
+
     log::info!(
-        "Interpolating all tables, {:?}ms",
+        "Interpolating processor table, {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
-    t = Local::now();
+    // t = Local::now();
     let mut t2 = Local::now();
-    let processor_interpol_columns:Vec<Polynomial> = processor_table
+    let processor_interpol_columns: Vec<Polynomial> = processor_table
         .table
         .clone()
         .interpolate_columns(vec![0, 1, 2, 3, 4, 5, 6]);
     log::info!(
-        "Interpolating processor table, {:?}ms",
+        "Interpolating memory table, {:?}ms",
         (Local::now() - t2).num_milliseconds()
     );
     t2 = Local::now();
-    let memory_interpol_columns:Vec<Polynomial> = memory_table
+    let memory_interpol_columns: Vec<Polynomial> = memory_table
         .table
         .clone()
         .interpolate_columns(vec![0, 1, 2]);
-    log::info!( "Interpolating memory table, {:?}ms", (Local::now() - t2).num_milliseconds());
-    t2 = Local::now();
-    let instruction_interpol_columns:Vec<Polynomial> = instruction_table
-        .table
-        .clone()
-        .interpolate_columns(vec![0, 1, 2]);
-    
     log::info!(
         "Interpolating instruction table, {:?}ms",
         (Local::now() - t2).num_milliseconds()
     );
+    t2 = Local::now();
+    let instruction_interpol_columns: Vec<Polynomial> = instruction_table
+        .table
+        .clone()
+        .interpolate_columns(vec![0, 1, 2]);
+
+    log::info!(
+        "Extending the domain, {:?}ms",
+        (Local::now() - t2).num_milliseconds()
+    );
+    // t2 = Local::now();
     let initial_length = roundup_npow2(9 * (instruction_table.table.clone().height - 1));
 
     //all codewords are evaluated on this expanded domain that has length expanded_length
     let expanded_length = initial_length * (expansion_f as u128);
 
-    log::info!(
-        "Extending the domain, {:?}ms",
-        (Local::now() - t).num_milliseconds()
-    );
     t = Local::now();
     let domain = FriDomain::new(
         offset,
@@ -194,7 +192,11 @@ pub fn prove(
         expanded_length,
     );
 
-    let mut basecodewords: Vec<Vec<FieldElement>> = Vec::new();
+    let mut basecodewords: Vec<Vec<FieldElement>> = Vec::with_capacity(
+        processor_interpol_columns.len()
+            + memory_interpol_columns.len()
+            + instruction_interpol_columns.len(),
+    );
 
     // basecodewords vector order:
     // processor: clk, ip, ci, ni, mp, mv, inv
@@ -207,6 +209,7 @@ pub fn prove(
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
+    // @todo make these functions rust native, by using iter.
     for i in 0..processor_interpol_columns.clone().len() {
         basecodewords.push(domain.evaluate(processor_interpol_columns[i].clone()));
     }
@@ -221,7 +224,7 @@ pub fn prove(
 
     //we are zipping all the base codewords (for each index in order) by taking their merkle root
 
-    let mut basecodeword: Vec<FieldElement> = Vec::new();
+    let mut basecodeword: Vec<FieldElement> = Vec::with_capacity(expanded_length as usize);
 
     log::info!(
         "Zipping all the codewords on the extended domain, {:?}ms",
@@ -244,24 +247,6 @@ pub fn prove(
         );
         basecodeword.push(root);
     }
-
-    // for i in 0..expanded_length as usize {
-    //     let mut x: Vec<u8> = vec![];
-    //     for j in 0..basecodewords.len() {
-    //         x.extend(basecodewords[j][i].to_bytes().iter().map(|&x| x));
-    //     }
-    //     basecodeword.push(x);
-    // }
-
-    // let mut data1 = vec![];
-
-    // for i in 0..basecodeword.len() {
-    //     // difficulty in implementing -> let n = basecodewords[0].len();
-    //     // so hardcoded the value to 32*13 = 416 -> where 13 => clk, ip, ci, ni, mp, mv, inv, clk, mp, mv, ip, ci, ni
-    //     let array: &[u8] = &basecodeword[i].to_vec();
-
-    //     data1.push(FieldElement::from_bytes(array));
-    // }
 
     // get 11 challenges array from fiat shamir
     let mut channel = Channel::new();
@@ -314,7 +299,11 @@ pub fn prove(
         .clone()
         .interpolate_columns(vec![3, 4]);
 
-    let mut extension_codewords: Vec<Vec<FieldElement>> = Vec::new();
+    let mut extension_codewords: Vec<Vec<FieldElement>> = Vec::with_capacity(
+        processor_interpol_columns_2.len()
+            + memory_interpol_columns_2.len()
+            + instruction_interpol_columns_2.len(),
+    );
 
     // extensioncodewords vector order:
     // processor: ipa, mpa, iea, oea
@@ -339,7 +328,7 @@ pub fn prove(
         extension_codewords.push(domain.evaluate(instruction_interpol_columns_2[i].clone()));
     }
 
-    let mut extension_codeword: Vec<FieldElement> = Vec::new();
+    let mut extension_codeword: Vec<FieldElement> = Vec::with_capacity(expanded_length as usize);
     log::info!(
         "Zipping all the extension codewords, {:?}ms",
         (Local::now() - t).num_milliseconds()
@@ -362,21 +351,6 @@ pub fn prove(
         extension_codeword.push(root);
     }
 
-    // for i in 0..expanded_length as usize {
-    //     let mut x: Vec<u8> = vec![];
-    //     for j in 0..extension_codewords.len() {
-    //         x.extend(extension_codewords[j][i].to_bytes().iter().map(|&x| x));
-    //     }
-    //     extension_codeword.push(x);
-    // }
-
-    // let mut data2 = vec![];
-
-    // for i in 0..extension_codeword.len() {
-    //     let array: &[u8] = &extension_codeword[i].to_vec();
-
-    //     data2.push(FieldElement::from_bytes(array));
-    // }
     log::info!(
         "Commiting the extension codewords, {:?}ms",
         (Local::now() - t).num_milliseconds()
@@ -428,7 +402,6 @@ pub fn prove(
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
-    // instruction_table.table.generate_omicron_domain();
     let instruction_air = instruction_table.generate_air(
         challenges_extension.clone(),
         terminal_instruction[0],
@@ -462,42 +435,39 @@ pub fn prove(
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
-    let mut processor_q = vec![];
-    for i in 0..processor_zerofiers.len() {
-        assert_eq!((processor_air[i]
-            .clone()
-            .q_div(processor_zerofiers[i].clone()))
-        .1, Polynomial::constant(FieldElement::zero(field)));
-        processor_q.push(
-            (processor_air[i]
+    let zero = FieldElement::zero(field);
+    // @todo optimize this.
+    let processor_q = (0..processor_zerofiers.len())
+        .into_par_iter()
+        .map(|i| {
+            let c = processor_air[i]
                 .clone()
-                .q_div(processor_zerofiers[i].clone()))
-            .0,
-        );
-    }
-    let mut memory_q = vec![];
-    for i in 0..memory_zerofiers.len() {
-        assert_eq!((memory_air[i]
-            .clone()
-            .q_div(memory_zerofiers[i].clone()))
-        .1, Polynomial::constant(FieldElement::zero(field)), "Failed at memory_q: {}", i);
-        memory_q.push((memory_air[i].clone().q_div(memory_zerofiers[i].clone())).0);
-    }
+                .q_div(processor_zerofiers[i].clone());
+            assert_eq!(c.1, Polynomial::constant(zero));
+            c.0
+        })
+        .collect();
 
-    let mut instruction_q = vec![];
+    let memory_q = (0..memory_zerofiers.len())
+        .into_par_iter()
+        .map(|i| {
+            let c = memory_air[i].clone().q_div(memory_zerofiers[i].clone());
+            assert_eq!(c.1, Polynomial::constant(zero), "Failed at memory_q: {}", i);
+            c.0
+        })
+        .collect();
 
-    for i in 0..instruction_zerofiers.len() {
-        assert_eq!((instruction_air[i]
-            .clone()
-            .q_div(instruction_zerofiers[i].clone()))
-        .1, Polynomial::zero(field), "failed at {}", i);
-        instruction_q.push(
-            (instruction_air[i]
+    let instruction_q = (0..instruction_zerofiers.len())
+        .into_par_iter()
+        .map(|i| {
+            let c = instruction_air[i]
                 .clone()
-                .q_div(instruction_zerofiers[i].clone()))
-            .0,
-        );
-    }
+                .q_div(instruction_zerofiers[i].clone());
+            assert_eq!(c.1, Polynomial::zero(field), "failed at {}", i);
+
+            c.0
+        })
+        .collect();
 
     // form combination polynomial
     // 9 is the maximum factor in AIR degree
@@ -508,6 +478,7 @@ pub fn prove(
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
+    //@todo optimize this
     let combination = combination_polynomial(
         processor_q,
         memory_q,
@@ -646,30 +617,31 @@ pub fn verify_proof(
     channel.send(combination_merkle_root);
 
     //commit to fri
-    let mut fri_merkle_roots: Vec<Vec<u8>> = Vec::new();
-    let mut betas: Vec<FieldElement> = Vec::new();
+
     // height should be power of 2
     // for fri_layer degree of the combination polynomial should be less then the height and the domain size will be the height*expansion_fact
     // fri.layer.len = 1+ log(height)/log2
 
-    let number = degree_bound + 1 as usize;
+    let number = degree_bound + 1_usize;
     let base = 2.0;
     let log_base_2 = (number as f64).log2();
-    let fri_layer_length: usize = (log_base_2 + 1 as f64) as usize;
-    for i in 0..fri_layer_length - 1 as usize {
+    let fri_layer_length: usize = (log_base_2 + 1_f64) as usize;
+    let mut fri_merkle_roots: Vec<Vec<u8>> = Vec::with_capacity(fri_layer_length - 1_usize);
+    let mut betas: Vec<FieldElement> = Vec::with_capacity(fri_layer_length - 1_usize);
+    for i in 0..fri_layer_length - 1_usize {
         let beta = channel.receive_random_field_element(field);
         betas.push(beta);
         let fri_root = compressed_proof[3 + i].clone();
         channel.send(fri_root.clone());
         fri_merkle_roots.push(fri_root);
     }
-    let last_layer_free_term = compressed_proof[2 as usize + fri_layer_length].clone();
+    let last_layer_free_term = compressed_proof[2_usize + fri_layer_length].clone();
     // last root will be 3+fri_layer_length-1
     // last term of the constant polynomial
 
     channel.send(last_layer_free_term.clone());
     // base_idx will be the point where the end of the compressed_proof indices for thr fri-layer_root commitment after this we have added the element and there authentication path we can see that in the utils.rs of the fri_layer decommit
-    let mut base_idx = 3 as usize + fri_layer_length;
+    let mut base_idx = 3_usize + fri_layer_length;
     for i in 0..num_of_queries {
         let idx = channel.receive_random_int(0, maximum_random_int, true) as usize;
         // verify_queries
@@ -679,7 +651,7 @@ pub fn verify_proof(
             blow_up_factor,
             field,
             &fri_merkle_roots,
-            &fri_domains,
+            fri_domains,
             compressed_proof,
             &betas,
             &mut channel,
@@ -720,7 +692,7 @@ pub fn verify_queries(
     fri_layer_length: usize,
 ) {
     // length of the eval_domain
-    let len = (degree_bound + 1 as usize) * blow_up_factor;
+    let len = (degree_bound + 1_usize) * blow_up_factor;
     let base_merkle_root = compressed_proof[0].clone();
 
     let base_x = compressed_proof[base_idx].clone();
@@ -734,7 +706,7 @@ pub fn verify_queries(
         base_x_auth,
         idx,
         base_x,
-        len as usize
+        len
     ));
 
     let base_gx = compressed_proof[base_idx + 2].clone();
@@ -746,7 +718,7 @@ pub fn verify_queries(
         base_gx_auth,
         idx + blow_up_factor,
         base_gx,
-        len as usize
+        len
     ));
     let exten_merkle_root = compressed_proof[1].clone();
     let exten_x = compressed_proof[base_idx + 4].clone();
@@ -759,7 +731,7 @@ pub fn verify_queries(
         exten_x_auth,
         idx,
         exten_x,
-        len as usize
+        len
     ));
     let exten_gx = compressed_proof[base_idx + 6].clone();
     channel.send(exten_gx.clone());
@@ -770,16 +742,16 @@ pub fn verify_queries(
         exten_gx_auth,
         idx + blow_up_factor,
         exten_gx,
-        len as usize
+        len
     ));
     //for inter table arguments constraints
 
     assert_eq!(terminal_processor[0], terminal_instruction[0]); //Tipa = Tppa
     assert_eq!(terminal_processor[1], terminal_memory[0]); //Tmpa = Tppa
-    if terminal_input.len() > 0 {
+    if !terminal_input.is_empty() {
         assert_eq!(terminal_processor[2], terminal_input[0]); //Tiea = Tea input
     }
-    if terminal_output.len() > 0 {
+    if !terminal_output.is_empty() {
         assert_eq!(terminal_processor[3], terminal_output[0]); //Toea = Tea output
     }
 
@@ -812,13 +784,13 @@ pub fn verify_fri_layers(
     intial_length: usize,
     fri_layer_length: usize,
 ) {
-    let mut lengths: Vec<usize> = vec![0_usize; fri_layer_length - 1 as usize];
-    for i in 0..fri_layer_length - 1 as usize {
+    let mut lengths: Vec<usize> = vec![0_usize; fri_layer_length - 1_usize];
+    for i in 0..fri_layer_length - 1_usize {
         // let len_value = intial_length/2_usize.pow(i as u32);
         // length.push(len_value);
         lengths[i] = intial_length / 2_usize.pow(i as u32);
     }
-    for i in 0..fri_layer_length - 1 as usize {
+    for i in 0..fri_layer_length - 1_usize {
         let length = lengths[i];
         let elem_idx = idx % length;
         let elem = compressed_proof[base_idx + 4 * i].clone();
@@ -836,7 +808,7 @@ pub fn verify_fri_layers(
                 FieldElement::from_bytes(&compressed_proof[base_idx + 4 * (i - 1)].clone());
             let prev_sibling =
                 FieldElement::from_bytes(&compressed_proof[base_idx + 4 * (i - 1) + 2].clone());
-            let two = FieldElement::new(2, field);
+            let two = FieldElement(2, field);
             let computed_elem = (prev_elem + prev_sibling) / two
                 + (betas[i - 1] * (prev_elem - prev_sibling)
                     / (two * fri_domains[i - 1][idx % lengths[i - 1]]));
@@ -902,15 +874,22 @@ mod stark_test {
         let expansion_f = 1;
         let num_queries = 1;
 
-        let v = vec![
-            processor_matrix,
-            memory_matrix,
-            instruction_matrix,
-            input_matrix,
-            output_matrix,
+        let v: &[&[Vec<FieldElement>]] = &[
+            &processor_matrix,
+            &memory_matrix,
+            &instruction_matrix,
+            &input_matrix,
+            &output_matrix,
         ];
-        let (degree_bound, compressed_proof, tp, tm, tins, ti, to, fri_d) =
-            prove(v, input_symbols, field, offset, expansion_f, num_queries);
+
+        let (degree_bound, compressed_proof, tp, tm, tins, ti, to, fri_d) = prove(
+            v.into(),
+            input_symbols,
+            field,
+            offset,
+            expansion_f,
+            num_queries,
+        );
 
         let maximum_random_int =
             ((degree_bound + 1) * expansion_f as u128 - expansion_f as u128) as u64;

@@ -30,7 +30,6 @@ pub fn combination_polynomial(
 
     let alpha_poly = Polynomial::new_from_coefficients(vec![alpha]);
     let beta_poly = Polynomial::new_from_coefficients(vec![beta]);
-
     // Compute partial results in parallel
     let partial_results: Vec<Polynomial> = processor_q
         .par_iter()
@@ -39,8 +38,7 @@ pub fn combination_polynomial(
             if q.degree() < degree {
                 let d = degree - q.degree();
                 Some(
-                    alpha_poly.clone() * q.clone()
-                        + beta_poly.clone() * x.clone().pow(d as u128) * q.clone(),
+                    (alpha_poly.clone() + beta_poly.clone() * x.clone().pow(d as u128)) * q.clone(),
                 )
             } else {
                 println!("processor quotient {} degree greater than degree max", i);
@@ -63,8 +61,7 @@ pub fn combination_polynomial(
             if q.degree() < degree {
                 let d = degree - q.degree();
                 Some(
-                    alpha_poly.clone() * q.clone()
-                        + beta_poly.clone() * x.clone().pow(d as u128) * q.clone(),
+                    (alpha_poly.clone() + beta_poly.clone() * x.clone().pow(d as u128)) * q.clone(),
                 )
             } else {
                 println!("memory quotient {} degree greater than degree max", i);
@@ -90,8 +87,7 @@ pub fn combination_polynomial(
             if q.degree() < degree {
                 let d = degree - q.degree();
                 Some(
-                    alpha_poly.clone() * q.clone()
-                        + beta_poly.clone() * x.clone().pow(d as u128) * q.clone(),
+                    (alpha_poly.clone() + beta_poly.clone() * x.clone().pow(d as u128)) * q.clone(),
                 )
             } else {
                 println!("instruction quotient {} degree greater than degree max", i);
@@ -144,9 +140,9 @@ pub fn next_fri_polynomial(old_polynomial: &Polynomial, beta: FieldElement) -> P
     // check the len of the polynomial
     let len = old_polynomial.coefficients.len();
     // h(y)
-    let mut odd_poly: Vec<FieldElement> = Vec::new();
+    let mut odd_poly: Vec<FieldElement> = Vec::with_capacity((len / 2) + 1);
     // g(y)
-    let mut even_poly: Vec<FieldElement> = Vec::new();
+    let mut even_poly: Vec<FieldElement> = Vec::with_capacity((len / 2) + 1);
     for i in 0..len {
         if i % 2 == 0 {
             even_poly.push(old_polynomial.coefficients[i]);
@@ -168,9 +164,9 @@ pub fn next_fri_layer(
     let new_eval_domain = next_eval_domain(domain);
     let new_polynomial = next_fri_polynomial(&old_polynomial, beta);
     let new_evaluations: Vec<FieldElement> = (0..new_eval_domain.length)
-    .into_par_iter() 
-    .map(|i| new_polynomial.evaluate(new_eval_domain.omega.pow(i))) 
-    .collect();
+        .into_par_iter()
+        .map(|i| new_polynomial.evaluate(new_eval_domain.omega.pow(i)))
+        .collect();
     (new_polynomial, new_eval_domain, new_evaluations)
 }
 
@@ -234,7 +230,6 @@ pub fn decommit_fri_layers(
 ) {
     log::debug!("Decommitting on fri layers for query {}", idx);
     // we dont send authentication path for element in last layer, as all elements are equal, regardless of query, as they are evaluations of a constant polynomial
-    //println!("frilayer len: {}", fri_layers.len());
     for (layer, merkle) in fri_layers[..fri_layers.len() - 1]
         .iter()
         .zip(fri_merkle[..fri_merkle.len() - 1].iter())
@@ -250,7 +245,6 @@ pub fn decommit_fri_layers(
         channel.send(layer[sibling_idx].to_bytes());
         let sibling_proof = merkle.get_authentication_path(sibling_idx);
         channel.send(sibling_proof);
-        //println!("4 vec sent to compressed proof");
     }
 
     // send the last layer element.
@@ -280,13 +274,7 @@ pub fn decommit_on_query(
     let _base_x_auth = f_merkle[0].get_authentication_path(idx).clone();
 
     channel.send(f_merkle[0].get_authentication_path(idx)); // merkle proof for basecodeword[idx] or f(x)
-                                                            // for i in 0..base_x_auth.len(){
-                                                            //     print!("{} ", base_x_auth[i]);
-                                                            // } println!("\n base_x_auth of prover");
-                                                            // println!("{} of prover",idx);
-                                                            // for i in 0..base_x.len(){
-                                                            //     print!("{}  ", base_x[i]);
-                                                            // } println!("\nbase_x of prover");
+
     channel.send(f_eval[0][idx + blow_up_factor].to_bytes()); //basecodeword[idx+blowupfactor] or f(g*x)
     channel.send(f_merkle[0].get_authentication_path(idx + blow_up_factor)); // merkle proof for basecodeword[idx+blowupfactor] or f(g*x)
 
@@ -392,14 +380,27 @@ impl FriDomain {
         list
     }
 
+    // @todo optimize computing pow here.
     pub fn evaluate(&self, polynomial: Polynomial) -> Vec<FieldElement> {
         let omega = self.omega;
+        let omega_val = omega.0;
+        let modulus = omega.1 .0;
         let polynomial = polynomial.scale(self.offset.0);
-        (0..self.length)
+        let mut opow = FieldElement::one(omega.1);
+        let powers: Vec<_> = (0..self.length)
+            .map(|_| {
+                let p = opow;
+                let n = opow.0 * omega_val;
+                opow.0 = if n >= modulus { n % modulus } else { n };
+                p
+            })
+            .collect();
+        powers
             .into_par_iter()
-            .map(|i| polynomial.evaluate(omega.pow(i)))
+            .map(|opow_i| polynomial.evaluate(opow_i))
             .collect()
     }
+
     // interpolate with the given offset
     pub fn interpolate(&self, values: Vec<FieldElement>) -> Polynomial {
         let mut list: Vec<FieldElement> = vec![];
@@ -409,6 +410,7 @@ impl FriDomain {
 
         interpolate_lagrange_polynomials(list, values).scalar_mul(self.offset.inverse())
     }
+
     //interpolate without offset
     pub fn real_interpolate(&self, values: Vec<FieldElement>) -> Polynomial {
         let mut list: Vec<FieldElement> = vec![];
@@ -418,14 +420,11 @@ impl FriDomain {
 
         interpolate_lagrange_polynomials(list, values)
     }
-
-    //not written xinterpolate, as it is used for extension field
 }
 
 #[cfg(test)]
 mod test_fri_layer {
     use super::*;
-    //use crate::{field::Field, utils::*};
     #[test]
     fn test_fri() {
         let field = Field::new(17);

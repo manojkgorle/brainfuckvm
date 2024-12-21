@@ -35,7 +35,7 @@ impl Channel {
     pub fn receive_random_field_element(&mut self, field: Field) -> FieldElement {
         let received_int = self.receive_random_int(0, (field.0 - 1) as u64, true);
 
-        FieldElement::new(received_int as u128, field)
+        FieldElement(received_int as u128, field)
     }
 
     pub fn receive_random_int(&mut self, min: u64, max: u64, show_in_proof: bool) -> u64 {

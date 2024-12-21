@@ -1,6 +1,5 @@
 use crate::fields::{Field, FieldElement};
 use crate::fri::*;
-use crate::multivariate_polynomial::*;
 use crate::ntt::*;
 use crate::univariate_polynomial::{interpolate_lagrange_polynomials, Polynomial};
 use chrono::Local;
@@ -8,7 +7,7 @@ use rand::*;
 pub mod instruction;
 pub mod io;
 pub mod memory;
-use rayon::prelude::*;
+use rayon::{prelude::*, vec};
 pub mod processor;
 #[derive(Debug, Clone)]
 // we are not going to use the randomizers in the table
@@ -76,30 +75,6 @@ impl Table {
         }
     }
 
-    pub fn new_3(
-        field: Field,
-        base_width: u128,
-        full_width: u128,
-        length: u128,
-        generator: FieldElement,
-        order: u128,
-        matrix: Vec<Vec<FieldElement>>,
-    ) -> Self {
-        let height = roundup_npow2(length);
-        let omicron = derive_omicron(generator, order, height);
-        Table {
-            field,
-            base_width,
-            full_width,
-            length,
-            height,
-            omicron,
-            generator,
-            order,
-            omicron_domain: Vec::new(),
-            matrix: matrix,
-        }
-    }
     // dont know how to implement this method
     pub fn unit_distance(&self, omega_order: u128) -> u128 {
         if self.height == 0 {
@@ -121,7 +96,7 @@ impl Table {
     }
 
     pub fn generate_omicron_domain(&mut self) {
-        let mut omicron_domain: Vec<FieldElement> = Vec::new();
+        let mut omicron_domain: Vec<FieldElement> = Vec::with_capacity(self.height as usize);
         for i in 0..self.height {
             omicron_domain.push(self.omicron.pow(i));
         }
@@ -130,73 +105,50 @@ impl Table {
 
     // @todo optimize this
     pub fn interpolate_columns(self, column_indices: Vec<u128>) -> Vec<Polynomial> {
-        let mut polynomial: Vec<Polynomial> = Vec::new();
+        let t = Local::now();
         if self.height == 0 {
-            let poly = Polynomial::new_from_coefficients(vec![FieldElement::zero(Field::new(
-                self.field.0,
-            ))]);
-            polynomial.push(poly);
-            return polynomial;
+            let poly = Polynomial::new_from_coefficients(vec![FieldElement::zero(self.field)]);
+            return vec![poly];
         }
 
-        let mut omicron_domain: Vec<FieldElement> = Vec::new();
-        for i in 0..self.height {
-            omicron_domain.push(self.omicron.pow(i));
-        }
-
-        for c in column_indices {
-            let mut trace: Vec<FieldElement> = Vec::new();
-            for row in self.matrix.iter() {
-                trace.push(row[c as usize]);
-            }
-            let values: Vec<FieldElement> = trace.clone();
-            if values.len() != omicron_domain.len() {
-                panic!("length of domain and values are unequal");
-            };
-            let poly = interpolate_lagrange_polynomials(omicron_domain.clone(), values);
-            // println!("poly ={:?}", poly);
-            polynomial.push(poly);
-        }
+        let polynomial = column_indices
+            .par_iter()
+            .map(|c| {
+                let mut trace: Vec<FieldElement> = Vec::new();
+                let omicron_domain: Vec<FieldElement> = self.omicron_domain.clone();
+                for row in self.matrix.iter() {
+                    trace.push(row[*c as usize]);
+                }
+                if trace.len() != omicron_domain.len() {
+                    panic!("length of domain and values are unequal");
+                };
+                let t2 = Local::now();
+                let poly = interpolate_lagrange_polynomials(omicron_domain, trace);
+                log::info!(
+                    "Interpolating lagrange polynomials took: {}ms",
+                    (Local::now() - t2).num_milliseconds()
+                );
+                poly
+            })
+            .collect();
+        log::info!(
+            "Interpolating columns took: {}ms",
+            (Local::now() - t).num_milliseconds()
+        );
         polynomial
     }
 
-    pub fn next_interpolate_columns(self, interpolated:Vec<Polynomial>) -> Vec<Polynomial> {
+    pub fn next_interpolate_columns(self, interpolated: Vec<Polynomial>) -> Vec<Polynomial> {
+        let t = Local::now();
         let mut next_interpolated: Vec<Polynomial> = Vec::new();
-        // if self.height == 0 {
-        //     let poly = Polynomial::new_from_coefficients(vec![FieldElement::zero(Field::new(
-        //         self.field.0,
-        //     ))]);
-        //     next_interpolated.push(poly);
-        //     return next_interpolated;
-        // }
-
-        // let mut omicron_domain: Vec<FieldElement> = Vec::new();
-        // omicron_domain.push(self.omicron.pow(self.height - 1));
-        // for i in 0..self.height - 1 {
-        //     omicron_domain.push(self.omicron.pow(i));
-        // }
-
-        // for c in 0..self.matrix[0].len() {
-        //     let mut trace: Vec<FieldElement> = Vec::new();
-        //     for row in self.matrix.iter() {
-        //         trace.push(row[c]);
-        //     }
-        //     let values = trace.clone();
-
-        //     if values.len() != omicron_domain.len() {
-        //         panic!("length of domain and values are unequal");
-        //     };
-        //     // println!("domain ={:?}", omicron_domain);
-        //     // println!("values ={:?}", values);
-
-        //     let poly = interpolate_lagrange_polynomials(omicron_domain.clone(), values);
-        //     // println!("poly ={:?}", poly);
-        //     next_interpolated.push(poly);
-        // }
-        for i in interpolated{
+        for i in interpolated {
             let next_interpolate = i.compose(self.omicron);
             next_interpolated.push(next_interpolate)
         }
+        log::debug!(
+            "Next Interpolating columns took: {}ms",
+            (Local::now() - t).num_milliseconds()
+        );
         next_interpolated
     }
 
@@ -312,6 +264,7 @@ mod test_operations {
             FieldElement::new(20, field),
         ]);
         table.matrix = matrix;
+        table.generate_omicron_domain();
         let column_indices = vec![0, 1, 2];
         let polynomials = table.interpolate_columns(column_indices);
         let expected_polynomials = [Polynomial::new_from_coefficients(vec![
@@ -322,16 +275,15 @@ mod test_operations {
         ])];
         println!("polynomials ={:?}", polynomials[0]);
         assert_eq!(polynomials[0], expected_polynomials[0]);
-        let mut  next_polynomials:Vec<Polynomial>=vec![];
-        for i in polynomials{
-            let next_polynomial =i.compose(omega);
+        let mut next_polynomials: Vec<Polynomial> = vec![];
+        for i in polynomials {
+            let next_polynomial = i.compose(omega);
             next_polynomials.push(next_polynomial);
-            
         }
-        println!("{:?}",next_polynomials[0]);
+        println!("{:?}", next_polynomials[0]);
     }
     #[test]
-    fn test_next_interpolate(){
+    fn test_next_interpolate() {
         let field = Field::new(17);
         let offset = FieldElement::new(2, field);
         let length = 4_u128;
@@ -373,7 +325,6 @@ mod test_operations {
         let column_indices = vec![0, 1, 2];
         // let polynomials = table.next_interpolate_columns(column_indices);
         // println!("polynomial_next{:?}",polynomials[0]);
-
     }
 
     #[test]
@@ -416,6 +367,7 @@ mod test_operations {
             FieldElement::new(20, field),
         ]);
         table.matrix = matrix;
+        table.generate_omicron_domain();
         let codewords = table.lde(domain);
 
         let expected_codewords = vec![

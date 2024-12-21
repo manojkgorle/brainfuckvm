@@ -44,11 +44,10 @@ impl MemoryTable {
         height: u128,
         generator: FieldElement,
         order: u128,
-        matrix: Vec<Vec<FieldElement>>,
+        matrix: &[Vec<FieldElement>],
     ) -> Self {
         let base_width = 3;
         let full_width = base_width + 1;
-        let height = height;
         let omicron = derive_omicron(generator, order, height);
 
         let mut gmatrix =
@@ -135,7 +134,7 @@ impl MemoryTable {
                     [Indices::MemoryValue as usize]
                     * challenges[ChallengeIndices::F as usize]
                 - challenges[ChallengeIndices::Beta as usize]);
-        let mut terminal: Vec<FieldElement> = Vec::new();
+        let mut terminal: Vec<FieldElement> = Vec::with_capacity(1);
         terminal.push(tppa);
         terminal
     }
@@ -174,15 +173,15 @@ impl MemoryTable {
         //Transition constraints: * == next
         //1. (mp+1-mp*).(mp-mp*)
         //2. (mp-mp*).mv*
-        //3. (mp-mp*).(mv-mv*)
         //4. (clk + 1 - clk*).(mv*-mv).(mp+1-mp*)
         //5. ppa.(d.clk + e.mp + f.mv - beta) - ppa*
-        let transitionair = (mp.clone() + one.clone() - mp_next.clone())
-            * (mp.clone() - mp_next.clone())
-            + (mp.clone() - mp_next.clone()) * mv_next.clone()
-            //+ (mp.clone() - mp_next.clone()) * (mv.clone() - mv_next.clone())
-            + (clk.clone() + one.clone() - clk_next) * (mv_next.clone() - mv.clone())
-            * (mp.clone() + one.clone() - mp_next.clone())
+        let mp_mp_next = mp.clone() - mp_next.clone();
+        let mp_one_mp_next = mp_mp_next.clone() + one.clone();
+        let transitionair = (mp_one_mp_next.clone()) * (mp_mp_next.clone())
+            + (mp_mp_next.clone()) * mv_next.clone()
+            + (clk.clone() + one.clone() - clk_next)
+                * (mv_next.clone() - mv.clone())
+                * (mp_one_mp_next)
             + ppa.clone()
                 * (clk.scalar_mul(challenges[ChallengeIndices::D as usize])
                     + mp.scalar_mul(challenges[ChallengeIndices::E as usize])
@@ -247,7 +246,10 @@ impl MemoryTable {
         let zerofiers = self.generate_zerofier();
 
         for i in 0..air.len() {
-            assert_eq!(air[i].clone().q_div(zerofiers[i].clone()).1, Polynomial::constant(FieldElement::zero(self.table.field)));
+            assert_eq!(
+                air[i].clone().q_div(zerofiers[i].clone()).1,
+                Polynomial::constant(FieldElement::zero(self.table.field))
+            );
             quotients.push(air[i].clone().q_div(zerofiers[i].clone()).0);
         }
         quotients
@@ -284,7 +286,7 @@ mod test_memory_table {
             roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
-            memory_matrix.clone(),
+            &memory_matrix,
         );
         memory_table.pad();
         assert!(memory_table.table.matrix.len().is_power_of_two());
@@ -312,7 +314,7 @@ mod test_memory_table {
             roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
-            memory_matrix,
+            &&memory_matrix,
         );
         let mut challenges = vec![zero; 11];
         challenges[ChallengeIndices::Beta as usize] = FieldElement::new(3, field);
@@ -421,7 +423,7 @@ mod test_memory_table {
             roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
-            processor_matrix,
+            &processor_matrix,
         );
         let mut memory_table = MemoryTable::new(
             field,
@@ -429,28 +431,28 @@ mod test_memory_table {
             roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
-            memory_matrix.clone(),
+            &memory_matrix,
         );
         let mut instruction_table = InstructionTable::new(
             field,
             instruction_matrix.len() as u128,
             generator,
             order,
-            instruction_matrix,
+            &instruction_matrix,
         );
         let mut input_table = IOTable::new(
             field,
             input_matrix.len() as u128,
             generator,
             order,
-            input_matrix,
+            &input_matrix,
         );
         let mut output_table = IOTable::new(
             field,
             output_matrix.len() as u128,
             generator,
             order,
-            output_matrix,
+            &output_matrix,
         );
 
         processor_table.pad();
@@ -465,26 +467,22 @@ mod test_memory_table {
         output_table.table.generate_omicron_domain();
         let terminal = memory_table.extend_column_ppa(1, challenges.clone());
         let terminal2 = processor_table.extend_columns(challenges.clone());
-        let mut i=0;
+        let mut i = 0;
         println!("memory_table after extending columns");
         for row in memory_table.table.matrix.clone() {
             println!("{} : {:?}", i, row);
-            i+=1;
+            i += 1;
         }
         println!("tppa: {:?}", terminal[0]);
         println!("tmpa: {:?}", terminal2[1]);
         let mut omicron_domain: Vec<FieldElement> = Vec::new();
         for i in 0..memory_table.table.height {
             omicron_domain.push(memory_table.table.omicron.pow(i));
-            if i == 4 {
-                println!("omicron_domain: {:?}", omicron_domain);
-            }
         }
 
         let air = memory_table.generate_air(challenges, terminal[0]);
 
         let b = air[0].evaluate(omicron_domain[0]);
-
 
         assert_eq!(b, zero);
         for v in 0..rt - 1 {
@@ -495,10 +493,9 @@ mod test_memory_table {
 
         let v = omicron_domain[4];
 
-        let t_air1 = air[2].evaluate(omicron_domain[rt as usize-1]);
+        let t_air1 = air[2].evaluate(omicron_domain[rt as usize - 1]);
         //println!("{}",t_air1);
         assert_eq!(t_air1, zero);
-
     }
 
     #[test]
@@ -527,7 +524,7 @@ mod test_memory_table {
             roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
-            processor_matrix,
+            &processor_matrix,
         );
         let mut memory_table = MemoryTable::new(
             field,
@@ -535,28 +532,28 @@ mod test_memory_table {
             roundup_npow2(instruction_matrix.len() as u128),
             generator,
             order,
-            memory_matrix,
+            &memory_matrix,
         );
         let mut instruction_table = InstructionTable::new(
             field,
             instruction_matrix.len() as u128,
             generator,
             order,
-            instruction_matrix,
+            &instruction_matrix,
         );
         let mut input_table = IOTable::new(
             field,
             input_matrix.len() as u128,
             generator,
             order,
-            input_matrix,
+            &input_matrix,
         );
         let mut output_table = IOTable::new(
             field,
             output_matrix.len() as u128,
             generator,
             order,
-            output_matrix,
+            &output_matrix,
         );
 
         processor_table.pad();

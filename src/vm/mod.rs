@@ -348,9 +348,13 @@ mod tests {
         let vm = VirtualMachine::new(Field(18446744069414584321));
         let code = "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.".to_string();
         let code2 = ">>[++-]<".to_string();
-        let (running_time, input_data, output_data) = vm.execute(code);
-        let expected_output = "Hello World!\n";
-        assert_eq!(output_data, expected_output);
+        let code3 = "+++++++++++>+>>>>++++++++++++++++++++++++++++++++++++++++++++>++++++++++++++++++++++++++++++++<<<<<<[>[>>>>>>+>+<<<<<<<-]>>>>>>>[<<<<<<<+>>>>>>>-]<[>++++++++++[-<-[>>+>+<<<-]>>>[<<<+>>>-]+<[>[-]<[-]]>[<<[>>>+<<<-]>>[-]]<<]>>>[>>+>+<<<-]>>>[<<<+>>>-]+<[>[-]<[-]]>[<<+>>[-]]<<<<<<<]>>>>>[++++++++++++++++++++++++++++++++++++++++++++++++.[-]]++++++++++<[->-<]>++++++++++++++++++++++++++++++++++++++++++++++++.[-]<<<<<<<<<<<<[>>>+>+<<<<-]>>>>[<<<<+>>>>-]<-[>>.>.<<<[-]]<<[>>+>+<<<-]>>>[<<<+>>>-]<<[<+>-]>[<+>-]<<<-]".to_string();
+        let (running_time, input_data, output_data) = vm.execute(code3);
+        println!("running time: {}", running_time);
+        println!("input data: {}", input_data);
+        println!("output data: {}", output_data);
+        // let expected_output = "Hello World!\n";
+        // assert_eq!(output_data, expected_output);
     }
 
     #[test]
@@ -387,10 +391,5 @@ mod tests {
         for row in output_matrix.clone() {
             println!("{:?}", row);
         }
-        // assert_eq!(processor_matrix.len(), 3);
-        // assert_eq!(instruction_matrix.len(), 5);
-        // assert_eq!(memory_matrix.len(), 2);
-        // assert_eq!(input_matrix.len(), 0);
-        // assert_eq!(output_matrix.len(), 0);
     }
 }

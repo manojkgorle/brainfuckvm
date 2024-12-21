@@ -19,7 +19,7 @@ impl IOTable {
         length: u128,
         generator: FieldElement,
         order: u128,
-        matrix: Vec<Vec<FieldElement>>,
+        matrix: &[Vec<FieldElement>],
     ) -> Self {
         let base_width = 1;
         let full_width = base_width + 1;
@@ -44,8 +44,8 @@ impl IOTable {
         challenge: FieldElement,
     ) -> Vec<FieldElement> {
         let mut ea = FieldElement::new(rand_field_elem, self.table.field); // take rand_field_elem as zero if no random secret implementation
-        let mut terminal: Vec<FieldElement> = Vec::new();
-        if self.table.matrix.len() > 0 {
+        let mut terminal: Vec<FieldElement> = Vec::with_capacity(self.table.length as usize);
+        if !self.table.matrix.is_empty() {
             self.table.matrix[0][1] = ea;
             for i in 0..self.table.length - 1 {
                 ea = self.table.matrix[i as usize][1] * challenge
@@ -80,14 +80,14 @@ mod test_io {
             input_matrix.len() as u128,
             generator,
             order,
-            input_matrix,
+            &input_matrix,
         );
         let mut output_table = IOTable::new(
             field,
             output_matrix.len() as u128,
             generator,
             order,
-            output_matrix,
+            &output_matrix,
         );
         input_table.pad();
         output_table.pad();
