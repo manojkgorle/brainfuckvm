@@ -25,8 +25,8 @@ impl log::Log for ConsoleLogger {
 
     fn flush(&self) {}
 }
-use pprof::ProfilerGuard;
 use pprof::protos::Message;
+use pprof::ProfilerGuard;
 use std::fs::File;
 use std::io::Write;
 
@@ -35,9 +35,7 @@ pub mod evaluation_argument;
 pub mod fields;
 pub mod fri;
 pub mod merkle;
-pub mod multivariate_polynomial;
 pub mod ntt;
-pub mod permutation_argument;
 pub mod stark;
 pub mod tables;
 pub mod univariate_polynomial;
@@ -47,39 +45,40 @@ pub use crate::fields::{Field, FieldElement};
 pub use crate::fri::FriDomain;
 pub use crate::stark::{prove, verify_proof};
 pub use crate::tables::derive_omicron;
-pub use crate::vm::VirtualMachine;
 pub use crate::tables::Table;
+pub use crate::vm::VirtualMachine;
 use rayon::ThreadPoolBuilder;
 fn main() {
-    let guard = ProfilerGuard::new(2).unwrap();
-    // ThreadPoolBuilder::new()
-    // .thread_name(|i| format!("par-iter-{}", i))
-    // .build_global()
-    // .unwrap();
+    // std::env::set_var("RAYON_NUM_THREADS", "1024");
+    env_logger::init();
+    let guard = ProfilerGuard::new(1000).unwrap();
     let field = Field(18446744069414584321);
     let vm = VirtualMachine::new(field);
     let generator = field.generator().pow((1 << 32) - 1);
     let order = 1 << 32;
     // let code = "++>+-[+--]++.".to_string();
-    let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
+    // let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
+    let code =  "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.".to_string();
+    // let code = "+++++++++++>+>>>>++++++++++++++++++++++++++++++++++++++++++++>++++++++++++++++++++++++++++++++<<<<<<[>[>>>>>>+>+<<<<<<<-]>>>>>>>[<<<<<<<+>>>>>>>-]<[>++++++++++[-<-[>>+>+<<<-]>>>[<<<+>>>-]+<[>[-]<[-]]>[<<[>>>+<<<-]>>[-]]<<]>>>[>>+>+<<<-]>>>[<<<+>>>-]+<[>[-]<[-]]>[<<+>>[-]]<<<<<<<]>>>>>[++++++++++++++++++++++++++++++++++++++++++++++++.[-]]++++++++++<[->-<]>++++++++++++++++++++++++++++++++++++++++++++++++.[-]<<<<<<<<<<<<[>>>+>+<<<<-]>>>>[<<<<+>>>>-]<-[>>.>.<<<[-]]<<[>>+>+<<<-]>>>[<<<+>>>-]<<[<+>-]>[<+>-]<<<-]".to_string();
     let program = vm.compile(code);
 
-    let (running_time, input_symbols, _output_symbols) = vm.run(&program, "112".to_string());
-
+    let (running_time, input_symbols, _output_symbols) =
+        vm.run(&program, "1121231241223".to_string());
+    log::info!("Running time: {}", running_time);
     let (processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix) =
-        vm.simulate(&program, "112".to_string());
+        vm.simulate(&program, "1121231241223".to_string());
     assert_eq!(running_time as usize, processor_matrix.len());
 
     let offset = FieldElement::one(field);
     let expansion_f = 1;
-    let num_queries = 1;
+    let num_queries = 64;
 
-    let v = vec![
-        processor_matrix,
-        memory_matrix,
-        instruction_matrix,
-        input_matrix,
-        output_matrix,
+    let v: &[&[Vec<FieldElement>]] = &[
+        &processor_matrix,
+        &memory_matrix,
+        &instruction_matrix,
+        &input_matrix,
+        &output_matrix,
     ];
     let (degree_bound, compressed_proof, tp, tm, tins, ti, to, fri_d) =
         prove(v, input_symbols, field, offset, expansion_f, num_queries);
@@ -93,9 +92,9 @@ fn main() {
         (degree_bound + 1) * expansion_f as u128,
     );
     verify_proof(
-        num_queries as usize,
+        num_queries,
         maximum_random_int,
-        expansion_f as usize,
+        expansion_f,
         field,
         &fri_d,
         &compressed_proof,
@@ -110,12 +109,10 @@ fn main() {
         Ok(report) => {
             let mut file = File::create("profile.pb").unwrap();
             let profile = report.pprof().unwrap();
-    
+
             let mut content = Vec::new();
             profile.write_to_vec(&mut content).unwrap();
             file.write_all(&content).unwrap();
-    
-            // println!("report: {:?}", &report);
         }
         Err(_) => {}
     };
