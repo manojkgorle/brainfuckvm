@@ -387,12 +387,15 @@ impl FriDomain {
     // @todo optimize computing pow here.
     pub fn evaluate(&self, polynomial: Polynomial) -> Vec<FieldElement> {
         let omega = self.omega;
+        let omega_val = omega.0;
+        let modulus = omega.1.0;
         let polynomial = polynomial.scale(self.offset.0);
         let mut opow = FieldElement::one(omega.1);
         let powers: Vec<_> = (0..self.length)
             .map(|_| {
                 let p = opow;
-                opow *= omega;
+                let n = opow.0 * omega_val;
+                opow.0 = if n >= modulus{n % modulus} else {n};
                 p
             })
             .collect();
@@ -410,6 +413,7 @@ impl FriDomain {
 
         interpolate_lagrange_polynomials(list, values).scalar_mul(self.offset.inverse())
     }
+
     //interpolate without offset
     pub fn real_interpolate(&self, values: Vec<FieldElement>) -> Polynomial {
         let mut list: Vec<FieldElement> = vec![];
@@ -419,14 +423,11 @@ impl FriDomain {
 
         interpolate_lagrange_polynomials(list, values)
     }
-
-    //not written xinterpolate, as it is used for extension field
 }
 
 #[cfg(test)]
 mod test_fri_layer {
     use super::*;
-    //use crate::{field::Field, utils::*};
     #[test]
     fn test_fri() {
         let field = Field::new(17);
