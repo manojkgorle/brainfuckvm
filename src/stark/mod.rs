@@ -87,8 +87,6 @@ pub fn prove(
     Vec<FieldElement>,
     Vec<Vec<FieldElement>>,
 ) {
-    // log::set_logger(&CONSOLE_LOGGER).unwrap();
-    // log::set_max_level(LevelFilter::Info);
     let start_time = Local::now();
     let generator = field.generator().pow((1 << 32) - 1);
     let order = 1 << 32;
@@ -569,7 +567,7 @@ pub fn prove(
 // combination polynomial equation
 // challenges of extension columns
 // challenges of combination polynomial
-//
+
 // prover sends to verifier -
 // height (whose correctness is indirectly verified through fri and degree bound)
 // base codewords merkle root, extension codewords merkle root
@@ -647,7 +645,7 @@ pub fn verify_proof(
     // last term of the constant polynomial
 
     channel.send(last_layer_free_term.clone());
-    // base_idx will be the point where the end of the compressed_proof indices for thr fri-layer_root commitment after this we have added the element and there authentication path we can see that in the utils.rs of the fri_layer decommit
+    // base_idx will be the point where the end of the compressed_proof indices for thr fri-layer_root commitment after this we have added the element and there authentication path 
     let mut base_idx = 3_usize + fri_layer_length;
     for i in 0..num_of_queries {
         let idx = channel.receive_random_int(0, maximum_random_int, true) as usize;
@@ -670,8 +668,8 @@ pub fn verify_proof(
             degree_bound,
             fri_layer_length,
         );
-        // why 46 ??// here 46 is consistence acc to stark101 6 commitment of the f(x), f(gx), f(g^2x) for it's elem and the authentication path and other 41 for the fri layer 4 for all 10 layers and 1 for the last layer the constant term
-        // in our case it will be 8 (for the base_x , base_gx,extenion_x, extension_gx) + 4*(fri_layer_length -1)+1 for the constant term
+  
+       
         base_idx += 8 + (4 * (fri_layer_length - 1));
     }
     log::info!(
@@ -679,7 +677,7 @@ pub fn verify_proof(
         (Local::now() - start).num_microseconds().unwrap()
     );
 }
-//pub fn verify_queries{verify queries on the zipped value of base codewords and the extension codeowrds and also the terminal values }
+
 pub fn verify_queries(
     base_idx: usize,
     idx: usize,
@@ -752,14 +750,17 @@ pub fn verify_queries(
         len
     ));
     //for inter table arguments constraints
-
-    assert_eq!(terminal_processor[0], terminal_instruction[0]); //Tipa = Tppa
-    assert_eq!(terminal_processor[1], terminal_memory[0]); //Tmpa = Tppa
+    //Tipa = Tppa
+    assert_eq!(terminal_processor[0], terminal_instruction[0]); 
+    //Tmpa = Tppa
+    assert_eq!(terminal_processor[1], terminal_memory[0]); 
+    //Tiea = Tea input
     if !terminal_input.is_empty() {
-        assert_eq!(terminal_processor[2], terminal_input[0]); //Tiea = Tea input
+        assert_eq!(terminal_processor[2], terminal_input[0]); 
     }
+    //Toea = Tea output
     if !terminal_output.is_empty() {
-        assert_eq!(terminal_processor[3], terminal_output[0]); //Toea = Tea output
+        assert_eq!(terminal_processor[3], terminal_output[0]); 
     }
 
     //@todo let this be for now sinze program evaluation has not been evaluated from program:- assert_eq!(Terminal_instruction[1], Tpea); //Tpea = program evaluation
@@ -842,7 +843,7 @@ pub fn verify_fri_layers(
             length,
         ));
 
-        //
+        
     }
     let last_elem = compressed_proof[base_idx + 4 * (fri_layer_length - 1)].clone();
     channel.send(last_elem);
