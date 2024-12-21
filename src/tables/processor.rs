@@ -495,7 +495,7 @@ impl ProcessorTable {
         let mv_next_mv = mv_next.clone() - mv.clone();
         //ci=[
         //(ip⋆−ip−2)⋅mv+(ip⋆−ni)⋅iszero
-        // mp⋆−mp 
+        // mp⋆−mp
         // mv⋆−mv
         let trasition_i0 = (mv.clone() * (ip_next_ip_poly_two.clone())
             + mv_is_zero.clone() * (ip_next.clone() - ni.clone()))
@@ -520,8 +520,7 @@ impl ProcessorTable {
         //ci=>
         // ip⋆−ip−1
         // mp⋆−mp-1
-        let trasition_i3 = (ip_next_ip_poly_one.clone())
-            + (mp_next_mp.clone() - poly_one.clone());
+        let trasition_i3 = (ip_next_ip_poly_one.clone()) + (mp_next_mp.clone() - poly_one.clone());
         air.push(trasition_i3);
 
         // ip⋆−ip−1
@@ -545,16 +544,14 @@ impl ProcessorTable {
         // ip⋆−ip−1
         // mp⋆−mp
         //ci=,
-        let trasition_i6 =
-            (ip_next_ip_poly_one.clone()) + (mp_next_mp.clone());
+        let trasition_i6 = (ip_next_ip_poly_one.clone()) + (mp_next_mp.clone());
         air.push(trasition_i6);
         // ip⋆−ip−1
         // mp⋆−mp
         // mv⋆−mv
         //ci=.
-        let trasition_i7 = (ip_next_ip_poly_one.clone())
-            + (mp_next_mp.clone())
-            + (mv_next_mv.clone());
+        let trasition_i7 =
+            (ip_next_ip_poly_one.clone()) + (mp_next_mp.clone()) + (mv_next_mv.clone());
         air.push(trasition_i7);
         log::info!(
             "Time taken for transition constraints: {:?}ms",
@@ -574,40 +571,61 @@ impl ProcessorTable {
         // selector(,)(ci) . (iea.gamma + mv* - iea*) + (ci -  “,”) . (iea - iea*)
         // selector(.)(ci) . (oea.delta + mv - oea*) + (ci -  “.”) . (oea - oea*)
 
-        // @todo optimzie this code
         let t = Local::now();
-        let trasition_all = (clk_next.clone() - clk.clone() - poly_one.clone())
-            + (inv_mv.clone() * (mv_is_zero.clone()))
-            + ci.clone()
-                * (ipa.clone()
-                    * (ip.scalar_mul(challenges[ChallengeIndices::A as usize])
-                        + ci.scalar_mul(challenges[ChallengeIndices::B as usize])
-                        + ni.scalar_mul(challenges[ChallengeIndices::C as usize])
-                        - Polynomial::constant(challenges[ChallengeIndices::Alpha as usize]))
-                    - ipa_next)
-            + (mpa.clone()
-                * (clk.scalar_mul(challenges[ChallengeIndices::D as usize])
-                    + mp.scalar_mul(challenges[ChallengeIndices::E as usize])
-                    + mv.scalar_mul(challenges[ChallengeIndices::F as usize])
-                    - Polynomial::constant(challenges[ChallengeIndices::Beta as usize]))
-                - mpa_next)
-            + ProcessorTable::selector_polynomial(',', ci.clone(), self.table.field)
-                * ci.clone()
-                * (iea
-                    .clone()
-                    .scalar_mul(challenges[ChallengeIndices::Gamma as usize])
-                    + mv_next.clone()
-                    - iea_next.clone())
-            + (ci.clone() - Polynomial::constant(f(','))) * (iea.clone() - iea_next.clone())
-            + ProcessorTable::selector_polynomial('.', ci.clone(), self.table.field)
-                * ci.clone()
-                * (oea
-                    .clone()
-                    .scalar_mul(challenges[ChallengeIndices::Delta as usize])
-                    + mv.clone()
-                    - oea_next.clone())
-            + (ci.clone() - Polynomial::constant(f('.'))) * (oea.clone() - oea_next.clone());
-        air.push(trasition_all);
+        let t_air_computations: Vec<Box<dyn Fn() -> Polynomial + Send + Sync>> = vec![
+            Box::new(|| clk_next.clone() - clk.clone() - poly_one.clone()), // t_air_1
+            Box::new(|| inv_mv.clone() * (mv_is_zero.clone())),             // t_air_2
+            Box::new(|| {
+                ci.clone()
+                    * (ipa.clone()
+                        * (ip.scalar_mul(challenges[ChallengeIndices::A as usize])
+                            + ci.scalar_mul(challenges[ChallengeIndices::B as usize])
+                            + ni.scalar_mul(challenges[ChallengeIndices::C as usize])
+                            - Polynomial::constant(challenges[ChallengeIndices::Alpha as usize]))
+                        - ipa_next.clone())
+            }), // t_air_3
+            Box::new(|| {
+                mpa.clone()
+                    * (clk.scalar_mul(challenges[ChallengeIndices::D as usize])
+                        + mp.scalar_mul(challenges[ChallengeIndices::E as usize])
+                        + mv.scalar_mul(challenges[ChallengeIndices::F as usize])
+                        - Polynomial::constant(challenges[ChallengeIndices::Beta as usize]))
+                    - mpa_next.clone()
+            }), // t_air_4
+            Box::new(|| {
+                ProcessorTable::selector_polynomial(',', ci.clone(), self.table.field)
+                    * ci.clone()
+                    * (iea
+                        .clone()
+                        .scalar_mul(challenges[ChallengeIndices::Gamma as usize])
+                        + mv_next.clone()
+                        - iea_next.clone())
+                    + (ci.clone() - Polynomial::constant(f(','))) * (iea.clone() - iea_next.clone())
+            }), // t_air_5
+            Box::new(|| {
+                ProcessorTable::selector_polynomial('.', ci.clone(), self.table.field)
+                    * ci.clone()
+                    * (oea
+                        .clone()
+                        .scalar_mul(challenges[ChallengeIndices::Delta as usize])
+                        + mv.clone()
+                        - oea_next.clone())
+                    + (ci.clone() - Polynomial::constant(f('.'))) * (oea.clone() - oea_next.clone())
+            }), // t_air_6
+        ];
+
+        // Execute all computations in parallel
+        let t_air_results: Vec<Polynomial> = t_air_computations
+            .into_par_iter()
+            .map(|compute| compute()) // Call each computation
+            .collect();
+
+        // Combine the results
+        let transition_all = t_air_results
+            .into_iter()
+            .reduce(|acc, poly| acc + poly)
+            .unwrap();
+        air.push(transition_all);
         log::info!(
             "Time taken for all constraints: {:?}ms",
             (Local::now() - t).num_milliseconds()
@@ -643,6 +661,7 @@ impl ProcessorTable {
         air
     }
 }
+
 #[cfg(test)]
 mod tests_processor_operations {
     use super::*;

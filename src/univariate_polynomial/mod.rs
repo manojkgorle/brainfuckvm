@@ -374,7 +374,7 @@ impl Mul for Polynomial {
             for (j, &c2) in coeff2.iter().enumerate() {
                 let r = c1 * c2;
                 result[i + j] += if r >= modulus {
-                    r - ((r / modulus) * modulus) 
+                    r - ((r / modulus) * modulus)
                 } else {
                     r
                 };
@@ -405,7 +405,7 @@ impl MulAssign for Polynomial {
                 for (j, &c2) in coeff2.iter().enumerate() {
                     let r = c1 * c2;
                     result[i + j] += if r >= modulus {
-                        r - ((r / modulus) * modulus) 
+                        r - ((r / modulus) * modulus)
                     } else {
                         r
                     };
