@@ -36,17 +36,17 @@ impl Polynomial {
     }
 
     pub fn evaluate(&self, x: FieldElement) -> FieldElement {
-        let mut result:u128 = 0;
-        let mut xpow:u128 = 1;
+        let mut result: u128 = 0;
+        let mut xpow: u128 = 1;
         let field = x.1;
         let xval = x.0;
         let modulo = field.0;
         let coeff = self.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
         for i in 0..coeff.len() {
             let r = coeff[i] * xpow;
-            result += if r>= modulo {r % modulo} else {r};
-            let x = xpow*xval;
-            xpow = if x >= modulo {x % modulo} else {x};
+            result += if r >= modulo { r % modulo } else { r };
+            let x = xpow * xval;
+            xpow = if x >= modulo { x % modulo } else { x };
         }
         FieldElement::new(result % field.0, field)
     }
@@ -85,7 +85,12 @@ impl Polynomial {
 
     pub fn scalar_div(&self, scalar: FieldElement) -> Self {
         let scalar_inv = scalar.inverse();
-        let result = self.coefficients.clone().into_par_iter().map(|x| x * scalar_inv).collect::<Vec<FieldElement>>();
+        let result = self
+            .coefficients
+            .clone()
+            .into_par_iter()
+            .map(|x| x * scalar_inv)
+            .collect::<Vec<FieldElement>>();
         Polynomial::new_from_coefficients(result)
     }
     pub fn zero(field: Field) -> Self {

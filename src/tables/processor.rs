@@ -386,19 +386,23 @@ impl ProcessorTable {
 
         // Parallelize the loop over characters
         let partial_results: Vec<Polynomial> = "[]<>,.+-"
-            .par_chars() 
-            .filter(|&c| c != instruction) 
-            .map(|c| {
-                Polynomial::constant(FieldElement::new(f(c).0, field))
-            })
+            .par_chars()
+            .filter(|&c| c != instruction)
+            .map(|c| Polynomial::constant(FieldElement::new(f(c).0, field)))
             .collect();
         let t2 = Local::now();
         // Combine the partial results into the final polynomial
         for poly in partial_results {
             acc *= ci.clone() - poly;
         }
-        log::info!("Time taken for selector polynomial inner loop: {:?}ms", (Local::now() - t2).num_milliseconds());
-        log::info!("Time taken for selector polynomial: {:?}ms", (Local::now() - t).num_milliseconds());
+        log::info!(
+            "Time taken for selector polynomial inner loop: {:?}ms",
+            (Local::now() - t2).num_milliseconds()
+        );
+        log::info!(
+            "Time taken for selector polynomial: {:?}ms",
+            (Local::now() - t).num_milliseconds()
+        );
         acc
     }
 
@@ -556,7 +560,10 @@ impl ProcessorTable {
             + (mp_next.clone() - mp.clone())
             + (mv_next.clone() - mv.clone());
         air.push(trasition_i7);
-        log::debug!("Time taken for transition constraints: {:?}ms", (Local::now() - t).num_milliseconds());
+        log::debug!(
+            "Time taken for transition constraints: {:?}ms",
+            (Local::now() - t).num_milliseconds()
+        );
         // clk⋆−clk−1
         // inv⋅(1−inv⋅mv)
         // ci.(ipa.(a.ip+b.ci+c.ni-alpha)-ipa*) // this constrainst is become redundant becaue we are not using +(ipa*-ipa).deselector
