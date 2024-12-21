@@ -65,8 +65,6 @@ pub fn prove(
     Vec<FieldElement>,
     Vec<Vec<FieldElement>>,
 ) {
-    // log::set_logger(&CONSOLE_LOGGER).unwrap();
-    // log::set_max_level(LevelFilter::Info);
     let start_time = Local::now();
     let generator = field.generator().pow((1 << 32) - 1);
     let order = 1 << 32;
@@ -531,7 +529,7 @@ pub fn prove(
 // combination polynomial equation
 // challenges of extension columns
 // challenges of combination polynomial
-//
+
 // prover sends to verifier -
 // height (whose correctness is indirectly verified through fri and degree bound)
 // base codewords merkle root, extension codewords merkle root
@@ -606,7 +604,7 @@ pub fn verify_proof(
     // last term of the constant polynomial
 
     channel.send(last_layer_free_term.clone());
-    // base_idx will be the point where the end of the compressed_proof indices for thr fri-layer_root commitment after this we have added the element and there authentication path we can see that in the utils.rs of the fri_layer decommit
+    // base_idx will be the point where the end of the compressed_proof indices for thr fri-layer_root commitment after this we have added the element and there authentication path 
     let mut base_idx = 3_usize + fri_layer_length;
     for i in 0..num_of_queries {
         let idx = channel.receive_random_int(0, maximum_random_int, true) as usize;
@@ -710,14 +708,17 @@ pub fn verify_queries(
         len
     ));
     //for inter table arguments constraints
-
-    assert_eq!(terminal_processor[0], terminal_instruction[0]); //Tipa = Tppa
-    assert_eq!(terminal_processor[1], terminal_memory[0]); //Tmpa = Tppa
+    //Tipa = Tppa
+    assert_eq!(terminal_processor[0], terminal_instruction[0]); 
+    //Tmpa = Tppa
+    assert_eq!(terminal_processor[1], terminal_memory[0]); 
+    //Tiea = Tea input
     if !terminal_input.is_empty() {
-        assert_eq!(terminal_processor[2], terminal_input[0]); //Tiea = Tea input
+        assert_eq!(terminal_processor[2], terminal_input[0]); 
     }
+    //Toea = Tea output
     if !terminal_output.is_empty() {
-        assert_eq!(terminal_processor[3], terminal_output[0]); //Toea = Tea output
+        assert_eq!(terminal_processor[3], terminal_output[0]); 
     }
 
     verify_fri_layers(
