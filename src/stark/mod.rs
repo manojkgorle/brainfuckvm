@@ -436,52 +436,39 @@ pub fn prove(
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
-    let mut processor_q = vec![];
-    for i in 0..processor_zerofiers.len() {
-        assert_eq!(
-            (processor_air[i]
+    let zero = FieldElement::zero(field);
+    // @todo optimize this.
+    let processor_q = (0..processor_zerofiers.len())
+        .into_par_iter()
+        .map(|i| {
+            let c = processor_air[i]
                 .clone()
-                .q_div(processor_zerofiers[i].clone()))
-            .1,
-            Polynomial::constant(FieldElement::zero(field))
-        );
-        processor_q.push(
-            (processor_air[i]
-                .clone()
-                .q_div(processor_zerofiers[i].clone()))
-            .0,
-        );
-    }
-    let mut memory_q = vec![];
-    for i in 0..memory_zerofiers.len() {
-        assert_eq!(
-            (memory_air[i].clone().q_div(memory_zerofiers[i].clone())).1,
-            Polynomial::constant(FieldElement::zero(field)),
-            "Failed at memory_q: {}",
-            i
-        );
-        memory_q.push((memory_air[i].clone().q_div(memory_zerofiers[i].clone())).0);
-    }
+                .q_div(processor_zerofiers[i].clone());
+            assert_eq!(c.1, Polynomial::constant(zero));
+            c.0
+        })
+        .collect();
 
-    let mut instruction_q = vec![];
+    let memory_q = (0..memory_zerofiers.len())
+        .into_par_iter()
+        .map(|i| {
+            let c = memory_air[i].clone().q_div(memory_zerofiers[i].clone());
+            assert_eq!(c.1, Polynomial::constant(zero), "Failed at memory_q: {}", i);
+            c.0
+        })
+        .collect();
 
-    for i in 0..instruction_zerofiers.len() {
-        assert_eq!(
-            (instruction_air[i]
+    let instruction_q = (0..instruction_zerofiers.len())
+        .into_par_iter()
+        .map(|i| {
+            let c = instruction_air[i]
                 .clone()
-                .q_div(instruction_zerofiers[i].clone()))
-            .1,
-            Polynomial::zero(field),
-            "failed at {}",
-            i
-        );
-        instruction_q.push(
-            (instruction_air[i]
-                .clone()
-                .q_div(instruction_zerofiers[i].clone()))
-            .0,
-        );
-    }
+                .q_div(instruction_zerofiers[i].clone());
+            assert_eq!(c.1, Polynomial::zero(field), "failed at {}", i);
+
+            c.0
+        })
+        .collect();
 
     // form combination polynomial
     // 9 is the maximum factor in AIR degree
@@ -492,6 +479,7 @@ pub fn prove(
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
+    //@todo optimize this
     let combination = combination_polynomial(
         processor_q,
         memory_q,
