@@ -108,9 +108,19 @@ impl FieldElement {
         let mut exp = exp;
         while exp > 0 {
             if exp % 2 == 1 {
-                res = (res * base) % self.1 .0;
+                let r = res * base;
+                if r >= self.1 .0 {
+                    res = r % self.1 .0;
+                } else {
+                    res = r;
+                }
             }
-            base = (base * base) % self.1 .0;
+            let b = base * base;
+            if b >= self.1 .0 {
+                base = b % self.1 .0;
+            } else {
+                base = b;
+            }
             exp /= 2;
         }
         FieldElement(res % self.1 .0, self.1)

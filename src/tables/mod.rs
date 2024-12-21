@@ -111,30 +111,44 @@ impl Table {
             return vec![poly];
         }
 
-        let polynomial = column_indices.par_iter().map(|c| {
-            let mut trace: Vec<FieldElement> = Vec::new();
-            let omicron_domain: Vec<FieldElement> = self.omicron_domain.clone();
-            for row in self.matrix.iter() {
-                trace.push(row[*c as usize]);
-            }
-            if trace.len() != omicron_domain.len() {
-                panic!("length of domain and values are unequal");
-            };
-            let t2 = Local::now();
-            let poly = interpolate_lagrange_polynomials(omicron_domain, trace);
-            log::info!("Interpolating lagrange polynomials took: {}ms", (Local::now() - t2).num_milliseconds());
-            poly
-        }).collect();
-        log::info!("Interpolating columns took: {}ms", (Local::now() - t).num_milliseconds());
+        let polynomial = column_indices
+            .par_iter()
+            .map(|c| {
+                let mut trace: Vec<FieldElement> = Vec::new();
+                let omicron_domain: Vec<FieldElement> = self.omicron_domain.clone();
+                for row in self.matrix.iter() {
+                    trace.push(row[*c as usize]);
+                }
+                if trace.len() != omicron_domain.len() {
+                    panic!("length of domain and values are unequal");
+                };
+                let t2 = Local::now();
+                let poly = interpolate_lagrange_polynomials(omicron_domain, trace);
+                log::info!(
+                    "Interpolating lagrange polynomials took: {}ms",
+                    (Local::now() - t2).num_milliseconds()
+                );
+                poly
+            })
+            .collect();
+        log::info!(
+            "Interpolating columns took: {}ms",
+            (Local::now() - t).num_milliseconds()
+        );
         polynomial
     }
 
     pub fn next_interpolate_columns(self, interpolated: Vec<Polynomial>) -> Vec<Polynomial> {
+        let t = Local::now();
         let mut next_interpolated: Vec<Polynomial> = Vec::new();
         for i in interpolated {
             let next_interpolate = i.compose(self.omicron);
             next_interpolated.push(next_interpolate)
         }
+        log::debug!(
+            "Next Interpolating columns took: {}ms",
+            (Local::now() - t).num_milliseconds()
+        );
         next_interpolated
     }
 

@@ -439,7 +439,8 @@ pub fn prove(
     let mut processor_q = vec![];
     for i in 0..processor_zerofiers.len() {
         assert_eq!(
-            (processor_air[i].clone()
+            (processor_air[i]
+                .clone()
                 .q_div(processor_zerofiers[i].clone()))
             .1,
             Polynomial::constant(FieldElement::zero(field))
