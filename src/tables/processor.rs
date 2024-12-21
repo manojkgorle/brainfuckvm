@@ -375,13 +375,11 @@ impl ProcessorTable {
         quotients
     }
 
-    //@todo parallelize this function
     //define a selector polynomial for a specific instruction.
     //this will return a non-zero value for instruction and zero for all other instructions
     pub fn selector_polynomial(instruction: char, ci: Polynomial, field: Field) -> Polynomial {
         let f = |x: char| -> FieldElement { FieldElement((x as u32) as u128, field) };
 
-        // Parallelize the loop over characters
         let partial_results: Vec<Polynomial> = "[]<>,.+-"
             .par_chars()
             .filter(|&c| c != instruction)
@@ -397,7 +395,7 @@ impl ProcessorTable {
                     .fold(one.clone(), |acc, poly| acc * (ci.clone() - poly.clone()))
             })
             .reduce(|| one.clone(), |acc, chunk_result| acc * chunk_result);
-        log::info!(
+        log::debug!(
             "Time taken for selector polynomial inner loop: {:?}ms",
             (Local::now() - t2).num_milliseconds()
         );
@@ -406,10 +404,8 @@ impl ProcessorTable {
 
     pub fn universal_selector(ci: Polynomial, field: Field) -> Polynomial {
         let f = |x: char| -> FieldElement { FieldElement((x as u32) as u128, field) };
-        // let mut deselectors = Vec::new();
         let mut acc = Polynomial::constant(FieldElement::one(field));
 
-        // for target_char in "[]<>,.+-".chars() {
         let target_char = ['[', ']', '<', '>', ',', '.', '+', '-'];
 
         for c in target_char.iter() {
@@ -615,14 +611,6 @@ impl ProcessorTable {
         // tiea, toea- last element identical to terminal
         // 3.iea-tiea   4. oea-toea
         let terminal_air1 = ipa.clone()
-            // * (ip
-            //     .clone()
-            //     .scalar_mul(challenges[ChallengeIndices::A as usize])
-            //     + ci.clone()
-            //         .scalar_mul(challenges[ChallengeIndices::B as usize])
-            //     + ni.clone()
-            //         .scalar_mul(challenges[ChallengeIndices::C as usize])
-            //     - Polynomial::constant(challenges[ChallengeIndices::Alpha as usize]))
             - Polynomial::constant(tipa);
 
         let terminal_air2 = mpa.clone()

@@ -505,13 +505,16 @@ pub fn interpolate_lagrange_polynomials(x: Vec<FieldElement>, y: Vec<FieldElemen
 
     let lagrange_polynomials = gen_lagrange_polynomials_parallel(&x);
     let field = Field::new(x[0].modulus());
-    let mut result = Polynomial::new_from_coefficients(vec![FieldElement::new(0, field); n]);
+    // let mut result = Polynomial::new_from_coefficients(vec![FieldElement::new(0, field); n]);
+    let zero = Polynomial::new_from_coefficients(vec![FieldElement::zero(field)]);
+    (0..n).into_par_iter()
+        .map(|i| lagrange_polynomials[i].scalar_mul(y[i]))
+        .reduce(
+            || zero.clone(),
+            |a, b| a + b
+        )
 
-    for i in 0..n {
-        result += lagrange_polynomials[i].scalar_mul(y[i]);
-    }
-
-    result
+    // result
 }
 
 impl PartialEq for Polynomial {
