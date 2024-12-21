@@ -84,12 +84,8 @@ impl Polynomial {
     }
 
     pub fn scalar_div(&self, scalar: FieldElement) -> Self {
-        let len = self.coefficients.len();
-        let mut result = Vec::with_capacity(len);
-
-        for i in 0..len {
-            result.push(self.coefficients[i] / scalar);
-        }
+        let scalar_inv = scalar.inverse();
+        let result = self.coefficients.clone().into_par_iter().map(|x| x * scalar_inv).collect::<Vec<FieldElement>>();
         Polynomial::new_from_coefficients(result)
     }
     pub fn zero(field: Field) -> Self {
@@ -151,6 +147,7 @@ impl Polynomial {
         self
     }
 
+    // @todo optimzie
     pub fn pow(self, exp: u128) -> Self {
         let mut res = Polynomial::new_from_coefficients(vec![FieldElement::one(Field::new(
             self.coefficients[0].modulus(),
@@ -479,33 +476,14 @@ pub fn gen_lagrange_polynomials_parallel(x: &[FieldElement]) -> Vec<Polynomial> 
     let modulus = x[0].modulus();
     let field = Field::new(modulus);
     let one = FieldElement::one(field);
-    let mx = x.into_iter().map(|k| k.0).collect::<Vec<u128>>();
     let lagrange_polynomials = (0..n)
         .into_par_iter()
         .map(|i| {
             let numerator = big_poly.clone() / Polynomial::new_from_coefficients(vec![-x[i], one]);
-            // let mut denominator = Vec::with_capacity(n);
-
             let t = Local::now();
-            let den = (0..n)
-                .into_par_iter()
-                .filter(|j| i != *j)
-                .map(|j| {
-                    if mx[i] < mx[j] {
-                        modulus + mx[i] - mx[j]
-                    } else {
-                        mx[i] - mx[j]
-                    }
-                })
-                .collect::<Vec<u128>>();
-            let denominator = den
-                .into_iter()
-                .map(|k| FieldElement::new(k, field))
-                .collect::<Vec<FieldElement>>();
+            let n_eval = numerator.evaluate(x[i]);
 
-            let den_sum = denominator.iter().fold(one, |acc, x| acc * *x);
-
-            let r = numerator.scalar_div(den_sum);
+            let r = numerator.scalar_div(n_eval);
             log::debug!(
                 "Time taken to generate lagrange polynomial: {:?}ms",
                 (Local::now() - t).num_milliseconds()

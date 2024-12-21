@@ -50,7 +50,7 @@ pub use crate::vm::VirtualMachine;
 use rayon::ThreadPoolBuilder;
 fn main() {
     env_logger::init();
-    // let guard = ProfilerGuard::new(1000).unwrap();
+    let guard = ProfilerGuard::new(1000).unwrap();
     let field = Field(18446744069414584321);
     let vm = VirtualMachine::new(field);
     let generator = field.generator().pow((1 << 32) - 1);
@@ -103,15 +103,15 @@ fn main() {
         to,
         degree_bound as usize,
     );
-    // match guard.report().build() {
-    //     Ok(report) => {
-    //         let mut file = File::create("profile.pb").unwrap();
-    //         let profile = report.pprof().unwrap();
+    match guard.report().build() {
+        Ok(report) => {
+            let mut file = File::create("profile.pb").unwrap();
+            let profile = report.pprof().unwrap();
 
-    //         let mut content = Vec::new();
-    //         profile.write_to_vec(&mut content).unwrap();
-    //         file.write_all(&content).unwrap();
-    //     }
-    //     Err(_) => {}
-    // };
+            let mut content = Vec::new();
+            profile.write_to_vec(&mut content).unwrap();
+            file.write_all(&content).unwrap();
+        }
+        Err(_) => {}
+    };
 }
