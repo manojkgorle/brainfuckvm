@@ -380,24 +380,25 @@ impl ProcessorTable {
     //define a selector polynomial for a specific instruction.
     //this will return a non-zero value for instruction and zero for all other instructions
     pub fn selector_polynomial(instruction: char, ci: Polynomial, field: Field) -> Polynomial {
+        let t = Local::now();
         let f = |x: char| -> FieldElement { FieldElement((x as u32) as u128, field) };
         let mut acc = Polynomial::constant(FieldElement::one(field)); // poly = 1
 
         // Parallelize the loop over characters
         let partial_results: Vec<Polynomial> = "[]<>,.+-"
-            .par_chars() // `par_chars` is available through rayon for parallel iteration over characters
-            .filter(|&c| c != instruction) // Filter out the character matching `instruction`
+            .par_chars() 
+            .filter(|&c| c != instruction) 
             .map(|c| {
-                // For each character, calculate the corresponding polynomial and multiply with the accumulator
                 Polynomial::constant(FieldElement::new(f(c).0, field))
             })
             .collect();
-
+        let t2 = Local::now();
         // Combine the partial results into the final polynomial
         for poly in partial_results {
-            acc *= ci.clone() - poly; // Multiply each result with the accumulator
+            acc *= ci.clone() - poly;
         }
-
+        log::info!("Time taken for selector polynomial inner loop: {:?}ms", (Local::now() - t2).num_milliseconds());
+        log::info!("Time taken for selector polynomial: {:?}ms", (Local::now() - t).num_milliseconds());
         acc
     }
 
@@ -464,6 +465,7 @@ impl ProcessorTable {
         let iea_next = next_interpolated[Indices::InputEvaluation as usize].clone();
         let oea_next = next_interpolated[Indices::OutputEvaluation as usize].clone();
 
+        let t = Local::now();
         let mut air = vec![];
         //Boundary contsraints :clk=mp=mv=inv=ip=0
         //iea=oea=1 (we are using 1 instead of any random number)
@@ -554,6 +556,7 @@ impl ProcessorTable {
             + (mp_next.clone() - mp.clone())
             + (mv_next.clone() - mv.clone());
         air.push(trasition_i7);
+        log::debug!("Time taken for transition constraints: {:?}ms", (Local::now() - t).num_milliseconds());
         // clk⋆−clk−1
         // inv⋅(1−inv⋅mv)
         // ci.(ipa.(a.ip+b.ci+c.ni-alpha)-ipa*) // this constrainst is become redundant becaue we are not using +(ipa*-ipa).deselector
@@ -567,6 +570,7 @@ impl ProcessorTable {
         // we are changing mv to mv*
         // selector(,)(ci) . (iea.gamma + mv* - iea*) + (ci -  “,”) . (iea - iea*)
         // selector(.)(ci) . (oea.delta + mv - oea*) + (ci -  “.”) . (oea - oea*)
+
         // @todo optimzie this code
         let trasition_all = (clk_next.clone() - clk.clone() - poly_one.clone())
             + (inv_mv.clone() * (mv_is_zero.clone()))

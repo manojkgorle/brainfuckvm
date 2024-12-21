@@ -388,9 +388,16 @@ impl FriDomain {
     pub fn evaluate(&self, polynomial: Polynomial) -> Vec<FieldElement> {
         let omega = self.omega;
         let polynomial = polynomial.scale(self.offset.0);
-        (0..self.length)
+        let mut opow = FieldElement::one(omega.1);
+        let powers: Vec<_> = (0..self.length).map(|_| {
+            let p = opow;
+            opow *= omega;
+            p
+        }
+        ).collect();
+        powers
             .into_par_iter()
-            .map(|i| polynomial.evaluate(omega.pow(i)))
+            .map(|opow_i| polynomial.evaluate(opow_i))
             .collect()
     }
     // interpolate with the given offset
