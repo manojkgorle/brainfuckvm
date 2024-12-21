@@ -622,26 +622,26 @@ pub fn verify_proof(
     // for fri_layer degree of the combination polynomial should be less then the height and the domain size will be the height*expansion_fact
     // fri.layer.len = 1+ log(height)/log2
 
-    let number = degree_bound + 1 as usize;
+    let number = degree_bound + 1_usize;
     let base = 2.0;
     let log_base_2 = (number as f64).log2();
-    let fri_layer_length: usize = (log_base_2 + 1 as f64) as usize;
-    let mut fri_merkle_roots: Vec<Vec<u8>> = Vec::with_capacity(fri_layer_length - 1 as usize);
-    let mut betas: Vec<FieldElement> = Vec::with_capacity(fri_layer_length - 1 as usize);
-    for i in 0..fri_layer_length - 1 as usize {
+    let fri_layer_length: usize = (log_base_2 + 1_f64) as usize;
+    let mut fri_merkle_roots: Vec<Vec<u8>> = Vec::with_capacity(fri_layer_length - 1_usize);
+    let mut betas: Vec<FieldElement> = Vec::with_capacity(fri_layer_length - 1_usize);
+    for i in 0..fri_layer_length - 1_usize {
         let beta = channel.receive_random_field_element(field);
         betas.push(beta);
         let fri_root = compressed_proof[3 + i].clone();
         channel.send(fri_root.clone());
         fri_merkle_roots.push(fri_root);
     }
-    let last_layer_free_term = compressed_proof[2 as usize + fri_layer_length].clone();
+    let last_layer_free_term = compressed_proof[2_usize + fri_layer_length].clone();
     // last root will be 3+fri_layer_length-1
     // last term of the constant polynomial
 
     channel.send(last_layer_free_term.clone());
     // base_idx will be the point where the end of the compressed_proof indices for thr fri-layer_root commitment after this we have added the element and there authentication path we can see that in the utils.rs of the fri_layer decommit
-    let mut base_idx = 3 as usize + fri_layer_length;
+    let mut base_idx = 3_usize + fri_layer_length;
     for i in 0..num_of_queries {
         let idx = channel.receive_random_int(0, maximum_random_int, true) as usize;
         // verify_queries
@@ -651,7 +651,7 @@ pub fn verify_proof(
             blow_up_factor,
             field,
             &fri_merkle_roots,
-            &fri_domains,
+            fri_domains,
             compressed_proof,
             &betas,
             &mut channel,
@@ -692,7 +692,7 @@ pub fn verify_queries(
     fri_layer_length: usize,
 ) {
     // length of the eval_domain
-    let len = (degree_bound + 1 as usize) * blow_up_factor;
+    let len = (degree_bound + 1_usize) * blow_up_factor;
     let base_merkle_root = compressed_proof[0].clone();
 
     let base_x = compressed_proof[base_idx].clone();
@@ -706,7 +706,7 @@ pub fn verify_queries(
         base_x_auth,
         idx,
         base_x,
-        len as usize
+        len
     ));
 
     let base_gx = compressed_proof[base_idx + 2].clone();
@@ -718,7 +718,7 @@ pub fn verify_queries(
         base_gx_auth,
         idx + blow_up_factor,
         base_gx,
-        len as usize
+        len
     ));
     let exten_merkle_root = compressed_proof[1].clone();
     let exten_x = compressed_proof[base_idx + 4].clone();
@@ -731,7 +731,7 @@ pub fn verify_queries(
         exten_x_auth,
         idx,
         exten_x,
-        len as usize
+        len
     ));
     let exten_gx = compressed_proof[base_idx + 6].clone();
     channel.send(exten_gx.clone());
@@ -742,16 +742,16 @@ pub fn verify_queries(
         exten_gx_auth,
         idx + blow_up_factor,
         exten_gx,
-        len as usize
+        len
     ));
     //for inter table arguments constraints
 
     assert_eq!(terminal_processor[0], terminal_instruction[0]); //Tipa = Tppa
     assert_eq!(terminal_processor[1], terminal_memory[0]); //Tmpa = Tppa
-    if terminal_input.len() > 0 {
+    if !terminal_input.is_empty() {
         assert_eq!(terminal_processor[2], terminal_input[0]); //Tiea = Tea input
     }
-    if terminal_output.len() > 0 {
+    if !terminal_output.is_empty() {
         assert_eq!(terminal_processor[3], terminal_output[0]); //Toea = Tea output
     }
 
@@ -784,13 +784,13 @@ pub fn verify_fri_layers(
     intial_length: usize,
     fri_layer_length: usize,
 ) {
-    let mut lengths: Vec<usize> = vec![0_usize; fri_layer_length - 1 as usize];
-    for i in 0..fri_layer_length - 1 as usize {
+    let mut lengths: Vec<usize> = vec![0_usize; fri_layer_length - 1_usize];
+    for i in 0..fri_layer_length - 1_usize {
         // let len_value = intial_length/2_usize.pow(i as u32);
         // length.push(len_value);
         lengths[i] = intial_length / 2_usize.pow(i as u32);
     }
-    for i in 0..fri_layer_length - 1 as usize {
+    for i in 0..fri_layer_length - 1_usize {
         let length = lengths[i];
         let elem_idx = idx % length;
         let elem = compressed_proof[base_idx + 4 * i].clone();
