@@ -48,7 +48,6 @@ impl MemoryTable {
     ) -> Self {
         let base_width = 3;
         let full_width = base_width + 1;
-        let height = height;
         let omicron = derive_omicron(generator, order, height);
 
         let mut gmatrix =

@@ -92,15 +92,15 @@ impl InstructionTable {
         let mut terminal: Vec<FieldElement> = Vec::with_capacity(2);
         let field = self.table.field;
         let mut ppa = FieldElement::one(field);
-        let mut pea = self.table.matrix[(0) as usize][Indices::Address as usize]
+        let mut pea = self.table.matrix[0_usize][Indices::Address as usize]
             * challenges[ChallengeIndices::A as usize]
-            + self.table.matrix[(0) as usize][Indices::CurrentInstruction as usize]
+            + self.table.matrix[0_usize][Indices::CurrentInstruction as usize]
                 * challenges[ChallengeIndices::B as usize]
-            + self.table.matrix[(0) as usize][Indices::NextInstruction as usize]
+            + self.table.matrix[0_usize][Indices::NextInstruction as usize]
                 * challenges[ChallengeIndices::C as usize];
 
-        self.table.matrix[(0) as usize][Indices::PermutationArg as usize] = ppa;
-        self.table.matrix[(0) as usize][Indices::EvaluationArg as usize] = pea;
+        self.table.matrix[0_usize][Indices::PermutationArg as usize] = ppa;
+        self.table.matrix[0_usize][Indices::EvaluationArg as usize] = pea;
 
         for i in 0..self.table.length - 1 {
             let weighted_sum = self.table.matrix[(i + 1) as usize][Indices::Address as usize]
@@ -162,11 +162,11 @@ impl InstructionTable {
             - Polynomial::new_from_coefficients(vec![FieldElement::one(self.table.field)])
             + pea.clone()
             - Polynomial::constant(
-                self.table.matrix[(0) as usize][Indices::Address as usize]
+                self.table.matrix[0_usize][Indices::Address as usize]
                     * challenges[ChallengeIndices::A as usize]
-                    + self.table.matrix[(0) as usize][Indices::CurrentInstruction as usize]
+                    + self.table.matrix[0_usize][Indices::CurrentInstruction as usize]
                         * challenges[ChallengeIndices::B as usize]
-                    + self.table.matrix[(0) as usize][Indices::NextInstruction as usize]
+                    + self.table.matrix[0_usize][Indices::NextInstruction as usize]
                         * challenges[ChallengeIndices::C as usize],
             );
 

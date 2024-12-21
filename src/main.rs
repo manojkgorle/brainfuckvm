@@ -90,9 +90,9 @@ fn main() {
         (degree_bound + 1) * expansion_f as u128,
     );
     verify_proof(
-        num_queries as usize,
+        num_queries,
         maximum_random_int,
-        expansion_f as usize,
+        expansion_f,
         field,
         &fri_d,
         &compressed_proof,

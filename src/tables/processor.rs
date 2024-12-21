@@ -79,7 +79,6 @@ impl ProcessorTable {
     ) -> Self {
         let base_width = 7;
         let full_width = base_width + 4;
-        let height = height;
         let omicron = derive_omicron(generator, order, height);
         let mut gmatrix =
             vec![vec![FieldElement::zero(field); full_width as usize]; height as usize];

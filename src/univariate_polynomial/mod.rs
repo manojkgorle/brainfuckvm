@@ -386,7 +386,7 @@ impl Mul for Polynomial {
 impl MulAssign for Polynomial {
     #[inline]
     fn mul_assign(&mut self, other: Polynomial) {
-        if self.coefficients.len() > 0 {
+        if !self.coefficients.is_empty() {
             let field = Field::new(self.coefficients[0].modulus());
             let mut result = vec![0; self.coefficients.len() + other.coefficients.len() - 1];
             let coeff = self.coefficients.iter().map(|x| x.0).collect::<Vec<u128>>();
@@ -456,7 +456,7 @@ pub fn gen_lagrange_polynomials(x: &[FieldElement]) -> Vec<Polynomial> {
     let n = x.len();
     let mut lagrange_polynomials = Vec::with_capacity(n);
     let one = FieldElement::one(x[0].1);
-    let big_poly = gen_polynomial_from_roots(&x);
+    let big_poly = gen_polynomial_from_roots(x);
     for i in 0..n {
         let mut denominator = Vec::with_capacity(n);
 
@@ -477,11 +477,13 @@ pub fn gen_lagrange_polynomials(x: &[FieldElement]) -> Vec<Polynomial> {
 
 pub fn gen_lagrange_polynomials_parallel(x: &[FieldElement]) -> Vec<Polynomial> {
     let n = x.len();
-    let big_poly = gen_polynomial_from_roots(&x);
+    let big_poly = gen_polynomial_from_roots(x);
     let modulus = x[0].modulus();
     let field = Field::new(modulus);
     let one = FieldElement::one(field);
-    let lagrange_polynomials = (0..n)
+    
+
+    (0..n)
         .into_par_iter()
         .map(|i| {
             let numerator = big_poly.clone() / Polynomial::new_from_coefficients(vec![-x[i], one]);
@@ -495,9 +497,7 @@ pub fn gen_lagrange_polynomials_parallel(x: &[FieldElement]) -> Vec<Polynomial> 
             );
             r
         })
-        .collect();
-
-    lagrange_polynomials
+        .collect()
 }
 
 pub fn interpolate_lagrange_polynomials(x: Vec<FieldElement>, y: Vec<FieldElement>) -> Polynomial {
