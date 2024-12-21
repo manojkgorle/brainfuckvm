@@ -106,7 +106,7 @@ pub fn prove(
         order,
         matrices[4],
     );
-    log::info!("Generating tables took {:?}ms", (Local::now() - t).num_milliseconds());
+    log::info!("Generating tables took: {:?}ms", (Local::now() - t).num_milliseconds());
     t = Local::now();
     processor_table.pad();
     memory_table.pad();
@@ -118,7 +118,7 @@ pub fn prove(
     instruction_table.table.generate_omicron_domain();
 
     log::info!(
-        "Padding all tables took {:?}ms",
+        "Padding all tables took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
 
@@ -128,7 +128,7 @@ pub fn prove(
         .clone()
         .interpolate_columns(vec![0, 1, 2, 3, 4, 5, 6]);
     log::info!(
-        "interpolating processor table took {:?}ms",
+        "interpolating processor table took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
 
@@ -139,7 +139,7 @@ pub fn prove(
         .interpolate_columns(vec![0, 1, 2]);
 
         log::info!(
-            "Interpolating memory table took {:?}ms",
+            "Interpolating memory table took: {:?}ms",
             (Local::now() - t).num_milliseconds()
         );
     t = Local::now();
@@ -148,7 +148,7 @@ pub fn prove(
         .clone()
         .interpolate_columns(vec![0, 1, 2]);
     log::info!(
-        "Interpolating instruction table took {:?}ms",
+        "Interpolating instruction table took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
 
@@ -165,7 +165,7 @@ pub fn prove(
     );
 
     log::info!(
-        "Extending the domain took {:?}ms",
+        "Extending the domain took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
@@ -194,7 +194,7 @@ pub fn prove(
     }
 
     log::info!(
-        "Evaluating on the extended domain took {:?}ms",
+        "Evaluating on the extended domain took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
@@ -219,7 +219,7 @@ pub fn prove(
         basecodeword.push(root);
     }
     log::info!(
-        "Zipping all the codewords on the extended domain took {:?}ms",
+        "Zipping all the codewords on the extended domain took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
@@ -229,7 +229,7 @@ pub fn prove(
     let merkle1 = MerkleTree::new(&basecodeword);
     channel.send(merkle1.inner.root().unwrap().to_vec());
     log::info!(
-        "Commiting the base codewords took {:?}ms",
+        "Commiting the base codewords took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
 
@@ -252,7 +252,7 @@ pub fn prove(
         .extend_column_ea(0, challenges_extension[ChallengeIndices::Delta as usize])
         .clone();
     log::info!(
-        "Generating the extension column using the fiat-shamir challenges took {:?}ms",
+        "Generating the extension column using the fiat-shamir challenges took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
@@ -274,7 +274,7 @@ pub fn prove(
             + instruction_interpol_columns_2.len(),
     );
     log::info!(
-        "Interpolating the extension columns took {:?}ms",
+        "Interpolating the extension columns took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
@@ -297,7 +297,7 @@ pub fn prove(
     }
 
     log::info!(
-        "Evaluating the extension columns on the extended domain took {:?}ms",
+        "Evaluating the extension columns on the extended domain took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
@@ -320,7 +320,7 @@ pub fn prove(
         extension_codeword.push(root);
     }
     log::info!(
-        "Zipping all the extension codewords took {:?}ms",
+        "Zipping all the extension codewords took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
@@ -329,7 +329,7 @@ pub fn prove(
     channel.send(merkle2.inner.root().unwrap().to_vec());
 
     log::info!(
-        "Commiting the extension codewords took {:?}ms",
+        "Commiting the extension codewords took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
@@ -342,7 +342,7 @@ pub fn prove(
     let eval = FieldElement::zero(field);
 
     log::info!(
-        "receiving challenges for the combination polynomial took {:?}ms",
+        "receiving challenges for the combination polynomial took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
@@ -357,14 +357,14 @@ pub fn prove(
     );
 
     log::info!(
-        "generating the processor AIR took {:?}ms",
+        "generating the processor AIR took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
 
     let memory_air = memory_table.generate_air(challenges_extension.clone(), terminal_memory[0]);
     log::info!(
-        "generating the memory AIR took {:?}ms",
+        "generating the memory AIR took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
@@ -375,7 +375,7 @@ pub fn prove(
         terminal_instruction[1],
     );
     log::info!(
-        "generating the instruction AIR took {:?}ms",
+        "generating the instruction AIR took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
@@ -384,21 +384,21 @@ pub fn prove(
 
     let processor_zerofiers = processor_table.generate_zerofier();
     log::info!(
-        "generating the processor zerofiers took {:?}ms",
+        "generating the processor zerofiers took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
 
     let memory_zerofiers = memory_table.generate_zerofier();
     log::info!(
-        "generating the memory zerofiers took {:?}ms",
+        "generating the memory zerofiers took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
 
     let instruction_zerofiers = instruction_table.generate_zerofier();
     log::info!(
-        "generating the instruction zerofiers took {:?}ms",
+        "generating the instruction zerofiers took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
@@ -436,7 +436,7 @@ pub fn prove(
         })
         .collect();
     log::info!(
-        "generating the quotient polynomial of all tables took {:?}ms",
+        "generating the quotient polynomial of all tables took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
@@ -455,20 +455,20 @@ pub fn prove(
         field,
     );
     log::info!(
-        "generating the combination polynomial took {:?}ms",
+        "generating the combination polynomial took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
     let combination_codeword = domain.evaluate(combination.clone());
     log::info!(
-        "evaluating the combination polynomial took {:?}ms",
+        "evaluating the combination polynomial took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
     let merkle_combination = MerkleTree::new(&combination_codeword);
     channel.send(merkle_combination.inner.root().unwrap().to_vec());
     log::info!(
-        "commiting the combination codewords took {:?}ms",
+        "commiting the combination codewords took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
@@ -480,7 +480,7 @@ pub fn prove(
         &mut channel,
     );
     log::info!(
-        "generating and commiting the Fri_layer took {:?}ms",
+        "generating and commiting the Fri_layer took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
@@ -496,7 +496,7 @@ pub fn prove(
         &mut channel,
     );
     log::info!(
-        "decommiting the Fri_layer took {:?}ms",
+        "decommiting the Fri_layer took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
     let mut fri_eval_domains = vec![];
