@@ -886,9 +886,10 @@ mod stark_test {
         let vm = VirtualMachine::new(field);
         let generator = field.generator().pow((1 << 32) - 1);
         let order = 1 << 32;
-        let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
+        //let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
         //let code = "++>+-[+--]++.".to_string();
         //let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
+        let code = "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.".to_string();
         let program = vm.compile(code);
 
         let (running_time, input_symbols, output_symbols) = vm.run(&program, "112".to_string());
