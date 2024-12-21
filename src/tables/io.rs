@@ -43,7 +43,8 @@ impl IOTable {
         rand_field_elem: u128,
         challenge: FieldElement,
     ) -> Vec<FieldElement> {
-        let mut ea = FieldElement::new(rand_field_elem, self.table.field); // take rand_field_elem as zero if no random secret implementation
+        // take rand_field_elem as zero if no random secret implementation
+        let mut ea = FieldElement::new(rand_field_elem, self.table.field); 
         let mut terminal: Vec<FieldElement> = Vec::with_capacity(self.table.length as usize);
         if !self.table.matrix.is_empty() {
             self.table.matrix[0][1] = ea;
