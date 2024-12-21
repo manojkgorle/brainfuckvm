@@ -250,7 +250,7 @@ impl VirtualMachine {
                 if input_counter < input_data.len() {
                     let c = input_data.chars().nth(input_counter).unwrap();
                     input_counter += 1;
-                    memory.insert(register.memory_pointer, f(c));
+                    memory.insert(register.memory_pointer, f(c)-FieldElement::new(48, field));
                     input_matrix.push(vec![*memory.get(&register.memory_pointer).unwrap_or(&zero)]);
                 } else {
                     // TODO: implement getch handler?
