@@ -250,7 +250,7 @@ impl VirtualMachine {
                 if input_counter < input_data.len() {
                     let c = input_data.chars().nth(input_counter).unwrap();
                     input_counter += 1;
-                    memory.insert(register.memory_pointer, f(c));
+                    memory.insert(register.memory_pointer, f(c)-FieldElement::new(48, field));
                     input_matrix.push(vec![*memory.get(&register.memory_pointer).unwrap_or(&zero)]);
                 } else {
                     // TODO: implement getch handler?
@@ -349,7 +349,8 @@ mod tests {
         let code = "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.".to_string();
         let code2 = ">>[++-]<".to_string();
         let code3 = "+++++++++++>+>>>>++++++++++++++++++++++++++++++++++++++++++++>++++++++++++++++++++++++++++++++<<<<<<[>[>>>>>>+>+<<<<<<<-]>>>>>>>[<<<<<<<+>>>>>>>-]<[>++++++++++[-<-[>>+>+<<<-]>>>[<<<+>>>-]+<[>[-]<[-]]>[<<[>>>+<<<-]>>[-]]<<]>>>[>>+>+<<<-]>>>[<<<+>>>-]+<[>[-]<[-]]>[<<+>>[-]]<<<<<<<]>>>>>[++++++++++++++++++++++++++++++++++++++++++++++++.[-]]++++++++++<[->-<]>++++++++++++++++++++++++++++++++++++++++++++++++.[-]<<<<<<<<<<<<[>>>+>+<<<<-]>>>>[<<<<+>>>>-]<-[>>.>.<<<[-]]<<[>>+>+<<<-]>>>[<<<+>>>-]<<[<+>-]>[<+>-]<<<-]".to_string();
-        let (running_time, input_data, output_data) = vm.execute(code3);
+        let code4 = ",>+>+<<--[>>[>+<<+>-]<[>+<-]>>[<<+>>-]<<<-]>>.".to_string();
+        let (running_time, input_data, output_data) = vm.execute(code4);
         println!("running time: {}", running_time);
         println!("input data: {}", input_data);
         println!("output data: {}", output_data);

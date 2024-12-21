@@ -146,6 +146,8 @@ pub fn prove(
     memory_table.table.generate_omicron_domain();
     instruction_table.table.generate_omicron_domain();
 
+    //let f = |x: char| -> FieldElement { FieldElement::new((x as u32) as u128, field) };
+
     log::info!(
         "Interpolating processor table, {:?}ms",
         (Local::now() - t).num_milliseconds()
@@ -304,6 +306,11 @@ pub fn prove(
             + memory_interpol_columns_2.len()
             + instruction_interpol_columns_2.len(),
     );
+
+    println!("processor table after extending columns");
+    for row in processor_table.table.matrix.clone() {
+      println!("{:?}", row);
+    }
 
     // extensioncodewords vector order:
     // processor: ipa, mpa, iea, oea
@@ -858,15 +865,16 @@ mod stark_test {
         let vm = VirtualMachine::new(field);
         let generator = field.generator().pow((1 << 32) - 1);
         let order = 1 << 32;
-        let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
-        //let code = "++>+-[+--]++.".to_string();
         //let code = "++>+++++[<+>-]++++++++[<++++++>-]<.".to_string();
+        //let code = ",++>+-[+--]++.".to_string();
+        let code = "++++++>+>+<<--[>>[>+<<+>-]<[>+<-]>>[<<+>>-]<<<-]>>.".to_string();
+        //let code = "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.".to_string();
         let program = vm.compile(code);
 
-        let (running_time, input_symbols, output_symbols) = vm.run(&program, "112".to_string());
+        let (running_time, input_symbols, output_symbols) = vm.run(&program, "4".to_string());
 
         let (processor_matrix, memory_matrix, instruction_matrix, input_matrix, output_matrix) =
-            vm.simulate(&program, "112".to_string());
+            vm.simulate(&program, "4".to_string());
         assert_eq!(running_time as usize, processor_matrix.len());
 
         let offset = FieldElement::one(field);
