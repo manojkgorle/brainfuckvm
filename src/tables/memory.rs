@@ -174,15 +174,15 @@ impl MemoryTable {
         //Transition constraints: * == next
         //1. (mp+1-mp*).(mp-mp*)
         //2. (mp-mp*).mv*
-        //3. (mp-mp*).(mv-mv*)
         //4. (clk + 1 - clk*).(mv*-mv).(mp+1-mp*)
         //5. ppa.(d.clk + e.mp + f.mv - beta) - ppa*
-        let transitionair = (mp.clone() + one.clone() - mp_next.clone())
-            * (mp.clone() - mp_next.clone())
-            + (mp.clone() - mp_next.clone()) * mv_next.clone()
-            //+ (mp.clone() - mp_next.clone()) * (mv.clone() - mv_next.clone())
-            + (clk.clone() + one.clone() - clk_next) * (mv_next.clone() - mv.clone())
-            * (mp.clone() + one.clone() - mp_next.clone())
+        let mp_mp_next = mp.clone() - mp_next.clone();
+        let mp_one_mp_next = mp_mp_next.clone() + one.clone();
+        let transitionair = (mp_one_mp_next.clone()) * (mp_mp_next.clone())
+            + (mp_mp_next.clone()) * mv_next.clone()
+            + (clk.clone() + one.clone() - clk_next)
+                * (mv_next.clone() - mv.clone())
+                * (mp_one_mp_next)
             + ppa.clone()
                 * (clk.scalar_mul(challenges[ChallengeIndices::D as usize])
                     + mp.scalar_mul(challenges[ChallengeIndices::E as usize])

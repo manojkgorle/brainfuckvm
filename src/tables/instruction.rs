@@ -146,7 +146,6 @@ impl InstructionTable {
         let pea = interpolated[Indices::EvaluationArg as usize].clone();
 
         let next_interpolated = self.table.clone().next_interpolate_columns(interpolated);
-
         let ip_next = next_interpolated[Indices::Address as usize].clone();
         let ci_next = next_interpolated[Indices::CurrentInstruction as usize].clone();
         let ni_next = next_interpolated[Indices::NextInstruction as usize].clone();
@@ -182,43 +181,36 @@ impl InstructionTable {
         //6. (ip-ip*).(ppa*-ppa)
         //7. (ip*-ip-1).(pea*-pea)
         //8. (ip*-ip).(pea* - pea.eta - (a.ip*+b.ci*+c.ni*))
-
-        let transitionair = (ip.clone() - ip_next.clone())
-            * (ip_next.clone() - ip.clone() - one.clone())
-            + (ip.clone() - ip_next.clone()) * (ni.clone() - ci_next.clone())
-            + (ip_next.clone() - ip.clone() - one.clone()) * (ci_next.clone() - ci.clone())
-            + (ip_next.clone() - ip.clone() - one.clone()) * (ni_next.clone() - ni.clone())
-            + (ip.clone() + one.clone() - ip_next.clone())
+        let ip_ip_next = ip.clone() - ip_next.clone();
+        let ip_next_ip_minus_one = ip_next.clone() - ip.clone() - one.clone();
+        let scap = ip_next
+            .clone()
+            .scalar_mul(challenges[ChallengeIndices::A as usize])
+            + ci_next
+                .clone()
+                .scalar_mul(challenges[ChallengeIndices::B as usize])
+            + ni_next
+                .clone()
+                .scalar_mul(challenges[ChallengeIndices::C as usize]);
+        let transitionair = (ip_ip_next.clone())
+            * ((ip_next_ip_minus_one.clone()) + (ni.clone() - ci_next.clone()))
+            + (ip_next_ip_minus_one.clone())
+                * ((ci_next.clone() - ci.clone()) + (ni_next.clone() - ni.clone()))
+            - ip_next_ip_minus_one.clone()
                 * (ppa_next.clone()
                     - ppa.clone()
-                        * (ip_next
-                            .clone()
-                            .scalar_mul(challenges[ChallengeIndices::A as usize])
-                            + ci_next
-                                .clone()
-                                .scalar_mul(challenges[ChallengeIndices::B as usize])
-                            + ni_next
-                                .clone()
-                                .scalar_mul(challenges[ChallengeIndices::C as usize])
+                        * (scap.clone()
                             - Polynomial::new_from_coefficients(vec![
                                 challenges[ChallengeIndices::Alpha as usize],
                             ])))
-            + (ip.clone() - ip_next.clone()) * (ppa_next.clone() - ppa.clone())
-            + (ip_next.clone() - ip.clone() - one) * (pea_next.clone() - pea.clone())
-            + (ip.clone() - ip_next.clone())
+            + (ip_ip_next.clone()) * (ppa_next.clone() - ppa.clone())
+            + (ip_next_ip_minus_one) * (pea_next.clone() - pea.clone())
+            + (ip_ip_next)
                 * (pea_next.clone()
                     - pea
                         .clone()
                         .scalar_mul(challenges[ChallengeIndices::Eta as usize])
-                    - (ip_next
-                        .clone()
-                        .scalar_mul(challenges[ChallengeIndices::A as usize])
-                        + ci_next
-                            .clone()
-                            .scalar_mul(challenges[ChallengeIndices::B as usize])
-                        + ni_next
-                            .clone()
-                            .scalar_mul(challenges[ChallengeIndices::C as usize])));
+                    - (scap));
         air.push(transitionair);
 
         //Terminal constraints:
@@ -415,9 +407,6 @@ mod test_instruction {
         let mut omicron_domain: Vec<FieldElement> = Vec::new();
         for i in 0..instruction_table.table.height {
             omicron_domain.push(instruction_table.table.omicron.pow(i));
-            if i == 4 {
-                println!("omicron_domain: {:?}", omicron_domain);
-            }
         }
         let air = instruction_table.generate_air(challenges, terminal[0], terminal[1]);
 
@@ -426,29 +415,16 @@ mod test_instruction {
         assert_eq!(b, zero);
 
         for v in 0..instruction_table.table.length - 1 {
-            // let transition = air[1].clone(); //.evaluate(omicron_domain[v as usize]);
             assert_eq!(
                 air[1].clone().q_div(zerofiers[1].clone()).1,
                 Polynomial::zero(field),
                 "failed at {}",
                 v
             );
-
-            //println!("{:?}: {}: {}", transition, v, zerofiers[1].evaluate(omicron_domain[v as usize]));
-            //assert_eq!(transition, zero);
         }
 
         let terminal =
             air[2].evaluate(omicron_domain[(instruction_table.table.length - 1) as usize]);
         assert_eq!(terminal, zero);
-
-        // println!("Input table after extending columns");
-        // for row in input_table.table.matrix.clone() {
-        //     println!("{:?}", row);
-        // }
-        // println!("Output table after extending columns");
-        // for row in output_table.table.matrix.clone() {
-        //     println!("{:?}", row);
-        // }
     }
 }

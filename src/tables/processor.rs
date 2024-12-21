@@ -380,9 +380,7 @@ impl ProcessorTable {
     //define a selector polynomial for a specific instruction.
     //this will return a non-zero value for instruction and zero for all other instructions
     pub fn selector_polynomial(instruction: char, ci: Polynomial, field: Field) -> Polynomial {
-        let t = Local::now();
         let f = |x: char| -> FieldElement { FieldElement((x as u32) as u128, field) };
-        let mut acc = Polynomial::constant(FieldElement::one(field)); // poly = 1
 
         // Parallelize the loop over characters
         let partial_results: Vec<Polynomial> = "[]<>,.+-"
@@ -391,23 +389,22 @@ impl ProcessorTable {
             .map(|c| Polynomial::constant(FieldElement::new(f(c).0, field)))
             .collect();
         let t2 = Local::now();
-        // Combine the partial results into the final polynomial
-        for poly in partial_results {
-            acc *= ci.clone() - poly;
-        }
+        let one = Polynomial::constant(FieldElement::one(field));
+        let acc = partial_results
+            .par_chunks(2)
+            .map(|chunk| {
+                chunk
+                    .iter()
+                    .fold(one.clone(), |acc, poly| acc * (ci.clone() - poly.clone()))
+            })
+            .reduce(|| one.clone(), |acc, chunk_result| acc * chunk_result);
         log::info!(
             "Time taken for selector polynomial inner loop: {:?}ms",
             (Local::now() - t2).num_milliseconds()
         );
-        log::info!(
-            "Time taken for selector polynomial: {:?}ms",
-            (Local::now() - t).num_milliseconds()
-        );
         acc
     }
 
-    // I am not using this function because it because universal selector is redundant
-    // define a selector polynomial for a valid set if instruction from this set then it should be zero
     pub fn universal_selector(ci: Polynomial, field: Field) -> Polynomial {
         let f = |x: char| -> FieldElement { FieldElement((x as u32) as u128, field) };
         // let mut deselectors = Vec::new();
@@ -663,13 +660,10 @@ mod tests_processor_operations {
         let generator = FieldElement::new(1753635133440165772, field);
         let order = 1 << 32;
         let target_order = 8;
-        //println!("generator ={:?}", generator);
         let omicron = derive_omicron(generator, order, target_order);
-        //println!("omicron ={:?}", omicron);
         let domain = FriDomain::new(FieldElement::new(1, field), omicron, target_order);
         let ci = domain.interpolate(values_array);
         let poly = ProcessorTable::selector_polynomial('.', ci, field);
-        //println!("{:?}", f(']'));
         for i in 0..target_order {
             println!(
                 "Selector([) value at ci:{}, ci: {}",
@@ -827,14 +821,9 @@ mod test_processor {
             println!("{:?}", row);
         }
 
-        // println!("tmpa: {:?}", terminal[1]);
-        // println!("tppa: {:?}", terminal2[0]);
         let mut omicron_domain: Vec<FieldElement> = Vec::new();
         for i in 0..processor_table.table.height {
             omicron_domain.push(processor_table.table.omicron.pow(i));
-            if i == processor_table.table.length.clone() {
-                println!("omicron_domain: {:?}", omicron_domain);
-            }
         }
         let air = processor_table.generate_air(
             challenges,
@@ -937,9 +926,6 @@ mod test_processor {
         let mut omicron_domain: Vec<FieldElement> = Vec::new();
         for i in 0..processor_table.table.height {
             omicron_domain.push(processor_table.table.omicron.pow(i));
-            if i == 4 {
-                println!("omicron_domain: {:?}", omicron_domain);
-            }
         }
         let air = processor_table.generate_air(
             challenges,
@@ -1072,9 +1058,6 @@ mod test_processor {
         let mut omicron_domain: Vec<FieldElement> = Vec::new();
         for i in 0..processor_table.table.height {
             omicron_domain.push(processor_table.table.omicron.pow(i));
-            if i == 4 {
-                println!("omicron_domain: {:?}", omicron_domain);
-            }
         }
         let _air = processor_table.generate_air(
             challenges,
