@@ -1,7 +1,7 @@
 #![allow(dead_code, unused_imports)]
 struct ConsoleLogger;
 use chrono::Local;
-use log::{Level,Metadata, Record};
+use log::{Level, Metadata, Record};
 use pprof::protos::Message;
 use pprof::ProfilerGuard;
 use std::fs::File;

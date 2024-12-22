@@ -46,7 +46,8 @@ pub enum ChallengeIndices {
 }
 
 // prove:
-// matrices -> processor, memory, instruction, input, output -> in this order
+//give matrices created by vm in this order-> processor, memory, instruction, input, output
+//1. create table from the func given in their respective module.
 
 pub fn prove(
     matrices: &[&[Vec<FieldElement>]],
@@ -106,8 +107,12 @@ pub fn prove(
         order,
         matrices[4],
     );
-    log::info!("Generating tables took: {:?}ms", (Local::now() - t).num_milliseconds());
+    log::info!(
+        "Generating tables took: {:?}ms",
+        (Local::now() - t).num_milliseconds()
+    );
     t = Local::now();
+    //2.pad all tables
     processor_table.pad();
     memory_table.pad();
     instruction_table.pad();
@@ -121,7 +126,7 @@ pub fn prove(
         "Padding all tables took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
-
+    //3.interpolate all tables
     t = Local::now();
     let processor_interpol_columns: Vec<Polynomial> = processor_table
         .table
@@ -138,10 +143,10 @@ pub fn prove(
         .clone()
         .interpolate_columns(vec![0, 1, 2]);
 
-        log::info!(
-            "Interpolating memory table took: {:?}ms",
-            (Local::now() - t).num_milliseconds()
-        );
+    log::info!(
+        "Interpolating memory table took: {:?}ms",
+        (Local::now() - t).num_milliseconds()
+    );
     t = Local::now();
     let instruction_interpol_columns: Vec<Polynomial> = instruction_table
         .table
@@ -181,6 +186,7 @@ pub fn prove(
     );
 
     // @todo make these functions rust native, by using iter.
+    //4.Evaluating all tables on the extended domain
     for i in 0..processor_interpol_columns.clone().len() {
         basecodewords.push(domain.evaluate(processor_interpol_columns[i].clone()));
     }
@@ -199,7 +205,7 @@ pub fn prove(
     );
     t = Local::now();
 
-    // zipping all the base codewords (for each index in order) by taking their merkle root
+    // 5.zipping all the base codewords (for each index in order) by taking their merkle root
     let mut basecodeword: Vec<FieldElement> = Vec::with_capacity(expanded_length as usize);
 
     for i in 0..expanded_length as usize {
@@ -224,9 +230,13 @@ pub fn prove(
     );
     t = Local::now();
 
-    // get 11 challenges array from fiat shamir
+    //6.commitng the base codewords
     let mut channel = Channel::new();
     let merkle1 = MerkleTree::new(&basecodeword);
+    //Sending merkle root to channel i.e. verifier
+    // channel acts as verifier, simulates verifier, in proof generation of non-interactive proving setup. and vice versa for proof verification
+    // to convert interactive proving to non interactive proving, fiat shamir heuristic is used.
+    // with fiat shamir heuristic, the channel is deterministic for both prover and verifier.
     channel.send(merkle1.inner.root().unwrap().to_vec());
     log::info!(
         "Commiting the base codewords took: {:?}ms",
@@ -234,13 +244,13 @@ pub fn prove(
     );
 
     let mut challenges_extension = vec![];
-
+    //7.receiving the challenges from the channel i.e. verifier to compute extension columns
     for _ in 0..=10 {
         let x = channel.receive_random_field_element(field);
         challenges_extension.push(x);
     }
 
-    // use extend column function on tables -> extends the base columns to extension columns
+    //8.use extend column function on tables to extend the base columns to extension columns
     t = Local::now();
     let terminal_processor = processor_table.extend_columns(challenges_extension.clone());
     let terminal_memory = memory_table.extend_column_ppa(1, challenges_extension.clone());
@@ -257,7 +267,7 @@ pub fn prove(
     );
     t = Local::now();
 
-    //These contain polynomials for interpolation of extension columns
+    //9. interpolate the extension columns
     let processor_interpol_columns_2 = processor_table
         .table
         .clone()
@@ -284,6 +294,7 @@ pub fn prove(
     // memory: ppa
     // instruction: ppa, pea
     // input and output tables are public, we dont commit to those, we only check their terminal extensions after extending
+    //10.Evaluating all extended columns on the extended domain
     for i in 0..processor_interpol_columns_2.clone().len() {
         extension_codewords.push(domain.evaluate(processor_interpol_columns_2[i].clone()));
     }
@@ -301,7 +312,7 @@ pub fn prove(
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
-
+    //11. zipping all the extension codewords
     let mut extension_codeword: Vec<FieldElement> = Vec::with_capacity(expanded_length as usize);
     for i in 0..expanded_length as usize {
         let mut x: Vec<FieldElement> = vec![];
@@ -324,8 +335,9 @@ pub fn prove(
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
-
+    //12.commiting the extension codewords
     let merkle2 = MerkleTree::new(&extension_codeword);
+    //Sending merkle root to channel i.e. verifier
     channel.send(merkle2.inner.root().unwrap().to_vec());
 
     log::info!(
@@ -333,7 +345,7 @@ pub fn prove(
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
-
+    //13.receveing challenges from channel (verifier) for computing the combination polynomial
     let mut challenges_combination = vec![];
     let x = channel.receive_random_field_element(field);
     challenges_combination.push(x);
@@ -346,7 +358,7 @@ pub fn prove(
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
-
+    //14. generating all the AIRs for different tables
     let processor_air = processor_table.generate_air(
         challenges_extension.clone(),
         terminal_processor[0],
@@ -379,9 +391,7 @@ pub fn prove(
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
-
-    // Generate zerofiers
-
+    //15. generating the zerofier for boundary,transition and terminal constraints for each table
     let processor_zerofiers = processor_table.generate_zerofier();
     log::info!(
         "generating the processor zerofiers took: {:?}ms",
@@ -403,6 +413,7 @@ pub fn prove(
     );
     t = Local::now();
 
+    //16.generating the quotient polynomial for each table
     let zero = FieldElement::zero(field);
     let processor_q = (0..processor_zerofiers.len())
         .into_par_iter()
@@ -441,8 +452,8 @@ pub fn prove(
     );
     t = Local::now();
 
-    // form combination polynomial
-    // 9 is the maximum factor in AIR degree
+    // 17. generating the combination polynomial from quotient polynomials of diff tables
+    // the maximum degree bound will be 9*height
     let degree_bound = roundup_npow2(9 * (instruction_table.table.height - 1)) - 1;
 
     //@todo optimize this
@@ -458,6 +469,7 @@ pub fn prove(
         "generating the combination polynomial took: {:?}ms",
         (Local::now() - t).num_milliseconds()
     );
+    //18. evaluating the combination polynomial on the extended domain
     t = Local::now();
     let combination_codeword = domain.evaluate(combination.clone());
     log::info!(
@@ -465,6 +477,7 @@ pub fn prove(
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
+    //19. commiting the combnation codewords
     let merkle_combination = MerkleTree::new(&combination_codeword);
     channel.send(merkle_combination.inner.root().unwrap().to_vec());
     log::info!(
@@ -472,6 +485,42 @@ pub fn prove(
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
+    // Now we have commited to the combination polynomial.
+    // Composition polynomial will be a polynomial only if all the contraints are satisfied.
+    // Using F.R.I, we will show composition polynomial is close to a polynomial of low degree.
+    // A function is close to a polynomial if its distance to the polynomial is small.
+    // distance of a function and polynomial is measured as, f:Domain->F, Distance(f, p) => for every d in Domain, f(d) != p(d)
+    // How can we prove that a composition polynomial is close to polynomial of low degree?
+    // Here comes F.R.I, Fast Reed solomon Interactive oracle proofs of proximity.
+    // FRI is a folding scheme, similar to what we see in FFT for breaking down the polynomial into 2 polynomials of even degree(s).
+    // Prover tries to convence the verifier that, the commitment of composition polynomial is close to a low degree polynomial.
+    // F.R.I Protocol:
+    // 1. Receive random element `beta` from verifier.
+    // 2. Apply the FRI folding scheme or FRI operator to the composition polynomial.
+    // 3. Commit to the new polynomial obtained after applying FRI operator.
+    // 4. Send the new commitment to the verifier.
+    // 5. Repeat step 1-4, until the polynomial degree is less than accepted degree in terms of security. in this case repeat till degree is 0.
+    // 6. Prover sends the result to the verifier.
+
+    // F.R.I Operator or folding scheme:
+    // from proving: function is close to a polynomial of degree < D
+    // to proving: new function is close to a new polynomial of degree < D/2, where new function has half the domain size of old polynomial.
+    // Example: To prove: A function is close to a polynomial of a degree < 1024, with function domain size = 8192
+    //          After applying the FRI operator we need to prove the new polynomial degree < 512 with new function domain size = 4096
+    // split ot even and odd powers.
+    // P_0(x) = g(x^2) + x h(x^2)
+    // Get random element beta from verifier
+    // P_1(y) = g(y) + beta * h(y)
+
+    // For this example, repeat steps 1-4 till degree of polynomial < 1, when domain size is 8.
+
+    // The new evaluation domain, will be half of the old evaluation domain.
+    // and new evaluation domain is first half of the old evaluation domain squared.
+    // eval domain: w, w.h, w.h2, .... w.h^8091
+    // new eval domain: w^2, (w.h)^2, ... (w.h^4095)^2
+    // square of the first half of the old eval domian, is equal to square of second half of old eval domain. This is a cyclic group property.
+
+    //20.generate fri layers and commit to the fri layers.
     let (_fri_polys, fri_domains, fri_layers, fri_merkles) = fri_commit(
         combination.clone(),
         domain,
@@ -484,6 +533,14 @@ pub fn prove(
         (Local::now() - t).num_milliseconds()
     );
     t = Local::now();
+
+    // Proof or provers work contains generating commitments and decommiting them, to convence the verifier over the integrity of the computation.
+    // i)  Commitment ✅
+    // ii) Decommitment -> query phase
+    // Decommitment involves verifier sending random elements from evaluation domain to prover. and prover responding with decommitments to the evaluations, which involve sending merkle paths along with evaluations.
+
+    // with each successful query and valid decommitment, verifiers confidence in the proof increases.
+
     let no_of_queries = num_queries;
     decommit_fri(
         no_of_queries,
@@ -524,22 +581,17 @@ pub fn prove(
     )
 }
 
-// verifier knows -
-// constraints (therefore AIR)
-// combination polynomial equation
-// challenges of extension columns
-// challenges of combination polynomial
-
 // prover sends to verifier -
-// height (whose correctness is indirectly verified through fri and degree bound)
-// base codewords merkle root, extension codewords merkle root
-// for each query (index) of verifier, prover sends respective evaluation and merkle authentication path of evaluation
-// written in fri decommit_on_query
+//-> height (whose correctness is indirectly verified through fri and degree bound)
+//-> base codewords merkle root, extension codewords merkle root
+// ->for each query (index) of verifier, prover sends respective evaluation and merkle authentication path of evaluation
+
+//panic for invalid proof
 
 pub fn verify_proof(
     num_of_queries: usize,
     maximum_random_int: u64,
-    blow_up_factor: usize, //expansion_factor
+    blow_up_factor: usize,
     field: Field,
     fri_domains: &[Vec<FieldElement>],
     compressed_proof: &[Vec<u8>],
@@ -553,7 +605,7 @@ pub fn verify_proof(
     log::info!("verifying proof");
     let start = Local::now();
     let mut channel = Channel::new();
-    // merkle root of the zipped base codewords
+    //merkle root of the zipped base codewords
     let base_merkle_root = compressed_proof[0].clone();
 
     channel.send(base_merkle_root.clone());
@@ -566,11 +618,12 @@ pub fn verify_proof(
         challenges_extension.push(x);
     }
     challenges_extension.push(channel.receive_random_field_element(field));
-
+    // merkle root of the zipped exten codewords
     let exten_merkle_root = compressed_proof[1].clone();
 
     channel.send(exten_merkle_root.clone());
 
+    // get challenges for the combination polynomial
     let mut challenges_combination = vec![];
     let x = channel.receive_random_field_element(field);
     challenges_combination.push(x);
@@ -582,9 +635,6 @@ pub fn verify_proof(
     channel.send(combination_merkle_root);
 
     //commit to fri
-
-    // height should be power of 2
-    // for fri_layer degree of the combination polynomial should be less then the height and the domain size will be the height*expansion_fact
     // fri.layer.len = 1+ log(height)/log2
 
     let number = degree_bound + 1_usize;
@@ -604,7 +654,7 @@ pub fn verify_proof(
     // last term of the constant polynomial
 
     channel.send(last_layer_free_term.clone());
-    // base_idx will be the point where the end of the compressed_proof indices for thr fri-layer_root commitment after this we have added the element and there authentication path 
+    // base_idx will be the point where the end of the compressed_proof indices for thr fri-layer_root commitment after this we have added the element and there authentication path
     let mut base_idx = 3_usize + fri_layer_length;
     for i in 0..num_of_queries {
         let idx = channel.receive_random_int(0, maximum_random_int, true) as usize;
@@ -709,16 +759,16 @@ pub fn verify_queries(
     ));
     //for inter table arguments constraints
     //Tipa = Tppa
-    assert_eq!(terminal_processor[0], terminal_instruction[0]); 
+    assert_eq!(terminal_processor[0], terminal_instruction[0]);
     //Tmpa = Tppa
-    assert_eq!(terminal_processor[1], terminal_memory[0]); 
+    assert_eq!(terminal_processor[1], terminal_memory[0]);
     //Tiea = Tea input
     if !terminal_input.is_empty() {
-        assert_eq!(terminal_processor[2], terminal_input[0]); 
+        assert_eq!(terminal_processor[2], terminal_input[0]);
     }
     //Toea = Tea output
     if !terminal_output.is_empty() {
-        assert_eq!(terminal_processor[3], terminal_output[0]); 
+        assert_eq!(terminal_processor[3], terminal_output[0]);
     }
 
     verify_fri_layers(
